@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>United Road</title>
+    
+    <!-- Dependencies -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
+
+    <style>
+        body { margin: 0; padding: 0; background-color: #050505; color: white; overflow-x: hidden; }
+        .audio-bar { animation: audioBounce 980ms infinite ease-in-out alternate; }
+        .paused .audio-bar { animation-play-state: paused !important; height: 5px !important; }
+        @keyframes audioBounce { 0% { height: 5px; } 100% { height: 26px; } }
+        
+        /* Hide scrollbars but keep functionality for beautiful mobile swiping */
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        .tabular-nums { font-variant-numeric: tabular-nums; }
+        
+        /* Oracle custom scrollbar */
+        .oracle-scroll::-webkit-scrollbar { width: 6px; }
+        .oracle-scroll::-webkit-scrollbar-track { background: transparent; }
+        .oracle-scroll::-webkit-scrollbar-thumb { background-color: #333; border-radius: 10px; }
+        
+        /* Fix for sticky header anchor overlaps */
+        section { scroll-margin-top: 80px; }
+        
+        /* Smooth scrolling */
+        html { scroll-behavior: smooth; }
+    </style>
+</head>
+<body>
+    <!-- 
+      CRITICAL CRASH FIX: 
+      The background YouTube player MUST live outside the "root" div.
+      This prevents YouTube's iframe injection from crashing the React app.
+    -->
+    <div id="bg-audio" style="display: none; position: absolute; width: 0; height: 0; pointer-events: none;"></div>
+    
+    <!-- React App Container -->
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+        const { motion, AnimatePresence } = window.Motion;
+
+        // --- ICONS ---
+        const LucideIcon = ({ d, className = "", ...props }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
+                {d}
+            </svg>
+        );
+
+        const Music = (props) => <LucideIcon d={<><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></>} {...props} />;
+        const Menu = (props) => <LucideIcon d={<><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></>} {...props} />;
+        const X = (props) => <LucideIcon d={<><path d="M18 6 6 18"/><path d="m6 6 12 12"/></>} {...props} />;
+        const ExternalLink = (props) => <LucideIcon d={<><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></>} {...props} />;
+        const Play = (props) => <LucideIcon d={<polygon points="5 3 19 12 5 21 5 3"/>} {...props} />;
+        const ChevronRight = (props) => <LucideIcon d={<path d="m9 18 6-6-6-6"/>} {...props} />;
+        const Volume2 = (props) => <LucideIcon d={<><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></>} {...props} />;
+        const VolumeX = (props) => <LucideIcon d={<><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" x2="17" y1="9" y2="15"/><line x1="17" x2="23" y1="9" y2="15"/></>} {...props} />;
+        const Shield = (props) => <LucideIcon d={<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/>} {...props} />;
+        const Copy = (props) => <LucideIcon d={<><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></>} {...props} />;
+        const CheckCircle = (props) => <LucideIcon d={<><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></>} {...props} />;
+        const Flame = (props) => <LucideIcon d={<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>} {...props} />;
+        const Send = (props) => <LucideIcon d={<><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></>} {...props} />;
+        const ArrowRight = (props) => <LucideIcon d={<><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></>} {...props} />;
+        const Trophy = (props) => <LucideIcon d={<><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></>} {...props} />;
+        const Users = (props) => <LucideIcon d={<><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></>} {...props} />;
+
+        // --- BRAND ICONS ---
+        const SpotifyIcon = () => <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.24 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.84.24 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.6.18-1.2.72-1.381 4.26-1.261 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg>;
+        const YouTubeIcon = () => <svg viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>;
+        const FacebookIcon = () => <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path></svg>;
+        const InstagramIcon = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>;
+
+        // --- GLOBAL DATA ---
+        const LINKS = {
+            spotify: "https://open.spotify.com/artist/5QVI0NjbUydubWdYZQJR9z",
+            spotifyEmbed: "https://open.spotify.com/embed/artist/5QVI0NjbUydubWdYZQJR9z?utm_source=generator&theme=0",
+            youtubeUrl: "https://youtube.com/@theunitedroad99",
+            youtubeChannelId: "UC6JA4gNGl03w", // Used for fallback dynamic fetching if possible
+            facebook: "https://www.facebook.com/share/1Ana9xcEU4/",
+            instagram: "https://www.instagram.com/theunitedroad99",
+            bgAudioVideoId: "UyWGmCiab3o", // Official Anthem Video ID
+            chantLyrics: `Take me home, United Road\nTo the place, I belong\nTo Old Trafford, to see United\nTake me home, United Road\n\nAll my memories\nOf Bobby Charlton, Georgie Best and Cantona\nTake me home, United Road\nTo the place, I belong`,
+        };
+
+        // --- EXCLUSIVE UNITED ROAD VIDEO ARCHIVE ---
+        // ONLY 100% REAL VIDEOS PROVIDED BY THE USER. NO FAKE PLACEHOLDERS.
+        const UNITED_ROAD_VIDEOS = [
+            { id: "07illo_uJ2g", title: "MAINOO! United Can’t Play Without You (Fan Chant) | Highlights 2026", thumb: "https://img.youtube.com/vi/07illo_uJ2g/maxresdefault.jpg", date: "May 2026" },
+            { id: "6JA4gNGl03w", title: "All Bruno Fernandes 21 Assists - United Road 21 Assists Song", thumb: "https://img.youtube.com/vi/6JA4gNGl03w/maxresdefault.jpg", date: "May 2026" },
+            { id: "Z4zqOLiijmI", title: "Carricks At The Wheel Again - United Road - It's in our DNA", thumb: "https://img.youtube.com/vi/Z4zqOLiijmI/maxresdefault.jpg", date: "May 2026" },
+            { id: "UyWGmCiab3o", title: "Take Me Home, United Road - Official Anthem", thumb: "https://img.youtube.com/vi/UyWGmCiab3o/maxresdefault.jpg", date: "Official Anthem" },
+        ];
+
+        const COMMUNITY_LINKS = [
+            { name: "The United Stand", desc: "Live match watchalongs, raw reactions, and tier-1 transfer news.", img: "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1000&q=80", link: "https://www.youtube.com/@TheUnitedStand", tag: "GLOBAL FAN CHANNEL" },
+            { name: "Stretford Paddock", desc: "Elite tactical breakdowns, academy insights, and authentic matchday vlogs.", img: "https://images.unsplash.com/photo-1518605368461-1e1e38ce81ba?auto=format&fit=crop&w=1000&q=80", link: "https://www.youtube.com/@StretfordPaddock", tag: "MATCHDAY VLOGS" },
+            { name: "Sky Sports Man Utd", desc: "The definitive source for breaking alerts and exclusive manager interviews.", img: "https://images.unsplash.com/photo-1495020632543-1bc2773d5786?auto=format&fit=crop&w=1000&q=80", link: "https://www.skysports.com/manchester-united", tag: "OFFICIAL NEWS" },
+            { name: "M.E.N. United", desc: "Deep dives and exclusive columns from local reporters embedded inside the club.", img: "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=1000&q=80", link: "https://www.manchestereveningnews.co.uk/all-about/manchester-united-fc", tag: "LOCAL PRESS" }
+        ];
+
+        const SAFE_FALLBACK_NEWS = [
+            { title: "Old Trafford roars as United secure crucial home victory", desc: "The atmosphere was electric as the team grabbed all three points in front of the Stretford End in a gritty display.", source: "BBC Sport", date: "2 Hours Ago", link: "https://www.bbc.co.uk/sport/football/teams/manchester-united", img: "https://images.unsplash.com/photo-1508344928928-7165b67de128?auto=format&fit=crop&w=1200&q=80" },
+            { title: "Transfer Latest: United eye summer midfield reinforcements", desc: "The recruitment team is identifying key targets to bolster the squad ahead of the upcoming window.", source: "Sky Sports", date: "4 Hours Ago", link: "https://www.skysports.com/manchester-united", img: "https://images.unsplash.com/photo-1574629810360-7efbb6b6973f?auto=format&fit=crop&w=1200&q=80" },
+            { title: "Academy Watch: Next generation shining at Carrington", desc: "Several youth prospects have been called up to first-team training this week following impressive youth performances.", source: "M.E.N.", date: "5 Hours Ago", link: "https://www.manchestereveningnews.co.uk/all-about/manchester-united-fc", img: null },
+            { title: "Injury Update: Key defenders step up recovery process", desc: "A massive boost for the squad as vital players are spotted returning to grass at the training complex.", source: "ESPN", date: "6 Hours Ago", link: "https://www.espn.co.uk/football/team/_/id/360/manchester-united", img: null },
+            { title: "The United Road anthem hits massive streaming milestones", desc: "The terraces have spoken. The matchday anthem is dominating playlists across the globe this week.", source: "Official Release", date: "8 Hours Ago", link: "#", img: null }
+        ];
+
+        // --- UPGRADED LEGACY STATS WITH NAMES ---
+        const LEGACY_STATS = [
+            { number: 20, label: "League Titles", sub: "English Record", icon: Trophy },
+            { number: 3, label: "European Cups", sub: "'68, '99, '08", icon: Trophy },
+            { number: 963, label: "Appearances", sub: "Ryan Giggs", icon: Users },
+            { number: 253, label: "Total Goals", sub: "Wayne Rooney", icon: Flame },
+        ];
+
+        const SUGGESTED_PROMPTS = [
+            "Who is the all-time top scorer?",
+            "How many league titles have we won?",
+            "Tell me about the 1999 Treble",
+            "Who has the most appearances?",
+            "What's the stadium capacity?",
+        ];
+
+        const timeAgo = (dateString) => {
+            const date = new Date(dateString);
+            const diffInSeconds = Math.floor((new Date() - date) / 1000);
+            if (diffInSeconds < 3600) { const m = Math.floor(diffInSeconds / 60); return `${m} Minute${m !== 1 ? 's' : ''} Ago`; }
+            if (diffInSeconds < 86400) { const h = Math.floor(diffInSeconds / 3600); return `${h} Hour${h !== 1 ? 's' : ''} Ago`; }
+            const d = Math.floor(diffInSeconds / 86400); return `${d} Day${d !== 1 ? 's' : ''} Ago`;
+        };
+
+        function UnitedRoadEnhanced() {
+            const [hasEntered, setHasEntered] = useState(false);
+            const [isNavOpen, setIsNavOpen] = useState(false);
+            const [scrolled, setScrolled] = useState(false);
+            const [activeSection, setActiveSection] = useState('hero');
+            const [isMuted, setIsMuted] = useState(false);
+            const [copied, setCopied] = useState(false);
+            const [vaultTab, setVaultTab] = useState('watch');
+            const [isPlayingChant, setIsPlayingChant] = useState(false);
+            const [currentLyricIndex, setCurrentLyricIndex] = useState(-1);
+            const [subscribed, setSubscribed] = useState(false);
+            
+            const [newsItems, setNewsItems] = useState(SAFE_FALLBACK_NEWS);
+            const [newsLoading, setNewsLoading] = useState(true);
+
+            // YT Videos initialized directly to the user's explicit requested videos
+            const [ytVideos, setYtVideos] = useState(UNITED_ROAD_VIDEOS);
+            const [activeVideoId, setActiveVideoId] = useState(UNITED_ROAD_VIDEOS[0].id);
+
+            const [oracleInput, setOracleInput] = useState('');
+            const [isOracleThinking, setIsOracleThinking] = useState(false);
+            const [chatHistory, setChatHistory] = useState([
+                { role: 'oracle', text: "I am the Red Oracle. Guardian of Manchester United's soul, stats, and stories. Ask me anything — from the Treble to today's form." }
+            ]);
+            const [showConfetti, setShowConfetti] = useState(false);
+
+            const chatEndRef = useRef(null);
+            const playerRef = useRef(null);
+            const audioBarsRef = useRef(null);
+            const lyricIntervalRef = useRef(null);
+
+            const socialLinks = [
+                { href: LINKS.facebook, icon: <FacebookIcon />, color: "hover:text-[#1877F2] text-white" },
+                { href: LINKS.instagram, icon: <InstagramIcon />, color: "hover:text-[#E4405F] text-white" },
+                { href: LINKS.spotify, icon: <SpotifyIcon />, color: "hover:text-[#1DB954] text-white" },
+                { href: LINKS.youtubeUrl, icon: <YouTubeIcon />, color: "hover:text-[#DA291C] text-white" },
+            ];
+
+            const chantLines = LINKS.chantLyrics.split('\n').filter(line => line.trim());
+
+            useEffect(() => {
+                const fetchLiveNews = async () => {
+                    try {
+                        const res = await fetch('https://api.rss2json.com/v1/api.json?rss_url=http://feeds.bbci.co.uk/sport/football/teams/manchester-united/rss.xml');
+                        const data = await res.json();
+                        if (data.status === 'ok' && data.items?.length > 0) {
+                            const premiumImages = [
+                                "https://images.unsplash.com/photo-1508344928928-7165b67de128?auto=format&fit=crop&w=1200&q=80",
+                                "https://images.unsplash.com/photo-1574629810360-7efbb6b6973f?auto=format&fit=crop&w=1200&q=80",
+                                "https://images.unsplash.com/photo-1495020632543-1bc2773d5786?auto=format&fit=crop&w=1200&q=80"
+                            ];
+                            const liveFormattedNews = data.items.slice(0, 5).map((item, index) => {
+                                let imgUrl = item.thumbnail || (item.enclosure && item.enclosure.link);
+                                const cleanDesc = item.description.replace(/<[^>]+>/g, "").trim();
+                                return {
+                                    title: item.title,
+                                    desc: cleanDesc.length > 120 ? cleanDesc.slice(0, 120) + "..." : cleanDesc,
+                                    source: "BBC Sport",
+                                    date: timeAgo(item.pubDate),
+                                    link: item.link,
+                                    img: imgUrl || premiumImages[index % premiumImages.length]
+                                };
+                            });
+                            setNewsItems(liveFormattedNews);
+                        }
+                    } catch (error) {
+                        console.log("Live news fetch failed. Using safe fallback data.");
+                    } finally {
+                        setNewsLoading(false);
+                    }
+                };
+                
+                const fetchYouTubeChannel = async () => {
+                    try {
+                        // Attempt to fetch any NEW videos from the channel to append to the hardcoded list
+                        const ytRes = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=https%3A%2F%2Fwww.youtube.com%2Ffeeds%2Fvideos.xml%3Fchannel_id%3D${LINKS.youtubeChannelId}`);
+                        const ytData = await ytRes.json();
+                        
+                        let liveVideos = [];
+                        if (ytData.status === 'ok' && ytData.items?.length > 0) {
+                            liveVideos = ytData.items.map(item => {
+                                const id = item.link.split('v=')[1] || item.guid.split(':')[2];
+                                return {
+                                    id: id,
+                                    title: item.title,
+                                    // Use standard thumbnail format
+                                    thumb: `https://img.youtube.com/vi/${id}/mqdefault.jpg`,
+                                    date: timeAgo(item.pubDate)
+                                };
+                            });
+                        }
+
+                        // Merge Live Feed with Hardcoded Archive (removing duplicates)
+                        const allCombinedVideos = [...liveVideos, ...UNITED_ROAD_VIDEOS];
+                        const uniqueVideos = Array.from(new Map(allCombinedVideos.map(v => [v.id, v])).values());
+                        
+                        setYtVideos(uniqueVideos);
+                    } catch (e) {
+                        console.log("YT channel live fetch failed. Relying purely on the hardcoded specific videos.");
+                        setYtVideos(UNITED_ROAD_VIDEOS);
+                    }
+                };
+
+                fetchLiveNews();
+                fetchYouTubeChannel();
+            }, []);
+
+            useEffect(() => {
+                const handleScroll = () => {
+                setScrolled(window.scrollY > 80);
+                const sectionIds = ['hero', 'legacy', 'news', 'vault', 'community', 'oracle'];
+                let current = 'hero';
+                for (const id of sectionIds) {
+                    const el = document.getElementById(id);
+                    if (el && el.getBoundingClientRect().top <= 150) current = id;
+                }
+                setActiveSection(current);
+                };
+                window.addEventListener('scroll', handleScroll, { passive: true });
+                return () => window.removeEventListener('scroll', handleScroll);
+            }, []);
+
+            // BACKGROUND PLAYER CRASH FIX
+            useEffect(() => {
+                const loadYT = () => {
+                    if (window.YT) {
+                        initPlayer();
+                        return;
+                    }
+                    const tag = document.createElement('script');
+                    tag.src = "https://www.youtube.com/iframe_api";
+                    document.body.appendChild(tag);
+                    window.onYouTubeIframeAPIReady = initPlayer;
+                };
+                
+                const initPlayer = () => {
+                    if (playerRef.current) return;
+                    playerRef.current = new window.YT.Player('bg-audio', {
+                        height: '0', width: '0', videoId: LINKS.bgAudioVideoId,
+                        playerVars: { autoplay: 0, controls: 0, playsinline: 1, modestbranding: 1, loop: 1 },
+                        events: {
+                            onStateChange: (e) => {
+                                const playing = e.data === window.YT.PlayerState.PLAYING;
+                                if (audioBarsRef.current) {
+                                    audioBarsRef.current.classList.toggle('paused', !playing);
+                                }
+                                if (!playing) {
+                                    setIsPlayingChant(false);
+                                }
+                            }
+                        }
+                    });
+                };
+                loadYT();
+            }, []);
+
+            useEffect(() => {
+                if (isPlayingChant) {
+                    let idx = 0;
+                    setCurrentLyricIndex(0);
+                    lyricIntervalRef.current = setInterval(() => {
+                        idx = (idx + 1) % chantLines.length;
+                        setCurrentLyricIndex(idx);
+                    }, 3800);
+                } else {
+                    setCurrentLyricIndex(-1);
+                    if (lyricIntervalRef.current) clearInterval(lyricIntervalRef.current);
+                }
+                return () => clearInterval(lyricIntervalRef.current);
+            }, [isPlayingChant]);
+
+            useEffect(() => { 
+                if (chatHistory.length > 1 || isOracleThinking) {
+                    chatEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }); 
+                }
+            }, [chatHistory, isOracleThinking]);
+
+            const triggerConfetti = () => {
+                setShowConfetti(true);
+                setTimeout(() => setShowConfetti(false), 2200);
+            };
+
+            const handleEnter = () => {
+                setHasEntered(true);
+                triggerConfetti();
+                setTimeout(() => {
+                try {
+                    if (playerRef.current && typeof playerRef.current.playVideo === 'function') {
+                        playerRef.current.playVideo();
+                        playerRef.current.setVolume(75);
+                        setIsMuted(false);
+                    }
+                } catch (_) {}
+                }, 600);
+            };
+
+            const toggleMute = () => {
+                if (!playerRef.current || typeof playerRef.current.playVideo !== 'function') return;
+                if (isMuted) {
+                    playerRef.current.unMute();
+                    playerRef.current.playVideo();
+                    setIsMuted(false);
+                } else {
+                    playerRef.current.pauseVideo();
+                    setIsMuted(true);
+                    setIsPlayingChant(false);
+                }
+            };
+
+            const handleCopy = () => {
+                try {
+                    const textArea = document.createElement("textarea");
+                    textArea.value = LINKS.chantLyrics;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand("copy");
+                    document.body.removeChild(textArea);
+                    setCopied(true);
+                    triggerConfetti();
+                    setTimeout(() => setCopied(false), 2200);
+                } catch (_) {}
+            };
+
+            const toggleChantMode = () => {
+                if (!playerRef.current || typeof playerRef.current.playVideo !== 'function') return;
+                if (isPlayingChant) {
+                    playerRef.current.pauseVideo();
+                    setIsPlayingChant(false);
+                } else {
+                    playerRef.current.playVideo();
+                    playerRef.current.setVolume(90);
+                    setIsMuted(false);
+                    setIsPlayingChant(true);
+                }
+            };
+
+            const getOracleResponse = (query) => {
+                const q = query.toLowerCase().trim();
+                if (q.includes("scorer") || q.includes("goals") || q.includes("rooney")) return "Wayne Rooney is our all-time top goalscorer with 253 goals in 559 appearances — overtaking Sir Bobby Charlton in 2017.";
+                if (q.includes("appearance") || q.includes("giggs")) return "Ryan Giggs holds the record with 963 appearances across 24 unforgettable years. The ultimate one-club man.";
+                if (q.includes("treble") || q.includes("1999")) return "1999. The greatest year in football history. United won the Premier League, FA Cup, and Champions League in 10 dramatic days.";
+                if (q.includes("manager")) return "United's history of managers is legendary, defined largely by Sir Matt Busby and Sir Alex Ferguson, who built empires at Old Trafford.";
+                if (q.includes("stadium") || q.includes("old trafford")) return "Old Trafford — the Theatre of Dreams — opened in 1910. It holds over 74,000 passionate Reds.";
+                if (q.includes("trophies") || q.includes("titles")) return "We are the most decorated club in English football: 20 League Titles, 13 FA Cups, 6 League Cups, 3 European Cups.";
+                if (q.includes("chant") || q.includes("anthem")) return "Our official anthem is 'Take Me Home, United Road'. Scroll to The Vault → Sing-Along Mode.";
+                return "Glory Glory Man United! Try asking about top scorers, the Treble, Giggs, or our trophy cabinet.";
+            };
+
+            const handleOracleSubmit = (e, promptText = null) => {
+                e?.preventDefault();
+                const query = promptText || oracleInput;
+                if (!query.trim() || isOracleThinking) return;
+                setChatHistory(prev => [...prev, { role: 'user', text: query }]);
+                setOracleInput('');
+                setIsOracleThinking(true);
+                setTimeout(() => {
+                const response = getOracleResponse(query);
+                setChatHistory(prev => [...prev, { role: 'oracle', text: response }]);
+                setIsOracleThinking(false);
+                if (query.toLowerCase().includes("treble") || query.toLowerCase().includes("titles") || query.toLowerCase().includes("rooney")) {
+                    setTimeout(triggerConfetti, 400);
+                }
+                }, 750);
+            };
+
+            const handleSuggestedPrompt = (prompt) => handleOracleSubmit(null, prompt);
+
+            const AnimatedCounter = ({ end, suffix = "" }) => {
+                const [count, setCount] = useState(0);
+                const ref = useRef(null);
+                const [hasAnimated, setHasAnimated] = useState(false);
+
+                useEffect(() => {
+                const observer = new IntersectionObserver(([entry]) => {
+                    if (entry.isIntersecting && !hasAnimated) {
+                    setHasAnimated(true);
+                    let start = 0;
+                    const duration = 1600;
+                    const increment = Math.ceil(end / 40);
+                    const timer = setInterval(() => {
+                        start += increment;
+                        if (start >= end) { setCount(end); clearInterval(timer); }
+                        else setCount(start);
+                    }, duration / 40);
+                    }
+                }, { threshold: 0.6 });
+                if (ref.current) observer.observe(ref.current);
+                return () => observer.disconnect();
+                }, [end, hasAnimated]);
+
+                return <span ref={ref} className="tabular-nums">{count}{suffix}</span>;
+            };
+
+            return (
+                <div className="min-h-screen bg-[#050505] text-white font-sans selection:bg-[#DA291C] selection:text-white overflow-x-hidden pb-[140px] md:pb-0">
+
+                {/* ENTRANCE (Deep Red/Black gradient) */}
+                <AnimatePresence>
+                    {!hasEntered && (
+                    <motion.div initial={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] bg-gradient-to-br from-[#0A0A0A] to-[#800000] flex flex-col items-center justify-center overflow-hidden">
+                        <div className="absolute inset-0 bg-[radial-gradient(#ffffff_0.8px,transparent_1px)] bg-[length:4px_4px] opacity-[0.05]"></div>
+                        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1508344928928-7165b67de128?auto=format&fit=crop&w=2400&q=80')] bg-cover bg-center opacity-30 mix-blend-overlay grayscale"></div>
+
+                        {[...Array(5)].map((_, i) => (
+                        <motion.div key={i} className="absolute w-3 h-3 bg-[#FFD700] rounded-full blur-xl" initial={{ x: Math.random() * window.innerWidth, y: Math.random() * window.innerHeight * 0.6 }} animate={{ y: [null, Math.random() * -200 - 100], opacity: [0.6, 0.1, 0.6] }} transition={{ duration: 3.5 + i * 0.4, repeat: Infinity }} />
+                        ))}
+
+                        <div className="relative z-10 flex flex-col items-center text-center px-4 md:px-6 max-w-5xl">
+                        <motion.div initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}>
+                            <Shield className="w-24 h-24 md:w-36 md:h-36 text-[#DA291C] mb-6 md:mb-8 drop-shadow-[0_0_40px_rgba(218,41,28,0.6)]" />
+                        </motion.div>
+                        <div className="overflow-hidden">
+                            <motion.h1 initial={{ y: 120 }} animate={{ y: 0 }} className="text-6xl sm:text-[92px] lg:text-[110px] font-black uppercase tracking-[-3px] sm:tracking-[-6.5px] leading-[0.85] mb-4 text-white">
+                            UNITED<br />ROAD
+                            </motion.h1>
+                        </div>
+                        <motion.div initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} className="inline-flex items-center gap-2 md:gap-3 bg-[#111] border border-[#FFD700]/30 text-[#FFD700] px-6 md:px-8 py-2 md:py-2.5 text-[10px] md:text-sm font-black tracking-[3px] md:tracking-[4.5px] uppercase mb-10 md:mb-14 -skew-x-12 shadow-lg">
+                            THE SOUND OF OLD TRAFFORD
+                        </motion.div>
+                        <motion.button onClick={handleEnter} whileHover={{ scale: 1.02 }} className="group relative w-full sm:w-auto px-8 sm:px-16 py-5 sm:py-6 bg-[#DA291C] text-white font-black text-sm sm:text-lg tracking-[2px] sm:tracking-[3px] uppercase flex items-center justify-center gap-3 sm:gap-4 shadow-[0_0_30px_rgba(218,41,28,0.5)] active:scale-[0.985] rounded-xl sm:rounded-none transition-colors hover:bg-red-700 border border-red-500">
+                            ENTER THE THEATRE <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6 group-hover:translate-x-1" />
+                        </motion.button>
+                        <p className="mt-8 md:mt-10 text-[9px] md:text-[10px] text-white/50 tracking-[3px] md:tracking-[3.5px] font-bold">265,000+ FANS • TURN VOLUME UP</p>
+                        </div>
+                    </motion.div>
+                    )}
+                </AnimatePresence>
+
+                {/* NAV (Dark Theme) */}
+                <nav className={`fixed w-full z-50 transition-all duration-500 ${scrolled ? 'bg-[#050505]/95 backdrop-blur-2xl border-b border-white/10 shadow-lg' : 'bg-transparent'}`}>
+                    <div className="max-w-[1680px] mx-auto px-5 md:px-10 h-16 md:h-20 flex items-center justify-between">
+                    <div onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="flex items-center gap-3 md:gap-4 cursor-pointer group">
+                        <div className="w-9 h-9 md:w-11 md:h-11 bg-[#DA291C] flex items-center justify-center text-white -skew-x-12 rounded-sm md:rounded-none shadow-sm"><Music className="w-4 h-4 md:w-5 md:h-5 skew-x-12" /></div>
+                        <div><div className="font-black text-xl md:text-3xl tracking-[-1px] md:tracking-[-1.5px] text-white">UNITED ROAD</div><div className="text-[8px] md:text-[9px] text-[#FFD700] font-bold -mt-1">EST 2024</div></div>
+                    </div>
+
+                    <div className="hidden md:flex items-center gap-10 text-sm font-black tracking-[1.5px]">
+                        {[{id:'legacy',label:'Legacy'},{id:'news',label:'News'},{id:'vault',label:'The Vault'},{id:'community',label:'Hub'},{id:'oracle',label:'Oracle'}].map(item => (
+                        <a key={item.id} href={`#${item.id}`} className={`relative hover:text-[#DA291C] transition-colors ${activeSection === item.id ? 'text-[#DA291C]' : 'text-white/80'}`}>
+                            {item.label}
+                            {activeSection === item.id && <motion.div layoutId="nav-underline" className="absolute -bottom-1 left-0 h-[2px] w-full bg-[#DA291C]" />}
+                        </a>
+                        ))}
+                    </div>
+
+                    <div className="flex items-center gap-4">
+                        <div className="hidden sm:flex items-center gap-1 bg-[#111] rounded-full p-1 border border-white/10">
+                        {socialLinks.slice(0,2).map((s,i) => <a key={i} href={s.href} target="_blank" className={`p-2.5 transition-colors ${s.color}`}>{s.icon}</a>)}
+                        </div>
+                        <button onClick={() => setIsNavOpen(!isNavOpen)} className={`md:hidden w-10 h-10 flex items-center justify-center rounded-lg active:scale-95 transition-all ${scrolled ? 'bg-white/10 text-white' : 'bg-black/40 text-white backdrop-blur border border-white/10'}`}>{isNavOpen ? <X size={22} /> : <Menu size={22} />}</button>
+                    </div>
+                    </div>
+
+                    <AnimatePresence>
+                    {isNavOpen && (
+                        <motion.div initial={{opacity:0, y:-10}} animate={{opacity:1, y:0}} exit={{opacity:0, y:-10}} className="md:hidden bg-[#0A0A0A] border-b border-white/10 shadow-2xl absolute top-full left-0 w-full z-40">
+                        <div className="px-5 py-6 flex flex-col gap-2 text-base font-black">
+                            {['legacy','news','vault','community','oracle'].map((id,idx) => (
+                            <a key={idx} href={`#${id}`} onClick={() => setIsNavOpen(false)} className="py-3 px-4 rounded-xl bg-white/5 flex justify-between text-white hover:text-[#DA291C] active:bg-white/10 transition-colors">{id.toUpperCase()} <ChevronRight className="opacity-40 w-5 h-5"/></a>
+                            ))}
+                        </div>
+                        </motion.div>
+                    )}
+                    </AnimatePresence>
+                </nav>
+
+                {/* HERO (Dark Red Gradient Theme) */}
+                <section id="hero" className="relative min-h-[100dvh] flex items-center justify-center pt-20 border-b border-white/10 bg-gradient-to-b from-[#0A0A0A] to-[#1a0505]">
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(218,41,28,0.15)_0%,transparent_50%)]"></div>
+                    <div className="max-w-[1100px] mx-auto px-5 text-center relative z-10">
+                    <div className="inline-flex items-center gap-2 bg-[#DA291C]/10 px-4 md:px-5 py-1.5 md:py-1 rounded-full mb-6 md:mb-8 border border-[#DA291C]/30 shadow-sm backdrop-blur">
+                        <div className="w-1.5 h-1.5 md:w-2 md:h-2 bg-[#DA291C] rounded-full animate-pulse"></div>
+                        <span className="text-[10px] md:text-xs font-black tracking-[2px] md:tracking-[3px] text-white/90">OFFICIAL ANTHEM • 300K+ STREAMS</span>
+                    </div>
+                    <h1 className="text-5xl sm:text-[92px] lg:text-[110px] font-black uppercase tracking-[-2px] sm:tracking-[-5.5px] leading-[0.9] md:leading-[0.82] mb-6 text-white drop-shadow-sm">
+                        TAKE ME<br />HOME,<br /><span className="text-[#DA291C]">UNITED ROAD</span>
+                    </h1>
+                    <p className="max-w-md mx-auto text-lg sm:text-2xl md:text-3xl text-white/70 font-medium tracking-tight mb-10 md:mb-16">The soundtrack of the Theatre of Dreams.<br />Written by the fans. Sung by the world.</p>
+                    <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center">
+                        <motion.a href="#vault" onClick={(e) => {e.preventDefault(); document.getElementById('vault').scrollIntoView({behavior:'smooth'})}} className="group px-8 sm:px-14 py-4 md:py-5 bg-[#DA291C] text-white font-black text-xs md:text-sm tracking-[2px] md:tracking-[2.5px] flex items-center justify-center gap-3 hover:bg-red-700 active:scale-[0.985] rounded-xl sm:rounded-none shadow-[0_0_20px_rgba(218,41,28,0.3)] transition-all" whileHover={{scale:1.01}}>ENTER THE VAULT <Play className="w-3 h-3 md:w-4 md:h-4 fill-current"/></motion.a>
+                        <motion.button onClick={() => document.getElementById('oracle').scrollIntoView({behavior:'smooth'})} className="px-8 sm:px-10 py-4 md:py-5 border border-white/20 hover:bg-white/10 hover:border-white/40 text-white font-black text-xs md:text-sm tracking-[2px] md:tracking-[2.5px] flex items-center justify-center gap-3 active:scale-[0.985] rounded-xl sm:rounded-none shadow-sm transition-all bg-black/50 backdrop-blur">ASK THE ORACLE</motion.button>
+                    </div>
+                    </div>
+                    <motion.div animate={{y:[0,8,0]}} transition={{duration:2.5,repeat:Infinity}} className="absolute bottom-8 md:bottom-12 text-[9px] md:text-[10px] tracking-[4px] text-white/30 font-bold flex flex-col items-center">SCROLL TO BEGIN <ChevronRight className="rotate-90 mt-1 w-4 h-4"/></motion.div>
+                </section>
+
+                {/* LEGACY STATS (PREMIUM NEWTON HEATH PLAQUES) */}
+                <section id="legacy" className="py-20 md:py-28 bg-[#02331F] border-y border-[#FFD700]/20 relative overflow-hidden">
+                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(255,215,0,0.05)_0%,transparent_70%)] pointer-events-none"></div>
+                    <div className="max-w-[1680px] mx-auto px-5 md:px-10 relative z-10">
+                        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6 mb-12 md:mb-20">
+                            <div>
+                                <div className="uppercase tracking-[3px] md:tracking-[4px] text-[#FFD700] text-xs md:text-sm font-black mb-2 md:mb-3">THE NEWTON HEATH ROOTS</div>
+                                <h2 className="text-5xl md:text-7xl font-black tracking-tighter text-white">Our Legacy</h2>
+                            </div>
+                            <p className="md:ml-auto max-w-sm text-base md:text-xl text-white/70 font-medium">The most decorated club in English football history. Icons made here.</p>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+                            {LEGACY_STATS.map((stat, index) => (
+                            <motion.div key={index} initial={{opacity:0,y:40}} whileInView={{opacity:1,y:0}} viewport={{once:true}} transition={{delay:index*0.1}} className="group relative bg-gradient-to-b from-[#034A2F] to-[#012616] rounded-3xl p-6 md:p-8 border border-[#FFD700]/20 shadow-[0_10px_30px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col justify-between h-[220px] md:h-[280px]">
+                                
+                                {/* Background Glow & Icon */}
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-[#FFD700]/10 rounded-full blur-[40px] group-hover:bg-[#FFD700]/20 transition-all duration-700 pointer-events-none"></div>
+                                <div className="absolute top-6 right-6 text-[#FFD700]/30 group-hover:text-[#FFD700]/80 group-hover:scale-110 transition-all duration-500">
+                                    <stat.icon className="w-10 h-10 md:w-12 md:h-12"/>
+                                </div>
+                                
+                                {/* Numbers & Label */}
+                                <div className="relative z-10 mt-auto md:mt-0">
+                                    <div className="text-5xl sm:text-6xl md:text-[80px] font-black text-white tabular-nums tracking-[-2px] md:tracking-[-4px] leading-none mb-2 drop-shadow-lg"><AnimatedCounter end={stat.number}/>{stat.suffix}</div>
+                                    <div className="text-lg md:text-2xl font-black tracking-tight text-[#FFD700] mb-4">{stat.label}</div>
+                                </div>
+
+                                {/* Premium Name Badge */}
+                                <div className="relative z-10 inline-flex items-center gap-2 bg-black/40 backdrop-blur-sm w-fit px-3 md:px-4 py-1.5 md:py-2 rounded-lg border border-[#FFD700]/10 mt-auto group-hover:border-[#FFD700]/30 transition-colors">
+                                    <div className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-[#FFD700]"></div>
+                                    <span className="text-[10px] md:text-xs font-bold text-white/90 tracking-widest uppercase">{stat.sub}</span>
+                                </div>
+                            </motion.div>
+                            ))}
+                        </div>
+                    </div>
+                </section>
+
+                {/* LIVE NEWS SECTION (Dark Gray & Red) */}
+                <section id="news" className="py-20 md:py-24 bg-[#0A0A0A]">
+                    <div className="max-w-[1680px] mx-auto px-5 md:px-10">
+                    <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 md:mb-12 gap-4">
+                        <div>
+                        <div className="flex items-center gap-3 md:gap-4 mb-2 md:mb-3"><div className="w-3 md:w-4 h-8 md:h-10 bg-[#DA291C] rounded-sm md:rounded-none"></div><span className="uppercase tracking-[2px] md:tracking-[3px] text-[10px] md:text-xs font-black text-[#FFD700] flex items-center gap-2"><div className="w-1.5 h-1.5 md:w-2 md:h-2 bg-[#DA291C] rounded-full animate-pulse"></div> LIVE FROM CARRINGTON</span></div>
+                        <h2 className="text-4xl md:text-[72px] font-black tracking-tighter text-white">Latest News</h2>
+                        </div>
+                        <a href="https://www.bbc.co.uk/sport/football/teams/manchester-united" target="_blank" className="inline-flex md:flex items-center gap-2 text-xs md:text-sm font-black tracking-widest text-[#FFD700] hover:text-white group bg-white/5 md:bg-transparent px-4 py-2 md:p-0 rounded-full md:rounded-none w-fit border border-white/10 md:border-none transition-colors">VIEW ALL <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform"/></a>
+                    </div>
+                    
+                    {newsLoading ? (
+                        <div className="h-[400px] md:h-[560px] flex items-center justify-center border border-white/10 bg-[#111] rounded-3xl md:rounded-none">
+                            <div className="flex flex-col items-center text-white/50">
+                                <div className="w-8 h-8 border-4 border-[#DA291C] border-t-transparent rounded-full animate-spin mb-4"></div>
+                                <div className="text-xs tracking-widest font-black uppercase">Fetching Latest Stories...</div>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="flex flex-col lg:grid lg:grid-cols-12 gap-5">
+                            
+                            {/* Main Featured Article */}
+                            <motion.a href={newsItems[0]?.link} target="_blank" className="lg:col-span-7 relative min-h-[400px] lg:h-[560px] group overflow-hidden border border-white/10 flex flex-col justify-end rounded-3xl lg:rounded-none w-full flex-shrink-0 shadow-lg" whileHover={{scale:1.005}}>
+                                <img src={newsItems[0]?.img} alt="" className="absolute inset-0 w-full h-full object-cover brightness-[0.6] group-hover:scale-105 transition-transform duration-700"/>
+                                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-transparent"/>
+                                <div className="relative p-6 md:p-14 max-w-3xl z-10 mt-auto text-white">
+                                    <div className="flex items-center gap-2 md:gap-3 text-[10px] md:text-xs tracking-[1px] md:tracking-[2px] font-black text-white mb-3 md:mb-4 bg-[#DA291C] px-3 py-1 w-fit rounded-sm shadow-sm">{newsItems[0]?.source} • {newsItems[0]?.date}</div>
+                                    <h3 className="text-2xl sm:text-4xl md:text-[52px] leading-[1.1] md:leading-[1.05] font-black tracking-tight md:tracking-[-1px] mb-3 md:mb-4 drop-shadow-sm">{newsItems[0]?.title}</h3>
+                                    <p className="text-sm md:text-xl text-white/70 line-clamp-3 md:line-clamp-none md:pr-8">{newsItems[0]?.desc}</p>
+                                </div>
+                                <div className="absolute top-4 right-4 md:top-6 md:right-6 px-3 py-1.5 md:px-4 md:py-2 bg-black/60 text-white shadow-lg text-[9px] sm:text-xs font-black tracking-widest flex items-center gap-1.5 md:gap-2 group-hover:bg-[#DA291C] transition-colors z-20 rounded-full md:rounded-none border border-white/10 md:border-none backdrop-blur">FULL STORY <ExternalLink className="w-3 h-3"/></div>
+                            </motion.a>
+                            
+                            {/* Side Articles */}
+                            <div className="lg:col-span-5 flex lg:flex-col overflow-x-auto lg:overflow-visible gap-4 md:gap-5 pb-4 lg:pb-0 snap-x snap-mandatory scrollbar-hide -mx-5 px-5 lg:mx-0 lg:px-0">
+                            {newsItems.slice(1,5).map((news,i) => (
+                                <motion.a key={i} href={news.link} target="_blank" className="group w-[80vw] sm:w-[300px] lg:w-full flex-shrink-0 snap-center bg-[#111] p-5 md:p-8 border-l-4 border-[#DA291C]/70 hover:border-[#DA291C] flex flex-col justify-center transition-all active:scale-[0.995] rounded-2xl lg:rounded-none h-[140px] md:h-auto shadow-sm border border-white/5" whileHover={{x:6}}>
+                                    <div className="flex justify-between text-[9px] md:text-xs mb-2 md:mb-3"><span className="font-black text-[#FFD700] tracking-widest uppercase">{news.source}</span><span className="text-white/40 font-bold uppercase">{news.date}</span></div>
+                                    <h4 className="font-black text-base md:text-2xl tracking-tight leading-tight text-white group-hover:text-[#DA291C] line-clamp-2 md:line-clamp-3 transition-colors">{news.title}</h4>
+                                </motion.a>
+                            ))}
+                            </div>
+                        </div>
+                    )}
+                    </div>
+                </section>
+
+                {/* VAULT - ENHANCED YOUTUBE GALLERY (Deep Dark Red Theme) */}
+                <section id="vault" className="py-20 md:py-24 bg-[#0A0A0A] border-y border-white/10 relative overflow-hidden">
+                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom,rgba(218,41,28,0.1)_0%,transparent_70%)] pointer-events-none"></div>
+                    <div className="max-w-[1680px] mx-auto px-5 md:px-10 relative z-10">
+                    <div className="flex flex-col md:flex-row items-start md:items-end gap-4 md:gap-8 mb-10 md:mb-14">
+                        <div className="flex-1">
+                            <div className="uppercase text-[#DA291C] tracking-[2.5px] md:tracking-[3.5px] text-[10px] md:text-sm font-black mb-2 md:mb-4">COMPLETE ACCESS</div>
+                            <h2 className="text-5xl md:text-[82px] font-black tracking-[-1.5px] md:tracking-[-3.2px] leading-none text-white">The Vault</h2>
+                        </div>
+                        <p className="max-w-xs text-sm md:text-xl text-white/60 font-medium">Every track. Every video. Every chant. All in one place.</p>
+                    </div>
+
+                    <div className="flex overflow-x-auto scrollbar-hide border-b border-white/10 mb-6 md:mb-8 -mx-5 px-5 md:mx-0 md:px-0">
+                        {[{id:'watch',label:'WATCH',icon:Play},{id:'listen',label:'LISTEN',icon:Music},{id:'sing',label:'SING ALONG',icon:Volume2}].map(tab => (
+                        <button key={tab.id} onClick={() => setVaultTab(tab.id)} className={`flex-shrink-0 md:flex-none px-6 md:px-10 py-4 md:py-5 text-xs md:text-sm font-black tracking-[1.5px] md:tracking-[2px] flex items-center justify-center gap-2 md:gap-3 border-b-4 transition-all ${vaultTab === tab.id ? 'border-[#DA291C] text-[#DA291C]' : 'border-transparent text-white/40 hover:text-white/80'}`}>
+                            <tab.icon className="w-3 h-3 md:w-4 md:h-4"/> {tab.label}
+                        </button>
+                        ))}
+                    </div>
+
+                    <AnimatePresence mode="wait">
+                        {vaultTab === 'watch' && (
+                        <motion.div key="watch" initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-20}} className="bg-black border border-white/10 rounded-3xl md:rounded-none overflow-hidden flex flex-col shadow-2xl">
+                            
+                            {/* Main Active Player with Strict Sandbox to prevent breakout! */}
+                            <div className="aspect-video w-full bg-black relative">
+                                <iframe className="absolute inset-0 w-full h-full" src={`https://www.youtube-nocookie.com/embed/${activeVideoId}?autoplay=0&rel=0`} title="YouTube Player" allowFullScreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" sandbox="allow-scripts allow-same-origin allow-presentation"/>
+                            </div>
+                            
+                            {/* Dynamic Playlist Fetch Gallery */}
+                            <div className="p-5 md:p-6 bg-[#111] border-t border-white/5">
+                                <div className="flex items-center justify-between mb-4">
+                                    <h4 className="font-black text-sm md:text-base tracking-tight text-white">United Road Music</h4>
+                                    <a href={LINKS.youtubeUrl} target="_blank" className="text-[10px] md:text-xs font-bold text-[#DA291C] hover:text-[#FFD700] uppercase tracking-widest border border-white/10 hover:border-[#FFD700] px-3 py-1 rounded-full transition-colors bg-black shadow-sm">Subscribe</a>
+                                </div>
+                                <div className="flex overflow-x-auto gap-4 scrollbar-hide snap-x snap-mandatory pb-2">
+                                    {ytVideos.map((v, idx) => (
+                                        <div key={`${v.id}-${idx}`} onClick={() => setActiveVideoId(v.id)} className={`w-[220px] md:w-[280px] flex-shrink-0 cursor-pointer snap-start group transition-opacity ${activeVideoId === v.id ? 'opacity-100' : 'opacity-70 hover:opacity-100'}`}>
+                                            <div className="aspect-video bg-black rounded-xl overflow-hidden mb-3 relative border border-white/10 shadow-sm group-hover:border-[#DA291C] transition-all">
+                                                <img src={v.thumb} className="w-full h-full object-cover group-hover:scale-105 transition duration-500" alt={v.title} onError={(e) => { e.target.src = "https://images.unsplash.com/photo-1508344928928-7165b67de128?auto=format&fit=crop&w=600&q=80" }}/>
+                                                <div className="absolute inset-0 bg-black/40 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+                                                    <Play className={`w-8 h-8 md:w-10 md:h-10 text-white drop-shadow-lg transition-transform ${activeVideoId === v.id ? 'scale-110 text-[#DA291C]' : 'group-hover:scale-110'}`} fill={activeVideoId === v.id ? '#DA291C' : 'currentColor'}/>
+                                                </div>
+                                            </div>
+                                            <h5 className="text-xs md:text-sm font-bold line-clamp-2 leading-tight text-white group-hover:text-[#FFD700] transition-colors">{v.title}</h5>
+                                            <p className="text-[9px] md:text-[10px] text-white/40 mt-1 uppercase tracking-wider font-bold">{v.date}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </motion.div>
+                        )}
+                        {vaultTab === 'listen' && (
+                        <motion.div key="listen" initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-20}} className="bg-black border border-[#1DB954]/30 rounded-3xl md:rounded-none p-2 md:p-3 h-[400px] md:h-[680px] shadow-sm">
+                            <iframe className="w-full h-full rounded-2xl md:rounded-none" src={LINKS.spotifyEmbed} title="Spotify" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"/>
+                        </motion.div>
+                        )}
+                        {vaultTab === 'sing' && (
+                        <motion.div key="sing" initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-20}} className="bg-[#DA291C] border border-red-800 rounded-3xl md:rounded-none p-6 md:p-16 relative overflow-hidden shadow-xl text-white">
+                            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.1)_0%,transparent_60%)] pointer-events-none"></div>
+                            <div className="max-w-3xl mx-auto text-center relative z-10">
+                            <div className="text-white/80 text-[9px] md:text-xs tracking-[3px] md:tracking-[4px] font-black mb-3 md:mb-4 bg-black/20 w-fit mx-auto px-4 py-1.5 rounded-full">OFFICIAL MATCHDAY ANTHEM</div>
+                            <h3 className="text-3xl md:text-7xl font-black tracking-tight md:tracking-tighter mb-8 md:mb-10 drop-shadow-sm">Take Me Home, United Road</h3>
+                            <button onClick={toggleChantMode} className="mb-10 md:mb-14 mx-auto flex items-center gap-2 md:gap-4 px-5 md:px-9 py-3 md:py-4 bg-white hover:bg-gray-100 text-[#DA291C] font-black tracking-widest text-[9px] md:text-sm transition-all active:scale-95 rounded-full md:rounded-none shadow-lg">
+                                {isPlayingChant ? <>STOP SINGING <div className="w-1.5 h-1.5 md:w-2 md:h-2 bg-[#DA291C] animate-pulse rounded-full"/></> : <>START SINGING ALONG <Volume2 className="w-3 h-3 md:w-5 md:h-5"/></>}
+                            </button>
+                            <div className="font-serif text-[18px] md:text-[34px] leading-[1.5] md:leading-[1.4] tracking-[-0.2px] md:tracking-[-0.3px] text-white/90 max-w-[620px] mx-auto">
+                                {chantLines.map((line, idx) => (
+                                <div key={idx} className={`transition-all duration-300 py-1 ${currentLyricIndex === idx ? 'text-white scale-[1.02] font-bold drop-shadow-md' : 'text-white/50'}`}>{line || <span className="opacity-40">•</span>}</div>
+                                ))}
+                            </div>
+                            <div className="mt-10 md:mt-12 flex justify-center">
+                                <button onClick={handleCopy} className="flex items-center gap-1.5 md:gap-2 text-[9px] md:text-xs tracking-widest text-white hover:text-[#FFD700] transition bg-black/20 hover:bg-black/40 px-5 py-2.5 rounded-full backdrop-blur font-bold shadow-sm border border-white/10">{copied ? <CheckCircle className="text-[#1DB954] w-3 h-3 md:w-4 md:h-4"/> : <Copy className="w-3 h-3 md:w-4 md:h-4"/>} COPY LYRICS</button>
+                            </div>
+                            </div>
+                        </motion.div>
+                        )}
+                    </AnimatePresence>
+                    </div>
+                </section>
+
+                {/* COMMUNITY (Dark & Red/Gold) */}
+                <section id="community" className="py-20 md:py-24 bg-[#050505]">
+                    <div className="max-w-[1680px] mx-auto px-5 md:px-10">
+                    <div className="flex items-center gap-3 md:gap-4 mb-10 md:mb-14">
+                        <div className="w-3 md:w-4 h-8 md:h-11 bg-[#DA291C] rounded-sm md:rounded-none"></div>
+                        <div><div className="text-[10px] md:text-xs tracking-[2px] md:tracking-[3px] text-[#FFD700] font-black">THE WIDER RED FAMILY</div><h2 className="text-4xl md:text-7xl font-black tracking-tighter text-white">United Hub</h2></div>
+                    </div>
+                    
+                    <div className="flex overflow-x-auto lg:grid lg:grid-cols-2 gap-4 md:gap-5 pb-4 lg:pb-0 snap-x snap-mandatory scrollbar-hide -mx-5 px-5 lg:mx-0 lg:px-0">
+                        {COMMUNITY_LINKS.map((item, index) => (
+                        <motion.a key={index} href={item.link} target="_blank" className="group w-[85vw] sm:w-[400px] lg:w-full flex-shrink-0 snap-center relative h-[380px] md:h-[520px] overflow-hidden flex flex-col justify-end bg-black border border-white/10 rounded-3xl lg:rounded-none shadow-sm" whileHover={{scale:1.015}}>
+                            <img src={item.img} alt={item.name} className="absolute inset-0 w-full h-full object-cover opacity-50 group-hover:opacity-80 transition-all duration-700 scale-[1.08] group-hover:scale-100"/>
+                            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/90 to-transparent"/>
+                            <div className="relative p-6 md:p-10 z-10 text-white">
+                            <div className="uppercase text-white text-[9px] md:text-xs tracking-[2px] md:tracking-[3.5px] font-black mb-3 md:mb-4 bg-[#DA291C] w-fit px-3 py-1 rounded-sm shadow-sm">{item.tag}</div>
+                            <h4 className="text-3xl md:text-[42px] leading-none font-black tracking-tighter mb-3 md:mb-4 drop-shadow-sm">{item.name}</h4>
+                            <p className="text-white/70 text-sm md:text-[17px] max-w-[380px] mb-6 md:mb-8 line-clamp-2 md:line-clamp-none font-medium">{item.desc}</p>
+                            <div className="inline-flex items-center text-[10px] md:text-sm font-black tracking-widest bg-white/10 backdrop-blur border border-white/20 text-white px-5 md:px-8 py-2.5 md:py-3 group-hover:bg-[#DA291C] group-hover:border-[#DA291C] transition-colors rounded-full md:rounded-none shadow-md">VISIT CHANNEL <ExternalLink className="ml-2 md:ml-3 w-3 h-3 md:w-4 md:h-4"/></div>
+                            </div>
+                        </motion.a>
+                        ))}
+                    </div>
+                    <div className="text-center mt-10 md:mt-16 text-[9px] md:text-sm text-white/40 tracking-widest font-bold">MORE THAN A CLUB — A GLOBAL MOVEMENT</div>
+                    </div>
+                </section>
+
+                {/* ORACLE (Red, Black, Gold Premium Theme) */}
+                <section id="oracle" className="relative py-20 md:py-24 bg-gradient-to-b from-[#0A0A0A] to-[#1a0505] border-t border-white/10 overflow-hidden">
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(218,41,28,0.1)_0%,transparent_60%)] pointer-events-none"></div>
+                    
+                    <div className="max-w-[820px] mx-auto px-5 relative z-10">
+                    <div className="text-center mb-10 md:mb-16">
+                        <div className="mx-auto w-16 h-16 md:w-20 md:h-20 bg-[#DA291C] flex items-center justify-center mb-6 md:mb-8 rounded-2xl md:rounded-[20px] shadow-[0_10px_30px_rgba(218,41,28,0.4)] border border-red-500/30"><Shield className="w-8 h-8 md:w-10 md:h-10 text-white"/></div>
+                        <h2 className="text-4xl md:text-7xl font-black tracking-tighter mb-3 md:mb-4 text-white">THE RED ORACLE</h2>
+                        <p className="text-base md:text-2xl text-white/60 max-w-md mx-auto font-medium">Ask anything about Manchester United. History. Stats. Soul.</p>
+                    </div>
+                    
+                    <div className="bg-[#111] border border-[#DA291C]/30 shadow-[0_20px_50px_rgba(0,0,0,0.8)] flex flex-col h-[550px] md:h-[650px] rounded-[24px] md:rounded-[32px] overflow-hidden text-white relative">
+                        {/* Glow effect inside oracle */}
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-[#DA291C]/5 rounded-full blur-[80px] pointer-events-none"></div>
+
+                        {/* Header */}
+                        <div className="px-5 md:px-8 py-4 md:py-5 border-b border-white/10 flex items-center justify-between bg-black/60 backdrop-blur z-10">
+                            <div className="flex items-center gap-3 md:gap-4">
+                                <div className="w-2.5 h-2.5 md:w-3 md:h-3 bg-[#FFD700] rounded-full animate-pulse shadow-[0_0_10px_rgba(255,215,0,0.6)]"></div>
+                                <div>
+                                    <div className="font-black text-[10px] md:text-sm tracking-[1px] md:tracking-[1.5px] text-white uppercase">Knowledge Base</div>
+                                    <div className="text-[8px] md:text-[10px] text-[#DA291C] font-bold uppercase mt-0.5 tracking-wider">1900 — PRESENT • 20 TITLES</div>
+                                </div>
+                            </div>
+                            <div className="hidden sm:block text-[9px] md:text-[10px] font-bold text-white/40">POWERED BY CLUB HISTORY</div>
+                        </div>
+
+                        {/* Chat Window */}
+                        <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-5 md:space-y-8 bg-transparent oracle-scroll z-10 relative">
+                        {chatHistory.map((msg, i) => (
+                            <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                <div className={`max-w-[90%] md:max-w-[80%] px-5 md:px-7 py-3.5 md:py-5 text-sm md:text-[15px] leading-relaxed font-medium rounded-2xl md:rounded-3xl shadow-sm border ${msg.role === 'user' ? 'bg-white text-black border-white rounded-br-sm' : 'bg-black/60 border-white/10 text-white/90 rounded-bl-sm backdrop-blur'}`}>{msg.text}</div>
+                            </div>
+                        ))}
+                        {isOracleThinking && (
+                            <div className="flex justify-start">
+                                <div className="bg-black/60 border border-white/10 px-5 md:px-6 py-4 md:py-5 flex items-center gap-3 md:gap-4 rounded-3xl rounded-bl-sm shadow-sm backdrop-blur">
+                                    <div className="flex gap-1.5">
+                                        {[0,1,2].map(i => <div key={i} className="w-1.5 h-1.5 md:w-2 md:h-2 bg-[#FFD700]/80 rounded-full animate-bounce" style={{animationDelay: `${i*150}ms`}}/>)}
+                                    </div>
+                                    <span className="text-[9px] md:text-xs text-white/50 font-bold tracking-widest uppercase">Consulting Archives</span>
+                                </div>
+                            </div>
+                        )}
+                        <div ref={chatEndRef}/>
+                        </div>
+
+                        {/* Suggested Prompts */}
+                        <div className="px-4 md:px-5 pt-3 md:pt-4 pb-2 flex overflow-x-auto gap-2 border-t border-white/10 bg-black/60 scrollbar-hide snap-x z-10 relative backdrop-blur">
+                        {SUGGESTED_PROMPTS.map((prompt, i) => (
+                            <button key={i} onClick={() => handleSuggestedPrompt(prompt)} className="flex-shrink-0 snap-start text-[10px] md:text-xs font-bold text-white/70 bg-white/5 hover:bg-white/10 hover:text-[#FFD700] px-3 md:px-4 py-2 rounded-full transition-all active:scale-95 border border-white/10 shadow-sm">{prompt}</button>
+                        ))}
+                        </div>
+
+                        {/* Input Area */}
+                        <div className="p-3 md:p-5 bg-black/80 border-t border-white/10 backdrop-blur z-10 relative">
+                        <form onSubmit={handleOracleSubmit} className="flex gap-2 md:gap-3">
+                            <input type="text" value={oracleInput} onChange={(e) => setOracleInput(e.target.value)} placeholder="Ask about United..." disabled={isOracleThinking} className="flex-1 bg-[#111] border border-[#DA291C]/30 focus:border-[#DA291C] px-4 md:px-7 py-3 md:py-4 text-sm md:text-base outline-none placeholder:text-white/30 font-medium text-white rounded-full md:rounded-[20px] shadow-inner transition-all"/>
+                            <button type="submit" disabled={!oracleInput.trim() || isOracleThinking} className="px-5 md:px-9 bg-[#DA291C] disabled:bg-red-900/50 text-white font-black text-xs md:text-sm tracking-widest rounded-full md:rounded-[20px] flex items-center justify-center hover:bg-red-700 active:scale-95 shadow-[0_0_15px_rgba(218,41,28,0.4)] transition-all"><Send className="w-4 h-4 md:w-5 md:h-5"/></button>
+                        </form>
+                        </div>
+                    </div>
+                    </div>
+                </section>
+
+                {/* FLOATING CONTROLS (Dark Premium Theme) */}
+                <AnimatePresence>
+                    {hasEntered && (
+                    <motion.div initial={{y:120,opacity:0}} animate={{y:0,opacity:1}} className="fixed bottom-4 right-4 md:bottom-6 md:right-6 z-[90] flex flex-col items-end gap-3 pointer-events-none">
+                        
+                        {/* Scroll to Top */}
+                        <motion.button onClick={() => window.scrollTo({top:0,behavior:'smooth'})} whileHover={{scale:1.1}} className="pointer-events-auto w-10 h-10 md:w-12 md:h-12 bg-[#111] backdrop-blur border border-white/10 shadow-[0_5px_20px_rgba(0,0,0,0.5)] flex items-center justify-center text-white/50 hover:text-[#DA291C] transition-colors rounded-full"><ChevronRight className="rotate-[-90deg] w-4 h-4 md:w-5 md:h-5"/></motion.button>
+                        
+                        {/* Compact Audio Player */}
+                        <div className="pointer-events-auto bg-[#0A0A0A]/95 border border-[#DA291C]/30 shadow-[0_15px_40px_rgba(0,0,0,0.9)] backdrop-blur-2xl flex items-center gap-3 md:gap-4 p-1.5 pr-4 md:pr-7 rounded-full md:rounded-[30px] max-w-[85vw] md:max-w-none">
+                            <button onClick={toggleMute} className="flex-shrink-0 w-12 h-12 md:w-14 md:h-14 bg-[#111] text-white flex items-center justify-center rounded-full md:rounded-2xl hover:bg-[#DA291C] active:scale-95 transition-all shadow-md border border-white/5">
+                                {isMuted ? <VolumeX className="w-5 h-5 md:w-6 md:h-6"/> : <Volume2 className="w-5 h-5 md:w-6 md:h-6"/>}
+                            </button>
+                            <div className="flex-1 min-w-0 pr-1 md:pr-2">
+                                <div className="text-[8px] md:text-[9px] font-black tracking-[2px] md:tracking-[2.5px] text-[#FFD700] uppercase truncate">Now Playing</div>
+                                <div className="text-xs md:text-sm font-black -mt-0.5 tracking-tight text-white truncate">Take Me Home, United Road</div>
+                            </div>
+                            <div ref={audioBarsRef} className="flex-shrink-0 flex items-end h-4 md:h-5 gap-[2px] md:gap-[3px] ml-1">
+                                {[1,2,3,4].map((_,i) => <div key={i} className="audio-bar w-[2.5px] md:w-[3.5px] bg-[#DA291C] rounded-full" style={{animationDelay: `${i*130}ms`, height: isMuted ? '5px' : undefined}}/>)}
+                            </div>
+                        </div>
+
+                    </motion.div>
+                    )}
+                </AnimatePresence>
+
+                {/* FOOTER (Bold Red & Black) */}
+                <footer className="bg-black pt-16 md:pt-20 pb-10 md:pb-12 border-t border-[#DA291C]/30 text-white relative overflow-hidden">
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-3xl h-1 bg-gradient-to-r from-transparent via-[#DA291C] to-transparent"></div>
+                    <div className="max-w-[1680px] mx-auto px-5 md:px-10 grid md:grid-cols-12 gap-y-10 md:gap-y-16 relative z-10">
+                    <div className="md:col-span-5 text-center md:text-left">
+                        <div className="flex items-center justify-center md:justify-start gap-3 md:gap-4 mb-5 md:mb-8"><div className="w-10 h-10 md:w-12 md:h-12 bg-[#DA291C] flex items-center justify-center -skew-x-12 rounded-sm md:rounded-none shadow-[0_0_20px_rgba(218,41,28,0.4)]"><Music className="skew-x-12 text-white w-5 h-5 md:w-6 md:h-6"/></div><div className="font-black text-3xl md:text-5xl tracking-tight md:tracking-tighter drop-shadow-sm">UNITED ROAD</div></div>
+                        <p className="max-w-md mx-auto md:mx-0 text-base md:text-xl text-white/60 font-medium">The official home of Manchester United’s matchday anthem. Written by the fans. For the fans.</p>
+                        <div className="mt-6 md:mt-10 flex justify-center md:justify-start gap-3 md:gap-4">{socialLinks.map((s,i) => <a key={i} href={s.href} target="_blank" className="w-10 h-10 md:w-12 md:h-12 bg-white/5 flex items-center justify-center text-white/70 hover:text-white hover:bg-[#DA291C] hover:border-[#DA291C] transition-all rounded-full md:rounded-xl border border-white/10 shadow-sm">{s.icon}</a>)}</div>
+                    </div>
+                    <div className="md:col-span-3 text-center md:text-left hidden md:block">
+                        <div className="uppercase text-[10px] md:text-xs tracking-[3px] text-[#FFD700] mb-5 md:mb-6 font-black drop-shadow-sm">EXPLORE</div>
+                        <div className="space-y-3 text-sm md:text-lg font-bold">{['The Vault','Red Oracle','United Hub','Latest News'].map((l,i) => <a key={i} href={`#${['vault','oracle','community','news'][i]}`} className="block text-white/70 hover:text-white hover:translate-x-1 hover:text-[#DA291C] transition-all">{l}</a>)}</div>
+                    </div>
+                    <div className="md:col-span-4">
+                        <div className="uppercase text-[10px] md:text-xs tracking-[3px] text-[#FFD700] mb-4 md:mb-6 font-black text-center md:text-left drop-shadow-sm">STAY IN THE LOOP</div>
+                        <div className="flex flex-col sm:flex-row gap-2 sm:gap-0 max-w-sm mx-auto md:mx-0 shadow-[0_0_20px_rgba(218,41,28,0.15)] rounded-full sm:rounded-r-none sm:rounded-l-full overflow-hidden border border-[#DA291C]/50">
+                            <input type="text" placeholder="Your email" className="flex-1 bg-[#111] px-5 md:px-6 py-3.5 md:py-4 text-sm focus:outline-none text-white placeholder:text-white/40 font-medium"/>
+                            <button onClick={() => { setSubscribed(true); triggerConfetti(); }} className="bg-[#DA291C] px-6 md:px-8 py-3.5 md:py-0 font-black text-xs md:text-sm tracking-widest hover:bg-red-700 transition-colors text-white">
+                                {subscribed ? 'JOINED!' : 'JOIN'}
+                            </button>
+                        </div>
+                        <div className="text-[9px] md:text-[10px] text-white/40 mt-3 tracking-widest text-center md:text-left font-bold">We respect your inbox. Unsubscribe anytime.</div>
+                    </div>
+                    </div>
+                    <div className="mt-12 md:mt-24 pt-6 md:pt-8 border-t border-white/5 text-center text-[8px] md:text-xs text-white/30 tracking-[2px] font-bold">© {new Date().getFullYear()} THE UNITED ROAD • MANCHESTER, ENGLAND • BUILT WITH ❤️ FOR THE REDS</div>
+                </footer>
+
+                {/* CONFETTI */}
+                <AnimatePresence>
+                    {showConfetti && <div className="fixed inset-0 z-[300] pointer-events-none">{Array.from({length:38}).map((_,i) => <motion.div key={i} className="absolute w-2 h-2 md:w-3 md:h-3 bg-[#FFD700] rounded-full" initial={{left:`${Math.random()*100}%`,top:`-20px`,scale:Math.random()*0.8+0.6}} animate={{top:`${80+Math.random()*40}%`,left:`${Math.random()*100}%`,opacity:[1,0.9,0],rotate:Math.random()*280-40}} transition={{duration:1.8+Math.random(),ease:"easeOut",delay:Math.random()*0.4}}/>)}</div>}
+                </AnimatePresence>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<UnitedRoadEnhanced />);
+    </script>
+</body>
+</html>
+
+
+```
