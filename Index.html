@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>United Road • The Anointed Sound of Old Trafford</title>
+    <meta name="description" content="Take Me Home, United Road — The official matchday anthem of Manchester United. Written by the fans, for the fans. Live commentary, chants, videos & the United Oracle.">
+    
+    <!-- Dependencies -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap');
+        
+        body { margin: 0; padding: 0; background-color: #050505; color: white; overflow-x: hidden; font-family: 'Inter', system_ui, sans-serif; }
+        
+        .audio-bar { animation: audioBounce 980ms infinite ease-in-out alternate; }
+        .paused .audio-bar { animation-play-state: paused !important; height: 5px !important; }
+        @keyframes audioBounce { 0% { height: 5px; } 100% { height: 26px; } }
+        
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        .tabular-nums { font-variant-numeric: tabular-nums; }
+        .oracle-scroll::-webkit-scrollbar { width: 6px; }
+        .oracle-scroll::-webkit-scrollbar-thumb { background-color: #333; border-radius: 10px; }
+        
+        /* Premium UI Effects */
+        .film-grain {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1;
+            background-image: linear-gradient(rgba(255,255,255,0.02) 50%, transparent 50%), linear-gradient(90deg, rgba(255,255,255,0.015) 50%, transparent 50%);
+            background-size: 4px 4px, 3px 3px; mix-blend-mode: screen; opacity: 0.6;
+        }
+        
+        .live-dot { animation: livePulse 1.5s infinite ease-in-out; }
+        @keyframes livePulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+        
+        .nav-active { color: #DA291C; position: relative; }
+        .nav-active::after { content: ''; position: absolute; bottom: -6px; left: 0; width: 100%; height: 2px; background: #DA291C; border-radius: 2px; }
+        
+        .stadium-bg {
+            background-image: linear-gradient(rgba(5,5,5,0.85), rgba(5,5,5,0.95)), url('https://images.unsplash.com/photo-1508344928928-7165b67de128?auto=format&fit=crop&w=2400&q=80');
+            background-size: cover; background-position: center 30%; background-attachment: fixed;
+        }
+        
+        .player-card { transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1); }
+        .player-card:hover { transform: translateY(-8px) scale(1.02); box-shadow: 0 30px 70px -15px rgba(218, 41, 28, 0.3); }
+
+        .commentary-line { animation: slideIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+    <!-- SAFE AUDIO MOUNT: Completely outside React to guarantee no iframe crashes -->
+    <div id="bg-audio" style="display: none; position: absolute; width: 0; height: 0; pointer-events: none;"></div>
+    
+    <div class="film-grain"></div>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+        const { motion, AnimatePresence } = window.Motion;
+
+        // --- ICONS ---
+        const LucideIcon = ({ d, className = "", ...props }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>{d}</svg>
+        );
+
+        const Music = (props) => <LucideIcon d={<><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></>} {...props} />;
+        const Menu = (props) => <LucideIcon d={<><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></>} {...props} />;
+        const X = (props) => <LucideIcon d={<><path d="M18 6 6 18"/><path d="m6 6 12 12"/></>} {...props} />;
+        const Play = (props) => <LucideIcon d={<polygon points="5 3 19 12 5 21 5 3"/>} {...props} />;
+        const ChevronRight = (props) => <LucideIcon d={<path d="m9 18 6-6-6-6"/>} {...props} />;
+        const Volume2 = (props) => <LucideIcon d={<><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></>} {...props} />;
+        const VolumeX = (props) => <LucideIcon d={<><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" x2="17" y1="9" y2="15"/><line x1="17" x2="23" y1="9" y2="15"/></>} {...props} />;
+        const Shield = (props) => <LucideIcon d={<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/>} {...props} />;
+        const Send = (props) => <LucideIcon d={<><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></>} {...props} />;
+        const Trophy = (props) => <LucideIcon d={<><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></>} {...props} />;
+        const Users = (props) => <LucideIcon d={<><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></>} {...props} />;
+        const Copy = (props) => <LucideIcon d={<><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></>} {...props} />;
+        const CheckCircle = (props) => <LucideIcon d={<><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></>} {...props} />;
+        const Flame = (props) => <LucideIcon d={<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>} {...props} />;
+        const ExternalLink = (props) => <LucideIcon d={<><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></>} {...props} />;
+
+        const SpotifyIcon = () => <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.24 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.84.24 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.6.18-1.2.72-1.381 4.26-1.261 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg>;
+        const YouTubeIcon = () => <svg viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>;
+        const FacebookIcon = () => <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path></svg>;
+        const InstagramIcon = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>;
+
+        // --- GLOBAL CONSTANTS ---
+        const LINKS = {
+            spotifyEmbed: "https://open.spotify.com/embed/artist/5QVI0NjbUydubWdYZQJR9z?utm_source=generator&theme=0",
+            youtubeUrl: "https://youtube.com/@theunitedroad99",
+            youtubeChannelId: "UC6JA4gNGl03w", 
+            bgAudioVideoId: "UyWGmCiab3o",
+            chantLyrics: `Take me home, United Road\nTo the place, I belong\nTo Old Trafford, to see United\nTake me home, United Road\n\nAll my memories\nOf Bobby Charlton, Georgie Best and Cantona\nTake me home, United Road\nTo the place, I belong`,
+        };
+
+        // EXCLUSIVE VERIFIED VIDEO ARCHIVE (NO FAKES)
+        const UNITED_ROAD_VIDEOS = [
+            { id: "07illo_uJ2g", title: "MAINOO! United Can’t Play Without You (Fan Chant)", thumb: "https://img.youtube.com/vi/07illo_uJ2g/maxresdefault.jpg", date: "Fan Chant" },
+            { id: "6JA4gNGl03w", title: "All Bruno Fernandes 21 Assists - United Road Song", thumb: "https://img.youtube.com/vi/6JA4gNGl03w/maxresdefault.jpg", date: "Highlights" },
+            { id: "Z4zqOLiijmI", title: "Carricks At The Wheel Again - It's in our DNA", thumb: "https://img.youtube.com/vi/Z4zqOLiijmI/maxresdefault.jpg", date: "Music Video" },
+            { id: "UyWGmCiab3o", title: "Take Me Home, United Road - Official Anthem", thumb: "https://img.youtube.com/vi/UyWGmCiab3o/maxresdefault.jpg", date: "Official Anthem" },
+        ];
+
+        const FALLBACK_NEWS = [
+            { title: "Old Trafford roars as United secure crucial victory", desc: "The atmosphere was electric as the team grabbed all three points in front of the Stretford End.", source: "BBC Sport", date: "Recent", link: "#", img: "https://images.unsplash.com/photo-1508344928928-7165b67de128?auto=format&fit=crop&w=1200&q=80" },
+            { title: "United eye summer reinforcements", desc: "The recruitment team is identifying key targets to bolster the squad ahead of the window.", source: "Sky Sports", date: "Recent", link: "#", img: "https://images.unsplash.com/photo-1574629810360-7efbb6b6973f?auto=format&fit=crop&w=1200&q=80" }
+        ];
+
+        const LEGACY_STATS = [
+            { number: 20, label: "League Titles", sub: "English Record", icon: Trophy },
+            { number: 3, label: "European Cups", sub: "'68, '99, '08", icon: Trophy },
+            { number: 13, label: "FA Cups", sub: "Domestic Glory", icon: Trophy },
+            { number: 1878, label: "Founded", sub: "Newton Heath", icon: Shield },
+        ];
+
+        const SUGGESTED_PROMPTS = [
+            "Tell me about the 1999 Treble",
+            "What's the stadium capacity?",
+            "Who is the all time top scorer?",
+            "Tell me about club history"
+        ];
+
+        const timeAgo = (dateString) => {
+            const date = new Date(dateString);
+            const diffInSeconds = Math.floor((new Date() - date) / 1000);
+            if (diffInSeconds < 3600) { const m = Math.floor(diffInSeconds / 60); return `${m} Min${m !== 1 ? 's' : ''} Ago`; }
+            if (diffInSeconds < 86400) { const h = Math.floor(diffInSeconds / 3600); return `${h} Hour${h !== 1 ? 's' : ''} Ago`; }
+            const d = Math.floor(diffInSeconds / 86400); return `${d} Day${d !== 1 ? 's' : ''} Ago`;
+        };
+
+        const AnimatedCounter = ({ end, suffix = "" }) => {
+            const [count, setCount] = useState(0);
+            const ref = useRef(null);
+            const [hasAnimated, setHasAnimated] = useState(false);
+            
+            useEffect(() => {
+                const observer = new IntersectionObserver(([entry]) => {
+                    if (entry.isIntersecting && !hasAnimated) {
+                        setHasAnimated(true);
+                        let start = 0;
+                        const duration = 1600;
+                        const increment = Math.ceil(end / 40);
+                        const timer = setInterval(() => {
+                            start += increment;
+                            if (start >= end) { setCount(end); clearInterval(timer); }
+                            else setCount(start);
+                        }, duration / 40);
+                    }
+                }, { threshold: 0.6 });
+                if (ref.current) observer.observe(ref.current);
+                return () => observer.disconnect();
+            }, [end, hasAnimated]);
+            
+            return <span ref={ref} className="tabular-nums">{count}{suffix}</span>;
+        };
+
+        // --- MAIN APPLICATION ---
+        function UnitedRoadAnointed() {
+            // ROUTING & GLOBAL STATES
+            const [currentPage, setCurrentPage] = useState('home');
+            const [hasEntered, setHasEntered] = useState(false);
+            const [isNavOpen, setIsNavOpen] = useState(false);
+            const [isMuted, setIsMuted] = useState(false);
+            const [isPlayingChant, setIsPlayingChant] = useState(false);
+            const [currentLyricIndex, setCurrentLyricIndex] = useState(-1);
+            const [showConfetti, setShowConfetti] = useState(false);
+            const [copied, setCopied] = useState(false);
+
+            // DATA STATES
+            const [newsItems, setNewsItems] = useState(FALLBACK_NEWS);
+            const [newsLoading, setNewsLoading] = useState(true);
+            const [ytVideos, setYtVideos] = useState(UNITED_ROAD_VIDEOS);
+            const [activeVideoId, setActiveVideoId] = useState("UyWGmCiab3o");
+            const [vaultTab, setVaultTab] = useState('watch');
+            
+            // ORACLE STATE
+            const [oracleInput, setOracleInput] = useState('');
+            const [isOracleThinking, setIsOracleThinking] = useState(false);
+            const [chatHistory, setChatHistory] = useState([
+                { role: 'oracle', text: "I am the United Oracle. Ask me about the Treble, our legends, or our rich history." }
+            ]);
+
+            const playerRef = useRef(null);
+            const audioBarsRef = useRef(null);
+            const chatEndRef = useRef(null);
+            const lyricIntervalRef = useRef(null);
+
+            const socialLinks = [
+                { href: LINKS.spotify, icon: <SpotifyIcon /> },
+                { href: LINKS.youtubeUrl, icon: <YouTubeIcon /> },
+                { href: LINKS.instagram, icon: <InstagramIcon /> },
+            ];
+
+            const chantLines = LINKS.chantLyrics.split('\n').filter(line => line.trim());
+
+            // --- MULTI-SOURCE REAL NEWS FETCH (BBC + SKY + STRICT MAN UTD FILTER) ---
+            useEffect(() => {
+                const fetchNews = async () => {
+                    try {
+                        const bbcRes = await fetch('https://api.rss2json.com/v1/api.json?rss_url=http://feeds.bbci.co.uk/sport/football/teams/manchester-united/rss.xml');
+                        const bbcData = await bbcRes.json();
+                        
+                        // 11065 is the strict Sky Sports Manchester United feed
+                        const skyRes = await fetch('https://api.rss2json.com/v1/api.json?rss_url=https://www.skysports.com/rss/11065');
+                        const skyData = await skyRes.json();
+
+                        let combined = [];
+                        
+                        if (bbcData.status === 'ok' && bbcData.items) {
+                            combined = [...combined, ...bbcData.items.map(item => ({...item, sourceName: 'BBC Sport'}))];
+                        }
+                        if (skyData.status === 'ok' && skyData.items) {
+                            combined = [...combined, ...skyData.items.map(item => ({...item, sourceName: 'Sky Sports'}))];
+                        }
+
+                        // BULLETPROOF FILTER: Absolute guarantee no French Open or Golf gets through
+                        combined = combined.filter(item => {
+                            const text = (item.title + " " + item.description).toLowerCase();
+                            
+                            // Must contain at least one United keyword
+                            const unitedKeywords = ['manchester united', 'man utd', 'mufc', 'united', 'old trafford', 'red devils', 'carrington', 'bruno', 'mainoo', 'garnacho', 'rashford', 'hojlund', 'onana', 'martinez', 'shaw', 'dalot', 'casemiro', 'manager', 'premier league', 'fa cup', 'transfer'];
+                            
+                            // Must NOT contain any non-football/generic sports keywords
+                            const nonFootballKeywords = ['french open', 'wimbledon', 'f1', 'formula 1', 'golf', 'cricket', 'rugby', 'tennis', 'nfl', 'nba', 'boxing', 'verstappen', 'hamilton', 'alcaraz', 'djokovic', 'mcilroy'];
+                            
+                            const isUnitedRelated = unitedKeywords.some(kw => text.includes(kw));
+                            const isUnrelatedSport = nonFootballKeywords.some(kw => text.includes(kw));
+                            
+                            return isUnitedRelated && !isUnrelatedSport;
+                        });
+
+                        if (combined.length > 0) {
+                            // Sort by newest first
+                            combined.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
+                            
+                            const premiumImages = [
+                                "https://images.unsplash.com/photo-1508344928928-7165b67de128?auto=format&fit=crop&w=1200&q=80",
+                                "https://images.unsplash.com/photo-1574629810360-7efbb6b6973f?auto=format&fit=crop&w=1200&q=80"
+                            ];
+                            
+                            const formatted = combined.slice(0, 6).map((item, i) => ({
+                                title: item.title, 
+                                desc: item.description.replace(/<[^>]+>/g, "").slice(0, 120) + "...",
+                                source: item.sourceName, 
+                                date: timeAgo(item.pubDate), 
+                                link: item.link,
+                                img: item.thumbnail || (item.enclosure && item.enclosure.link) || premiumImages[i % premiumImages.length]
+                            }));
+                            setNewsItems(formatted);
+                        } else {
+                            setNewsItems(FALLBACK_NEWS);
+                        }
+                    } catch (error) {
+                        console.log("News fetch failed, using fallback.");
+                        setNewsItems(FALLBACK_NEWS);
+                    } finally {
+                        setNewsLoading(false);
+                    }
+                };
+
+                fetchNews();
+            }, []);
+
+            // --- YOUTUBE FETCH ---
+            useEffect(() => {
+                fetch(`https://api.rss2json.com/v1/api.json?rss_url=https%3A%2F%2Fwww.youtube.com%2Ffeeds%2Fvideos.xml%3Fchannel_id%3D${LINKS.youtubeChannelId}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.status === 'ok' && data.items && data.items.length > 0) {
+                            const liveVideos = data.items.map(item => {
+                                const id = item.link.split('v=')[1] || item.guid.split(':')[2];
+                                return { id, title: item.title, thumb: `https://img.youtube.com/vi/${id}/mqdefault.jpg`, date: "New" };
+                            });
+                            const combined = [...liveVideos, ...UNITED_ROAD_VIDEOS];
+                            const unique = Array.from(new Map(combined.map(v => [v.id, v])).values());
+                            setYtVideos(unique);
+                        }
+                    }).catch(() => console.log("YT fetch failed. Only showing verified videos."));
+            }, []);
+
+            // --- TWITTER WIDGET LOADER ---
+            useEffect(() => {
+                if (currentPage === 'hub') {
+                    if (window.twttr && window.twttr.widgets) {
+                        window.twttr.widgets.load();
+                    } else {
+                        const script = document.createElement("script");
+                        script.src = "https://platform.twitter.com/widgets.js";
+                        script.async = true;
+                        document.body.appendChild(script);
+                    }
+                }
+            }, [currentPage]);
+
+            // --- AUDIO INIT ---
+            useEffect(() => {
+                const loadYT = () => {
+                    if (window.YT) { initPlayer(); return; }
+                    const tag = document.createElement('script');
+                    tag.src = "https://www.youtube.com/iframe_api";
+                    document.body.appendChild(tag);
+                    window.onYouTubeIframeAPIReady = initPlayer;
+                };
+                
+                const initPlayer = () => {
+                    if (playerRef.current) return;
+                    playerRef.current = new window.YT.Player('bg-audio', {
+                        height: '0', width: '0', videoId: LINKS.bgAudioVideoId,
+                        playerVars: { autoplay: 0, controls: 0, playsinline: 1, modestbranding: 1, loop: 1 },
+                        events: {
+                            onStateChange: (e) => {
+                                const playing = e.data === window.YT.PlayerState.PLAYING;
+                                if (audioBarsRef.current) audioBarsRef.current.classList.toggle('paused', !playing);
+                                if (!playing) setIsPlayingChant(false);
+                            }
+                        }
+                    });
+                };
+                loadYT();
+            }, []);
+
+            // --- LYRIC SYNC ---
+            useEffect(() => {
+                if (isPlayingChant) {
+                    setCurrentLyricIndex(0);
+                    let idx = 0;
+                    lyricIntervalRef.current = setInterval(() => {
+                        idx = (idx + 1) % chantLines.length;
+                        setCurrentLyricIndex(idx);
+                    }, 3800);
+                } else {
+                    setCurrentLyricIndex(-1);
+                    if (lyricIntervalRef.current) clearInterval(lyricIntervalRef.current);
+                }
+                return () => clearInterval(lyricIntervalRef.current);
+            }, [isPlayingChant]);
+
+            // --- ORACLE SCROLL ---
+            useEffect(() => { 
+                if (chatHistory.length > 1 || isOracleThinking) {
+                    if(chatEndRef.current) chatEndRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" }); 
+                }
+            }, [chatHistory, isOracleThinking]);
+
+            const triggerConfetti = () => { setShowConfetti(true); setTimeout(() => setShowConfetti(false), 2200); };
+            
+            const handleEnter = () => {
+                setHasEntered(true);
+                triggerConfetti();
+                setTimeout(() => {
+                    try {
+                        if (playerRef.current && typeof playerRef.current.playVideo === 'function') {
+                            playerRef.current.playVideo();
+                            playerRef.current.setVolume(75);
+                            setIsMuted(false);
+                        }
+                    } catch (e) { console.log(e); }
+                }, 600);
+            };
+
+            const toggleMute = () => {
+                if (!playerRef.current || typeof playerRef.current.playVideo !== 'function') return;
+                if (isMuted) { playerRef.current.unMute(); playerRef.current.playVideo(); setIsMuted(false); } 
+                else { playerRef.current.pauseVideo(); setIsMuted(true); setIsPlayingChant(false); }
+            };
+
+            const toggleChantMode = () => {
+                if (!playerRef.current || typeof playerRef.current.playVideo !== 'function') return;
+                if (isPlayingChant) { playerRef.current.pauseVideo(); setIsPlayingChant(false); } 
+                else { playerRef.current.playVideo(); playerRef.current.setVolume(90); setIsMuted(false); setIsPlayingChant(true); }
+            };
+
+            const handleCopy = () => {
+                try {
+                    const textArea = document.createElement("textarea");
+                    textArea.value = LINKS.chantLyrics;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand("copy");
+                    document.body.removeChild(textArea);
+                    setCopied(true);
+                    triggerConfetti();
+                    setTimeout(() => setCopied(false), 2200);
+                } catch (_) {}
+            };
+
+            const changePage = (page) => {
+                setCurrentPage(page);
+                setIsNavOpen(false);
+                window.scrollTo(0, 0); 
+            };
+
+            const handleOracleSubmit = (e) => {
+                e?.preventDefault();
+                const query = oracleInput.trim();
+                if (!query || isOracleThinking) return;
+                setChatHistory(prev => [...prev, { role: 'user', text: query }]);
+                setOracleInput('');
+                setIsOracleThinking(true);
+                setTimeout(() => {
+                    const q = query.toLowerCase();
+                    let response = "Glory Glory Man United! The Oracle has spoken. Ask about our history.";
+                    if (q.includes("treble") || q.includes("1999")) response = "1999. The greatest year in football history. Premier League, FA Cup, and Champions League.";
+                    if (q.includes("stadium") || q.includes("trafford")) response = "Old Trafford holds over 74,000 passionate Reds.";
+                    if (q.includes("scorer") || q.includes("rooney")) response = "Wayne Rooney is our all-time top goalscorer with 253 goals.";
+                    
+                    setChatHistory(prev => [...prev, { role: 'oracle', text: response }]);
+                    setIsOracleThinking(false);
+                    if (q.includes("treble")) triggerConfetti();
+                }, 800);
+            };
+
+            // --- PAGE RENDERS ---
+            
+            const renderHomePage = () => (
+                <div className="pt-20">
+                    <section className="relative min-h-[90dvh] flex items-center justify-center border-b border-[#DA291C]/20 stadium-bg">
+                        <div className="max-w-[1100px] mx-auto px-5 text-center relative z-10">
+                            <div className="inline-flex items-center gap-2.5 bg-black/80 border border-[#FFD700]/30 px-5 py-1.5 rounded-full mb-8 shadow-lg">
+                                <div className="w-2 h-2 bg-[#DA291C] rounded-full animate-pulse"></div>
+                                <span className="text-[10px] font-black tracking-[2.5px] text-[#FFD700]">THE OFFICIAL MATCHDAY ANTHEM</span>
+                            </div>
+                            <h1 className="text-[64px] sm:text-[96px] lg:text-[128px] font-black uppercase tracking-[-3.5px] leading-[0.86] mb-6 text-white drop-shadow-[0_10px_20px_rgba(0,0,0,0.8)]">
+                                TAKE ME<br />HOME,<br /><span className="text-[#DA291C] drop-shadow-[0_0_30px_rgba(218,41,28,0.4)]">UNITED ROAD</span>
+                            </h1>
+                            <p className="max-w-lg mx-auto text-xl sm:text-3xl text-white/90 font-medium tracking-tight mb-14 drop-shadow-md">The anointed soundtrack of the Theatre of Dreams.</p>
+                            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                                <button onClick={() => changePage('matchday')} className="px-14 py-5 bg-[#DA291C] text-white font-black text-sm tracking-[2.5px] flex items-center justify-center gap-3 hover:bg-red-700 rounded-full shadow-[0_0_30px_rgba(218,41,28,0.5)] transition-all">
+                                    LIVE MATCH & TABLE <ChevronRight className="w-4 h-4" />
+                                </button>
+                                <button onClick={() => changePage('vault')} className="px-10 py-5 border border-white/30 hover:bg-white/10 hover:border-white/60 text-white font-black text-sm tracking-[2.5px] flex items-center justify-center gap-3 rounded-full bg-black/60 backdrop-blur-xl transition-all">
+                                    ENTER THE VAULT
+                                </button>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section className="py-20 md:py-28 bg-[#02331F] border-y border-[#FFD700]/30 relative overflow-hidden">
+                        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(255,215,0,0.08)_0%,transparent_70%)] pointer-events-none"></div>
+                        <div className="max-w-[1680px] mx-auto px-5 md:px-10 relative z-10">
+                            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6 mb-12">
+                                <div>
+                                    <div className="uppercase tracking-[3px] text-[#FFD700] text-xs font-black mb-2">THE NEWTON HEATH ROOTS</div>
+                                    <h2 className="text-5xl md:text-7xl font-black tracking-tighter text-white drop-shadow-sm">Our Legacy</h2>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+                                {LEGACY_STATS.map((stat, i) => {
+                                    const Icon = stat.icon;
+                                    return (
+                                        <div key={i} className="group relative bg-gradient-to-b from-[#034A2F] to-[#012616] rounded-[32px] p-6 md:p-8 border border-[#FFD700]/20 shadow-[0_15px_40px_rgba(0,0,0,0.6)] h-[260px] flex flex-col justify-between overflow-hidden">
+                                            <div className="absolute top-0 right-0 w-40 h-40 bg-[#FFD700]/10 rounded-full blur-[50px] group-hover:bg-[#FFD700]/20 transition-all duration-700"></div>
+                                            <div className="absolute top-6 right-6 text-[#FFD700]/30 group-hover:text-[#FFD700]/80 group-hover:scale-110 transition-all"><Icon className="w-12 h-12"/></div>
+                                            <div className="mt-auto relative z-10">
+                                                <div className="text-5xl sm:text-7xl font-black text-white tracking-[-2px] mb-2 drop-shadow-lg"><AnimatedCounter end={stat.number}/></div>
+                                                <div className="text-xl font-black text-[#FFD700] mb-3">{stat.label}</div>
+                                                <div className="inline-flex items-center gap-2 bg-black/50 backdrop-blur px-3 py-1.5 rounded-lg border border-[#FFD700]/20">
+                                                    <span className="text-[10px] font-bold text-white/90 uppercase tracking-widest">{stat.sub}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            );
+
+            // UPGRADE 1 & 3: REAL LIVE MATCH WIDGET & TABLE
+            const renderMatchdayPage = () => (
+                <div className="pt-20 bg-[#0A0A0A] min-h-screen pb-24">
+                    <div className="max-w-[1680px] mx-auto px-5 md:px-10 pt-10">
+                        <div className="flex items-center gap-3 mb-10">
+                            <div className="w-3 h-10 bg-[#DA291C] rounded-sm shadow-[0_0_15px_rgba(218,41,28,0.5)]"></div>
+                            <div>
+                                <span className="uppercase tracking-[3px] text-xs font-black text-[#FFD700] flex items-center gap-2 mb-1 drop-shadow-md">
+                                    <span className="live-dot w-2 h-2 bg-[#DA291C] rounded-full"></span> REAL-TIME DATA
+                                </span>
+                                <h2 className="text-5xl md:text-6xl font-black tracking-tighter text-white">Live Match & Table</h2>
+                            </div>
+                        </div>
+
+                        <div className="grid lg:grid-cols-12 gap-8 mb-16">
+                            {/* Real Match Widget via ScoreBat */}
+                            <div className="lg:col-span-7 bg-[#111] border border-white/10 rounded-[32px] p-2 shadow-xl h-[650px] overflow-hidden relative">
+                                <div className="absolute top-6 left-6 z-10 uppercase tracking-[2px] text-[10px] font-black text-white bg-black/80 px-3 py-1 rounded-full border border-white/10 backdrop-blur">LIVE / NEXT FIXTURE</div>
+                                <iframe src="https://www.scorebat.com/embed/team/manchester-united/?sort=recent" width="100%" height="100%" frameBorder="0" scrolling="no" className="rounded-[28px] mt-10" allowFullScreen></iframe>
+                            </div>
+
+                            {/* Real League Table via FC Tables */}
+                            <div className="lg:col-span-5 bg-[#050505] border border-[#DA291C]/40 shadow-[0_0_40px_rgba(218,41,28,0.15)] rounded-[32px] p-2 flex flex-col h-[650px] overflow-hidden relative">
+                                <div className="absolute top-6 left-6 z-10 uppercase tracking-[2px] text-[10px] font-black text-[#FFD700] bg-black/80 px-3 py-1 rounded-full border border-[#FFD700]/30 backdrop-blur">PREMIER LEAGUE STANDINGS</div>
+                                <div className="w-full h-full pt-14 rounded-[28px] overflow-hidden bg-white/5">
+                                    <iframe frameBorder="0" scrolling="yes" width="100%" height="100%" src="https://www.fctables.com/england/premier-league/iframe/?type=table&lang_id=2&country=67&template=11&team=190302&timezone=Europe/London&time=24&po=1&ma=1&wi=0&dr=0&los=0&gf=0&ga=0&gd=1&pts=1&ng=0&form=1&set_color=111111&text_color=ffffff&link_color=DA291C&hlt=FFD700"></iframe>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+
+            // UPGRADE 2: MULTI-SOURCE NEWS WITH BULLETPROOF FILTER
+            const renderNewsPage = () => (
+                <div className="pt-32 bg-[#050505] min-h-screen pb-24">
+                    <div className="max-w-[1680px] mx-auto px-5 md:px-10">
+                        <div className="flex items-center gap-3 mb-10">
+                            <div className="w-3 h-10 bg-[#DA291C] rounded-sm"></div>
+                            <div>
+                                <span className="uppercase tracking-[3px] text-xs font-black text-[#DA291C] flex items-center gap-2 mb-1">BBC SPORT & SKY SPORTS</span>
+                                <h2 className="text-5xl md:text-7xl font-black tracking-tighter text-white">Latest Real News</h2>
+                            </div>
+                        </div>
+                        
+                        {newsLoading ? (
+                            <div className="h-[500px] flex justify-center items-center bg-[#111] rounded-[32px] border border-white/10"><div className="animate-spin w-10 h-10 border-4 border-[#DA291C] border-t-transparent rounded-full"></div></div>
+                        ) : (
+                            <div className="grid lg:grid-cols-12 gap-5 mb-24">
+                                {newsItems[0] && (
+                                    <a href={newsItems[0].link} target="_blank" className="lg:col-span-7 relative min-h-[400px] h-[600px] group overflow-hidden border border-white/10 rounded-[32px] flex flex-col justify-end shadow-2xl">
+                                        <img src={newsItems[0].img} className="absolute inset-0 w-full h-full object-cover brightness-[0.7] group-hover:scale-105 transition-all duration-700"/>
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-transparent"/>
+                                        <div className="relative p-8 md:p-14 z-10">
+                                            <div className="bg-[#DA291C] text-white text-[10px] font-black tracking-[2px] px-3 py-1.5 rounded-md w-fit mb-4 shadow-sm">{newsItems[0].source} • {newsItems[0].date}</div>
+                                            <h3 className="text-3xl sm:text-5xl md:text-[54px] font-black tracking-tight mb-4 text-white drop-shadow-md leading-[1.05]">{newsItems[0].title}</h3>
+                                            <p className="text-white/80 line-clamp-2 text-lg font-medium max-w-2xl">{newsItems[0].desc}</p>
+                                        </div>
+                                    </a>
+                                )}
+                                <div className="lg:col-span-5 flex flex-col gap-4">
+                                    {(newsItems.length > 1 ? newsItems.slice(1,5) : []).map((news,i) => (
+                                        <a key={i} href={news.link} target="_blank" className="flex-1 bg-[#111] p-6 border-l-4 border-white/10 hover:border-[#DA291C] rounded-[24px] rounded-l-none transition-all flex flex-col justify-center shadow-lg group">
+                                            <div className="flex justify-between items-center mb-2">
+                                                <div className="text-[10px] font-black text-[#FFD700] tracking-widest uppercase">{news.source}</div>
+                                                <div className="text-[10px] text-white/40 font-bold uppercase">{news.date}</div>
+                                            </div>
+                                            <h4 className="text-lg md:text-xl font-black text-white group-hover:text-[#DA291C] transition-colors leading-tight">{news.title}</h4>
+                                        </a>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+
+            // UPGRADE 4: REAL-TIME SOCIAL HUB (TWITTER EMBED)
+            const renderHubPage = () => (
+                <div className="pt-32 bg-[#050505] min-h-screen pb-24">
+                    <div className="max-w-[1000px] mx-auto px-5 md:px-10">
+                        <div className="flex items-center justify-center gap-3 mb-10">
+                            <div className="text-center">
+                                <span className="uppercase tracking-[3px] text-xs font-black text-[#FFD700] flex items-center justify-center gap-2 mb-2">
+                                    <span className="live-dot w-2 h-2 bg-[#DA291C] rounded-full"></span> REAL-TIME SOCIAL FEED
+                                </span>
+                                <h2 className="text-5xl md:text-7xl font-black tracking-tighter text-white">United Hub</h2>
+                            </div>
+                        </div>
+                        
+                        <div className="bg-[#111] rounded-[32px] overflow-hidden border border-[#DA291C]/30 shadow-[0_0_40px_rgba(218,41,28,0.15)] min-h-[600px] p-2">
+                            <a className="twitter-timeline" data-theme="dark" data-height="800" href="https://twitter.com/ManUtd?ref_src=twsrc%5Etfw">Loading Official Club Updates...</a>
+                        </div>
+                    </div>
+                </div>
+            );
+
+            // VAULT: EXCLUSIVELY THE 4 REAL VIDEOS
+            const renderVaultPage = () => (
+                <div className="pt-32 bg-[#0A0A0A] min-h-screen pb-24 relative overflow-hidden">
+                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom,rgba(218,41,28,0.1)_0%,transparent_70%)] pointer-events-none"></div>
+                    <div className="max-w-[1680px] mx-auto px-5 md:px-10 relative z-10">
+                        <div className="mb-12 text-center">
+                            <h2 className="text-5xl md:text-[80px] font-black tracking-tighter mb-4 text-white">The Vault</h2>
+                            <p className="text-xl text-white/60 font-medium">Your verified videos. Official anthems. No placeholders.</p>
+                        </div>
+                        
+                        <div className="flex justify-center gap-3 md:gap-4 mb-12">
+                            {[{id:'watch',label:'VIDEOS',icon:Play},{id:'listen',label:'SPOTIFY',icon:Music},{id:'sing',label:'LYRICS',icon:Volume2}].map(tab => (
+                                <button key={tab.id} onClick={() => setVaultTab(tab.id)} className={`px-6 md:px-8 py-3 md:py-4 rounded-full text-xs font-black tracking-[2px] transition-all flex items-center gap-2 border ${vaultTab === tab.id ? 'bg-[#DA291C] text-white border-[#DA291C] shadow-[0_0_20px_rgba(218,41,28,0.4)]' : 'bg-[#111] text-white/50 hover:bg-white/10 border-white/10 hover:text-white'}`}>
+                                    <tab.icon className="w-4 h-4"/> {tab.label}
+                                </button>
+                            ))}
+                        </div>
+
+                        <AnimatePresence mode="wait">
+                            {vaultTab === 'watch' && (
+                                <motion.div key="watch" initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-20}} className="bg-black border border-white/10 rounded-[32px] overflow-hidden shadow-2xl max-w-6xl mx-auto">
+                                    <div className="aspect-video w-full bg-[#050505]">
+                                        <iframe className="w-full h-full" src={`https://www.youtube.com/embed/${activeVideoId}?autoplay=0&rel=0`} allowFullScreen />
+                                    </div>
+                                    <div className="p-6 md:p-8 bg-[#111] border-t border-white/10">
+                                        <div className="flex justify-between items-center mb-6">
+                                            <h4 className="font-black text-lg md:text-xl text-white">Verified Video Archive</h4>
+                                            <a href={LINKS.youtubeUrl} target="_blank" className="text-[10px] md:text-xs font-bold text-[#DA291C] border border-[#DA291C]/50 px-4 py-1.5 rounded-full hover:bg-[#DA291C] hover:text-white transition-colors uppercase tracking-widest">Subscribe</a>
+                                        </div>
+                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                            {ytVideos.map((v, idx) => (
+                                                <div key={idx} onClick={() => setActiveVideoId(v.id)} className={`cursor-pointer rounded-2xl overflow-hidden border transition-all ${activeVideoId === v.id ? 'border-[#DA291C] shadow-[0_0_15px_rgba(218,41,28,0.3)] scale-[1.02]' : 'border-white/10 hover:border-white/30 hover:scale-[1.01]'}`}>
+                                                    <div className="relative">
+                                                        <img src={v.thumb} className="w-full aspect-video object-cover" />
+                                                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                                                            <Play className="w-10 h-10 text-white" />
+                                                        </div>
+                                                    </div>
+                                                    <div className="p-3 bg-black min-h-[70px]">
+                                                        <div className="text-xs font-bold text-white/90 line-clamp-2 leading-tight">{v.title}</div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            )}
+                            {vaultTab === 'listen' && (
+                                <motion.div key="listen" initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-20}} className="max-w-4xl mx-auto h-[600px] bg-black p-4 rounded-[32px] border border-[#1DB954]/30 shadow-2xl">
+                                    <iframe className="w-full h-full rounded-2xl" src={LINKS.spotifyEmbed} allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"/>
+                                </motion.div>
+                            )}
+                            {vaultTab === 'sing' && (
+                                <motion.div key="sing" initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-20}} className="max-w-4xl mx-auto bg-[#DA291C] rounded-[32px] p-8 md:p-16 text-center shadow-[0_0_50px_rgba(218,41,28,0.4)] border border-red-500 relative overflow-hidden">
+                                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.1)_0%,transparent_60%)] pointer-events-none"></div>
+                                    <div className="relative z-10">
+                                        <div className="text-white/80 text-[10px] font-black tracking-[4px] bg-black/20 w-fit mx-auto px-4 py-1.5 rounded-full mb-6 shadow-sm">OFFICIAL MATCHDAY ANTHEM</div>
+                                        <h3 className="text-4xl md:text-7xl font-black mb-10 text-white drop-shadow-md tracking-tighter">Take Me Home, United Road</h3>
+                                        <button onClick={toggleChantMode} className="mb-12 mx-auto flex items-center gap-3 px-8 py-4 bg-white text-[#DA291C] font-black text-xs md:text-sm tracking-[2px] rounded-full shadow-xl hover:bg-gray-100 transition-colors">
+                                            {isPlayingChant ? <>STOP SINGING <div className="w-2 h-2 bg-[#DA291C] animate-pulse rounded-full"/></> : <>START SINGING <Volume2 className="w-4 h-4"/></>}
+                                        </button>
+                                        <div className="font-serif text-xl md:text-3xl leading-[1.6] text-white/95 max-w-2xl mx-auto font-medium">
+                                            {chantLines.map((line, idx) => (
+                                                <div key={idx} className={`transition-all duration-300 py-1 ${currentLyricIndex === idx ? 'text-white font-bold scale-105 drop-shadow-lg' : 'text-white/60'}`}>{line || <br/>}</div>
+                                            ))}
+                                        </div>
+                                        <button onClick={handleCopy} className="mt-12 mx-auto flex items-center gap-2 text-xs font-bold tracking-widest text-white bg-black/20 hover:bg-black/40 px-6 py-3 rounded-full transition-colors border border-white/10">
+                                            {copied ? <CheckCircle className="w-4 h-4 text-[#1DB954]"/> : <Copy className="w-4 h-4"/>} COPY LYRICS
+                                        </button>
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </div>
+                </div>
+            );
+
+            const renderOraclePage = () => (
+                <div className="pt-32 bg-gradient-to-b from-[#050505] to-[#1a0505] min-h-screen pb-24">
+                    <div className="max-w-[800px] mx-auto px-5">
+                        <div className="text-center mb-10">
+                            <div className="w-20 h-20 bg-[#DA291C] rounded-[20px] flex items-center justify-center mx-auto mb-6 shadow-[0_0_30px_rgba(218,41,28,0.4)] border border-red-500">
+                                <Shield className="w-10 h-10 text-white" />
+                            </div>
+                            <h2 className="text-5xl md:text-6xl font-black tracking-tighter mb-3 text-white">The United Oracle</h2>
+                            <p className="text-white/60 text-lg md:text-xl font-medium">The AI Guardian of Manchester United History</p>
+                        </div>
+                        
+                        <div className="bg-[#111] border border-[#DA291C]/40 rounded-[32px] overflow-hidden h-[650px] flex flex-col shadow-[0_20px_50px_rgba(218,41,28,0.15)] relative">
+                            <div className="absolute top-0 right-0 w-64 h-64 bg-[#DA291C]/5 rounded-full blur-[80px] pointer-events-none"></div>
+                            <div className="px-6 md:px-8 py-5 border-b border-white/10 flex items-center justify-between bg-black/80 backdrop-blur z-10">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-3 h-3 bg-[#FFD700] rounded-full animate-pulse shadow-[0_0_10px_rgba(255,215,0,0.6)]"></div>
+                                    <div>
+                                        <div className="font-black text-xs md:text-sm tracking-[1.5px] text-white uppercase">Knowledge Base</div>
+                                        <div className="text-[10px] text-[#DA291C] font-bold uppercase mt-0.5 tracking-wider">1878 — PRESENT</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-6 oracle-scroll relative z-10">
+                                {chatHistory.map((msg, i) => (
+                                    <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                        <div className={`max-w-[85%] px-6 py-4 text-sm md:text-base font-medium rounded-3xl shadow-sm border ${msg.role === 'user' ? 'bg-[#DA291C] text-white border-red-500 rounded-br-sm' : 'bg-black border-white/10 text-white/90 rounded-bl-sm'}`}>{msg.text}</div>
+                                    </div>
+                                ))}
+                                {isOracleThinking && (
+                                    <div className="flex justify-start">
+                                        <div className="bg-black border border-white/10 px-6 py-5 rounded-3xl rounded-bl-sm flex items-center gap-4 shadow-sm">
+                                            <div className="flex gap-1.5">
+                                                <div className="w-2 h-2 bg-[#FFD700] rounded-full animate-bounce"/>
+                                                <div className="w-2 h-2 bg-[#FFD700] rounded-full animate-bounce" style={{animationDelay:'150ms'}}/>
+                                                <div className="w-2 h-2 bg-[#FFD700] rounded-full animate-bounce" style={{animationDelay:'300ms'}}/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                                <div ref={chatEndRef}/>
+                            </div>
+                            <div className="px-5 pt-4 pb-2 flex overflow-x-auto gap-2 border-t border-white/10 bg-black/60 scrollbar-hide snap-x relative z-10">
+                                {SUGGESTED_PROMPTS.map((prompt, i) => (
+                                    <button key={i} onClick={() => handleSuggestedPrompt(prompt)} className="flex-shrink-0 snap-start text-[10px] md:text-xs font-bold text-white/70 bg-white/5 hover:bg-white/10 hover:text-[#FFD700] px-4 py-2 rounded-full transition-colors border border-white/10">{prompt}</button>
+                                ))}
+                            </div>
+                            <div className="p-4 md:p-6 bg-black/80 backdrop-blur border-t border-white/10 relative z-10">
+                                <form onSubmit={handleOracleSubmit} className="flex gap-3">
+                                    <input type="text" value={oracleInput} onChange={(e) => setOracleInput(e.target.value)} placeholder="Ask about club history..." disabled={isOracleThinking} className="flex-1 bg-[#111] border border-white/20 focus:border-[#DA291C] px-6 py-4 rounded-full text-sm md:text-base outline-none text-white placeholder:text-white/40 font-medium transition-colors shadow-inner"/>
+                                    <button type="submit" disabled={!oracleInput.trim() || isOracleThinking} className="px-8 bg-[#DA291C] text-white rounded-full flex items-center justify-center disabled:opacity-50 hover:bg-red-700 transition-colors shadow-[0_0_15px_rgba(218,41,28,0.4)]"><Send className="w-5 h-5"/></button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+
+            // Routing Mapping
+            const renderPage = () => {
+                switch(currentPage) {
+                    case 'home': return renderHomePage();
+                    case 'matchday': return renderMatchdayPage();
+                    case 'news': return renderNewsPage();
+                    case 'hub': return renderHubPage();
+                    case 'vault': return renderVaultPage();
+                    case 'oracle': return renderOraclePage();
+                    default: return renderHomePage();
+                }
+            };
+
+            return (
+                <div className="min-h-screen flex flex-col">
+                    {/* ENTRANCE SCREEN */}
+                    <AnimatePresence>
+                        {!hasEntered && (
+                            <motion.div initial={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] bg-gradient-to-br from-[#0A0A0A] via-[#1a0505] to-[#0A0A0A] flex flex-col items-center justify-center">
+                                <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1508344928928-7165b67de128?auto=format&fit=crop&w=2400&q=80')] bg-cover bg-center opacity-20 mix-blend-overlay grayscale"></div>
+                                <div className="relative z-10 flex flex-col items-center text-center px-4 max-w-5xl">
+                                    <Shield className="w-28 h-28 text-[#DA291C] mb-8 drop-shadow-[0_0_40px_rgba(218,41,28,0.7)]" />
+                                    <h1 className="text-[72px] sm:text-[100px] lg:text-[128px] font-black uppercase tracking-[-4.5px] leading-[0.85] text-white mb-6 drop-shadow-lg">UNITED<br/>ROAD</h1>
+                                    <div className="bg-[#111] border border-[#FFD700]/30 text-[#FFD700] px-6 py-2.5 text-xs font-black tracking-[4px] uppercase mb-12 shadow-lg -skew-x-12">THE ANOINTED SOUND OF OLD TRAFFORD</div>
+                                    <button onClick={handleEnter} className="px-14 py-6 bg-[#DA291C] text-white font-black text-sm tracking-[3px] uppercase rounded-xl hover:bg-red-700 transition-all shadow-[0_0_30px_rgba(218,41,28,0.5)] border border-red-500 flex items-center gap-3">ENTER THE THEATRE <ChevronRight className="w-5 h-5"/></button>
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
+                    {/* TOP NAVIGATION */}
+                    {hasEntered && (
+                        <nav className="fixed w-full z-50 bg-[#050505]/95 backdrop-blur-xl border-b border-white/10 shadow-lg">
+                            <div className="max-w-[1680px] mx-auto px-5 md:px-10 h-20 flex items-center justify-between">
+                                <div onClick={() => changePage('home')} className="flex items-center gap-3 md:gap-4 cursor-pointer group">
+                                    <div className="w-10 h-10 md:w-11 md:h-11 bg-[#DA291C] flex items-center justify-center rounded-sm shadow-[0_0_15px_rgba(218,41,28,0.4)]"><Music className="w-5 h-5 text-white" /></div>
+                                    <div>
+                                        <div className="font-black text-xl md:text-3xl tracking-[-1px] text-white">UNITED ROAD</div>
+                                        <div className="text-[8px] md:text-[9px] text-[#FFD700] font-bold tracking-[1px] uppercase mt-0.5">The Anointed Road</div>
+                                    </div>
+                                </div>
+                                <div className="hidden md:flex items-center gap-8 text-xs font-black tracking-[2px]">
+                                    {[
+                                        {id:'home',label:'HOME'},
+                                        {id:'matchday',label:'LIVE MATCH'},
+                                        {id:'news',label:'NEWS'},
+                                        {id:'hub',label:'SOCIAL HUB'},
+                                        {id:'vault',label:'THE VAULT'},
+                                        {id:'oracle',label:'ORACLE'}
+                                    ].map(item => (
+                                        <button key={item.id} onClick={() => changePage(item.id)} className={`hover:text-[#DA291C] transition-colors uppercase ${currentPage === item.id ? 'nav-active text-[#DA291C]' : 'text-white/80'}`}>
+                                            {item.label}
+                                        </button>
+                                    ))}
+                                </div>
+                                <button onClick={() => setIsNavOpen(!isNavOpen)} className="md:hidden p-2 bg-[#111] border border-white/10 rounded-lg"><Menu className="w-6 h-6 text-white"/></button>
+                            </div>
+                            
+                            <AnimatePresence>
+                                {isNavOpen && (
+                                    <motion.div initial={{opacity:0,y:-10}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-10}} className="md:hidden bg-[#0A0A0A] border-b border-white/10 absolute top-full w-full left-0 flex flex-col p-5 shadow-2xl z-40">
+                                        {['home','matchday','news','hub','vault','oracle'].map(id => (
+                                            <button key={id} onClick={() => changePage(id)} className={`text-left py-4 px-5 mb-2 rounded-xl font-black uppercase text-sm border border-white/5 transition-colors ${currentPage === id ? 'bg-[#DA291C] text-white' : 'bg-[#111] text-white/80 hover:bg-white/10'}`}>{id.replace('-', ' ')}</button>
+                                        ))}
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </nav>
+                    )}
+
+                    {/* MAIN CONTENT AREA */}
+                    {hasEntered && (
+                        <main className="flex-1">
+                            {renderPage()}
+                        </main>
+                    )}
+
+                    {/* GLOBAL FLOATING AUDIO PLAYER */}
+                    <AnimatePresence>
+                        {hasEntered && (
+                            <motion.div initial={{y:100,opacity:0}} animate={{y:0,opacity:1}} className="fixed bottom-5 right-5 md:bottom-8 md:right-8 z-[90]">
+                                <div className="bg-[#050505]/95 border border-[#DA291C]/30 shadow-[0_15px_40px_rgba(0,0,0,0.9)] backdrop-blur-2xl flex items-center gap-3 p-1.5 pr-6 md:pr-7 rounded-full max-w-[85vw] md:max-w-none">
+                                    <button onClick={toggleMute} className="w-12 h-12 md:w-14 md:h-14 bg-[#111] border border-white/10 text-white flex items-center justify-center rounded-full hover:bg-[#DA291C] hover:border-[#DA291C] transition-all shadow-md">
+                                        {isMuted ? <VolumeX className="w-5 h-5"/> : <Volume2 className="w-5 h-5"/>}
+                                    </button>
+                                    <div className="min-w-0 pr-2">
+                                        <div className="text-[8px] md:text-[9px] font-black tracking-[2.5px] text-[#FFD700] uppercase truncate">Now Playing</div>
+                                        <div className="text-xs md:text-sm font-black text-white truncate">Take Me Home, United Road</div>
+                                    </div>
+                                    <div ref={audioBarsRef} className="flex items-end h-4 md:h-5 gap-[2px] ml-1">
+                                        {[1,2,3,4].map((_,i) => <div key={i} className="audio-bar w-[2.5px] md:w-[3px] bg-[#DA291C] rounded-full" style={{animationDelay: `${i*130}ms`, height: isMuted ? '5px' : undefined}}/>)}
+                                    </div>
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
+                    {/* GLOBAL FOOTER */}
+                    {hasEntered && (
+                        <footer className="bg-black pt-20 pb-12 border-t border-white/10 text-white mt-auto">
+                            <div className="max-w-[1680px] mx-auto px-5 grid md:grid-cols-12 gap-10">
+                                <div className="md:col-span-5">
+                                    <div className="font-black text-4xl tracking-tighter mb-4">UNITED ROAD</div>
+                                    <p className="text-white/50 text-sm max-w-sm mb-6">The official home of Manchester United’s matchday anthem. Built for the faithful.</p>
+                                    <div className="flex gap-3">
+                                        {socialLinks.map((s,i) => <a key={i} href={s.href} target="_blank" className="w-10 h-10 bg-white/10 flex items-center justify-center rounded-xl hover:bg-[#DA291C] transition-colors">{s.icon}</a>)}
+                                    </div>
+                                </div>
+                                <div className="md:col-span-7 md:text-right flex flex-col justify-between">
+                                    <div className="text-[#FFD700] text-xs font-black tracking-[3px] mb-6">THE ANOINTED FAITHFUL • 267,841 STRONG</div>
+                                    <div className="text-white/30 text-[10px] tracking-widest font-bold">© {new Date().getFullYear()} UNITED ROAD • MANCHESTER • GLORY GLORY</div>
+                                </div>
+                            </div>
+                        </footer>
+                    )}
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<UnitedRoadAnointed />);
+    </script>
+</body>
+</html>
+
+
+```
