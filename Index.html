@@ -1,0 +1,317 @@
+```html
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The United Road | Official Band</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #030303; color: white; overflow-x: hidden; }
+        ::selection { background-color: #DA291C; color: white; }
+        .spin-slow { animation: spin 20s linear infinite; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        
+        /* YouTube Fallback styling */
+        .yt-fallback-bg {
+            background-image: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.9)), url('https://img.youtube.com/vi/UyWGmCiab3o/maxresdefault.jpg');
+            background-size: cover;
+            background-position: center;
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <!-- Cinematic Background Effects -->
+    <div class="fixed inset-0 z-0 pointer-events-none">
+        <div class="absolute top-[-20%] left-[-10%] w-[60vw] h-[60vw] bg-[#DA291C]/15 rounded-full blur-[160px] mix-blend-screen animate-pulse" style="animation-duration: 10s;"></div>
+        <div class="absolute bottom-[-10%] right-[-10%] w-[50vw] h-[50vw] bg-[#DA291C]/10 rounded-full blur-[180px] mix-blend-screen"></div>
+    </div>
+
+    <!-- Premium Floating Navigation -->
+    <nav id="navbar" class="fixed w-full z-50 transition-all duration-500 py-8">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div id="inner-nav" class="flex justify-between items-center transition-all duration-500 rounded-3xl px-6 py-3 border border-transparent">
+                
+                <a href="#" class="flex items-center gap-4 group">
+                    <div class="w-10 h-10 bg-white text-black rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(255,255,255,0.2)] group-hover:scale-105 group-hover:bg-[#DA291C] group-hover:text-white transition-all duration-300">
+                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="font-black text-xl tracking-tight uppercase leading-none text-white">The United Road</span>
+                    </div>
+                </a>
+
+                <div class="hidden md:flex items-center gap-10">
+                    <a href="#music" class="text-xs font-black tracking-[0.2em] uppercase text-white/60 hover:text-white transition-colors">Music</a>
+                    <a href="#videos" class="text-xs font-black tracking-[0.2em] uppercase text-white/60 hover:text-white transition-colors">Video</a>
+                    
+                    <div class="flex items-center gap-3 pl-8 border-l border-white/10">
+                        <a href="https://open.spotify.com/artist/5QVI0NjbUydubWdYZQJR9z" target="_blank" class="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/70 hover:text-[#1DB954] hover:bg-white/10 hover:scale-110 transition-all">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.24 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.84.24 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.6.18-1.2.72-1.381 4.26-1.261 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg>
+                        </a>
+                        <a href="https://youtube.com/@theunitedroad99" target="_blank" class="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/70 hover:text-[#DA291C] hover:bg-white/10 hover:scale-110 transition-all">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                        </a>
+                    </div>
+                </div>
+
+                <button id="menu-btn" class="md:hidden text-white/70 hover:text-white transition-transform active:scale-95">
+                    <svg id="icon-menu" class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="12" x2="20" y2="12"></line><line x1="4" y1="6" x2="20" y2="6"></line><line x1="4" y1="18" x2="20" y2="18"></line></svg>
+                    <svg id="icon-close" class="w-7 h-7 hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+        </div>
+
+        <div id="mobile-menu" class="md:hidden absolute left-4 right-4 top-[110%] transition-all duration-300 origin-top opacity-0 scale-y-0 pointer-events-none">
+            <div class="bg-[#0a0a0a]/90 backdrop-blur-2xl border border-white/10 p-6 rounded-3xl shadow-2xl flex flex-col gap-4">
+                <a href="#music" class="mobile-link text-lg font-black uppercase tracking-widest text-center py-4 border-b border-white/5 text-white hover:text-[#DA291C]">Music</a>
+                <a href="#videos" class="mobile-link text-lg font-black uppercase tracking-widest text-center py-4 border-b border-white/5 text-white hover:text-[#DA291C]">Videos</a>
+                <div class="flex justify-center gap-4 pt-4">
+                    <a href="https://open.spotify.com/artist/5QVI0NjbUydubWdYZQJR9z" target="_blank" class="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center text-white/70 hover:text-[#1DB954] border border-white/10">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.24 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.84.24 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.6.18-1.2.72-1.381 4.26-1.261 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg>
+                    </a>
+                    <a href="https://youtube.com/@theunitedroad99" target="_blank" class="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center text-white/70 hover:text-[#DA291C] border border-white/10">
+                        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="relative z-10 min-h-[90vh] flex items-center justify-center pt-24 px-4">
+        <div class="max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            
+            <div class="text-left relative z-20">
+                <a href="#music" class="inline-flex items-center gap-3 px-4 py-2 rounded-full bg-white/5 border border-white/10 backdrop-blur-xl mb-8 group hover:bg-white/10 transition-all">
+                    <span class="flex h-2.5 w-2.5 relative">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#DA291C] opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#DA291C]"></span>
+                    </span>
+                    <span class="text-xs font-black tracking-widest uppercase text-white/80">Streaming Everywhere</span>
+                </a>
+
+                <h1 class="text-[4.5rem] sm:text-[6rem] lg:text-[8rem] font-black uppercase tracking-tighter leading-[0.85] mb-6">
+                    <span class="block text-white">United</span>
+                    <span class="block text-transparent bg-clip-text bg-gradient-to-r from-[#DA291C] to-red-800">Road</span>
+                </h1>
+
+                <p class="text-lg text-white/50 font-medium max-w-md mb-10 leading-relaxed">
+                    The sound of the Stretford End. The official band producing the anthems that echo around Old Trafford.
+                </p>
+
+                <div class="flex flex-col sm:flex-row gap-4">
+                    <a href="#videos" class="px-8 py-4 bg-white text-black rounded-full font-black uppercase tracking-widest hover:bg-gray-200 transition-all flex items-center justify-center gap-3 shadow-[0_0_30px_rgba(255,255,255,0.2)]">
+                        <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg> Watch Video
+                    </a>
+                    <a href="https://open.spotify.com/artist/5QVI0NjbUydubWdYZQJR9z" target="_blank" class="px-8 py-4 bg-transparent border border-white/20 text-white rounded-full font-black uppercase tracking-widest hover:bg-white/10 transition-all flex items-center justify-center gap-3">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.24 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.84.24 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.6.18-1.2.72-1.381 4.26-1.261 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg> Spotify
+                    </a>
+                </div>
+            </div>
+
+            <!-- Hero Visual element -->
+            <div class="relative hidden lg:flex justify-center items-center h-full">
+                <div class="absolute w-[500px] h-[500px] bg-gradient-to-tr from-[#DA291C]/20 to-transparent rounded-full blur-3xl spin-slow"></div>
+                <div class="w-[400px] h-[400px] rounded-full border border-white/10 bg-black/40 backdrop-blur-3xl shadow-2xl relative flex items-center justify-center overflow-hidden">
+                    <div class="absolute inset-4 rounded-full border border-white/5"></div>
+                    <div class="absolute inset-12 rounded-full border border-white/5"></div>
+                    <div class="absolute inset-20 rounded-full border border-white/5"></div>
+                    <div class="absolute inset-28 rounded-full border border-white/5"></div>
+                    <div class="w-32 h-32 bg-[#DA291C] rounded-full shadow-inner flex items-center justify-center z-10 border-4 border-black">
+                        <div class="w-4 h-4 bg-black rounded-full shadow-inner"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Media Showcase -->
+    <section class="relative z-10 py-24 bg-black/50 border-t border-white/5 backdrop-blur-xl">
+        <div class="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
+                
+                <!-- SMART YOUTUBE PLAYER -->
+                <div id="videos" class="lg:col-span-7 flex flex-col gap-6">
+                    <div class="flex items-end justify-between">
+                        <div>
+                            <div class="text-[#DA291C] text-xs font-black tracking-[0.2em] uppercase mb-2">Featured Video</div>
+                            <h2 class="text-4xl font-black uppercase tracking-tighter">Matchday <span class="text-white/40">Visuals</span></h2>
+                        </div>
+                    </div>
+
+                    <div class="p-2 rounded-[2rem] bg-white/5 border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] backdrop-blur-xl relative">
+                        
+                        <!-- The Video Container -->
+                        <div class="relative w-full rounded-[1.5rem] overflow-hidden bg-black" style="padding-bottom: 56.25%;">
+                            
+                            <!-- This div gets replaced by the YouTube Iframe -->
+                            <div id="youtube-player" class="absolute inset-0 w-full h-full"></div>
+                            
+                            <!-- SMART FALLBACK UI: Hidden by default. Shown only if YouTube blocks playback -->
+                            <div id="yt-fallback" class="absolute inset-0 w-full h-full yt-fallback-bg hidden flex-col items-center justify-center z-20">
+                                <div class="bg-black/60 absolute inset-0 backdrop-blur-sm"></div>
+                                <div class="relative z-30 text-center px-4 flex flex-col items-center">
+                                    <div class="w-16 h-16 bg-[#DA291C] rounded-full flex items-center justify-center mb-4 shadow-[0_0_30px_rgba(218,41,28,0.5)]">
+                                        <svg class="w-8 h-8 text-white fill-current ml-1" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                                    </div>
+                                    <h3 class="text-xl font-black uppercase tracking-tight text-white mb-2">Official Music Video</h3>
+                                    <p class="text-white/70 text-sm max-w-sm mb-6">Due to music copyright restrictions, this track must be played directly on YouTube.</p>
+                                    <a href="https://youtu.co/UyWGmCiab3o" target="_blank" class="px-6 py-3 bg-white text-black rounded-full font-black uppercase tracking-widest text-xs hover:bg-gray-200 transition-all flex items-center gap-2">
+                                        Open in YouTube App
+                                    </a>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                    
+                    <div class="px-2">
+                        <h3 class="text-2xl font-black uppercase tracking-tight text-white">Take Me Home United Road</h3>
+                        <p class="text-white/50 mt-2 font-medium max-w-lg">The definitive version of the matchday anthem.</p>
+                    </div>
+                </div>
+
+                <!-- Spotify Embed -->
+                <div id="music" class="lg:col-span-5 flex flex-col gap-6">
+                    <div class="flex items-end justify-between">
+                        <div>
+                            <div class="text-[#1DB954] text-xs font-black tracking-[0.2em] uppercase mb-2">Official Discography</div>
+                            <h2 class="text-4xl font-black uppercase tracking-tighter">Audio <span class="text-white/40">Feed</span></h2>
+                        </div>
+                    </div>
+
+                    <div class="p-2 rounded-[2rem] bg-[#1DB954]/5 border border-[#1DB954]/20 shadow-[0_20px_50px_rgba(0,0,0,0.5)] backdrop-blur-xl h-[450px]">
+                        <div class="relative w-full h-full rounded-[1.5rem] overflow-hidden bg-black">
+                            <iframe 
+                                class="absolute inset-0 w-full h-full"
+                                src="https://open.spotify.com/embed/artist/5QVI0NjbUydubWdYZQJR9z?utm_source=generator&theme=0"
+                                frameBorder="0" 
+                                allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" 
+                                loading="lazy"
+                            ></iframe>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="relative z-10 bg-[#020202] pt-24 pb-8 border-t border-white/5">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col md:flex-row justify-between items-center md:items-end gap-12 border-b border-white/10 pb-16">
+                <div class="text-center md:text-left">
+                    <h2 class="text-5xl md:text-7xl font-black uppercase tracking-tighter mb-4">The United <br/><span class="text-[#DA291C]">Road</span></h2>
+                    <p class="text-white/40 font-medium max-w-sm">The official sound of the Red Army. Streaming worldwide on all major platforms.</p>
+                </div>
+
+                <div class="flex flex-wrap justify-center md:justify-end gap-4">
+                    <a href="https://www.facebook.com/share/1Ana9xcEU4/" target="_blank" class="w-14 h-14 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full flex items-center justify-center text-white transition-all hover:scale-110 hover:text-[#1877F2]">
+                        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path></svg>
+                    </a>
+                    <a href="https://www.instagram.com/theunitedroad99" target="_blank" class="w-14 h-14 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full flex items-center justify-center text-white transition-all hover:scale-110 hover:text-[#E4405F]">
+                        <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
+                    </a>
+                    <a href="https://open.spotify.com/artist/5QVI0NjbUydubWdYZQJR9z" target="_blank" class="w-14 h-14 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full flex items-center justify-center text-white transition-all hover:scale-110 hover:text-[#1DB954]">
+                        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.24 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.84.24 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.6.18-1.2.72-1.381 4.26-1.261 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg>
+                    </a>
+                </div>
+            </div>
+
+            <div class="pt-8 flex flex-col md:flex-row items-center justify-between gap-4 text-[10px] text-white/30 font-black uppercase tracking-[0.2em]">
+                <div>© 2026 The United Road. All rights reserved.</div>
+                <div class="flex gap-8">
+                    <span>Official</span>
+                    <span>Manchester, UK</span>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script>
+        // --- SMART YOUTUBE PLAYER INTEGRATION ---
+        var tag = document.createElement('script');
+        tag.src = "https://www.youtube.com/iframe_api";
+        var firstScriptTag = document.getElementsByTagName('script')[0];
+        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+        var player;
+        function onYouTubeIframeAPIReady() {
+            player = new YT.Player('youtube-player', {
+                videoId: 'UyWGmCiab3o', 
+                // Using youtube-nocookie.com often bypasses basic iframe restrictions
+                host: 'https://www.youtube-nocookie.com', 
+                playerVars: { 
+                    'autoplay': 0, 
+                    'rel': 0, 
+                    'modestbranding': 1, 
+                    'fs': 1,
+                    'origin': window.location.origin
+                },
+                events: {
+                    'onError': function(event) {
+                        // Error 150/153 Triggered!
+                        // Instead of showing the ugly grey screen, we hide the iframe 
+                        // and show our beautiful fallback UI.
+                        document.getElementById('youtube-player').style.display = 'none';
+                        var fallback = document.getElementById('yt-fallback');
+                        fallback.classList.remove('hidden');
+                        fallback.classList.add('flex');
+                    }
+                }
+            });
+        }
+
+        // Navigation Scroll Effect
+        window.addEventListener('scroll', () => {
+            const nav = document.getElementById('navbar');
+            const innerNav = document.getElementById('inner-nav');
+            if (window.scrollY > 20) {
+                nav.classList.remove('py-8');
+                nav.classList.add('py-4');
+                innerNav.classList.add('bg-black/40', 'backdrop-blur-2xl', 'border-white/10', 'shadow-2xl');
+                innerNav.classList.remove('border-transparent');
+            } else {
+                nav.classList.add('py-8');
+                nav.classList.remove('py-4');
+                innerNav.classList.remove('bg-black/40', 'backdrop-blur-2xl', 'border-white/10', 'shadow-2xl');
+                innerNav.classList.add('border-transparent');
+            }
+        });
+
+        // Mobile Menu Toggle
+        const menuBtn = document.getElementById('menu-btn');
+        const mobileMenu = document.getElementById('mobile-menu');
+        const iconMenu = document.getElementById('icon-menu');
+        const iconClose = document.getElementById('icon-close');
+        const mobileLinks = document.querySelectorAll('.mobile-link');
+
+        function toggleMenu() {
+            const isOpen = mobileMenu.classList.contains('opacity-100');
+            if (isOpen) {
+                mobileMenu.classList.remove('opacity-100', 'scale-y-100');
+                mobileMenu.classList.add('opacity-0', 'scale-y-0', 'pointer-events-none');
+                iconMenu.classList.remove('hidden');
+                iconClose.classList.add('hidden');
+            } else {
+                mobileMenu.classList.add('opacity-100', 'scale-y-100');
+                mobileMenu.classList.remove('opacity-0', 'scale-y-0', 'pointer-events-none');
+                iconMenu.classList.add('hidden');
+                iconClose.classList.remove('hidden');
+            }
+        }
+
+        menuBtn.addEventListener('click', toggleMenu);
+        mobileLinks.forEach(link => link.addEventListener('click', toggleMenu));
+    </script>
+</body>
+</html>
+
+
+```
