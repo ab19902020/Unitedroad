@@ -398,20 +398,14 @@
                 else document.title = titles[path] || titles['/'];
             }, [path]);
 
-            // --- 4-SLOT SUBSTACK ROTATION ENGINE (Fixes 30-min lag without spamming dashboard) ---
+            // --- SUBSTACK SYNC (served by our own Netlify Function for reliable freshness) ---
             const fetchSubstack = async () => {
                 try {
-                    // This creates exactly 4 feeds in your dashboard (slot=0, 1, 2, 3) 
-                    // It forces Substack to drop its cache while keeping your dashboard perfectly clean.
-                    const slot = Math.floor(new Date().getMinutes() / 15);
-                    const pureUrl = `https://adam730708.substack.com/feed?slot=${slot}`;
-                    
-                    const buster = Date.now();
-                    const encodedRssUrl = encodeURIComponent(pureUrl);
-                    
-                    const premiumUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodedRssUrl}&api_key=suaz9hy4g8krsoe7lt5dq46t9jucnimnzji3ipqi&order_by=pubDate&order_dir=desc&count=30&_cb=${buster}`;
-                    
-                    const res = await fetch(premiumUrl);
+                    // /api/substack fetches the Substack RSS feed server-side on every
+                    // request, so new posts appear without the caching lag of a
+                    // third-party RSS converter. The cache-buster keeps the browser
+                    // from reusing a previous response.
+                    const res = await fetch(`/api/substack?_cb=${Date.now()}`, { cache: 'no-store' });
                     if (res.ok) {
                         const data = await res.json();
                         if (data?.status === 'ok' && data.items) {
@@ -447,7 +441,7 @@
 
             useEffect(() => {
                 fetchSubstack();
-                const interval = setInterval(fetchSubstack, 900000); 
+                const interval = setInterval(fetchSubstack, 300000); // refresh every 5 minutes
 
                 const handleVisibilityChange = () => {
                     if (document.visibilityState === 'visible') {
