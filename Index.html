@@ -302,12 +302,13 @@
             return "My archives are vast, but my focus is singular. Ask me about our legends, the 1999 Treble, our top scorers, Old Trafford, or our current manager Michael Carrick! GGMU!";
         };
 
-        // --- STABLE PREMIUM CACHE BUSTER FOR SECONDARY FEEDS ---
-        // PURE URL is passed to rss2json so it only registers exactly 1 feed in your dashboard
-        const getFreshRssUrl = (baseRssUrl) => {
-            const buster = Date.now();
-            return `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(baseRssUrl)}&api_key=suaz9hy4g8krsoe7lt5dq46t9jucnimnzji3ipqi&_cb=${buster}`;
-        };
+        // --- SECONDARY FEEDS: served by our own Netlify Function (see netlify/functions/rss.mts) ---
+        // Previously these went straight to rss2json.com from the browser with an
+        // API key embedded in the page source, shared by every visitor. The site's
+        // own polling burned through that quota in minutes, which is why feeds kept
+        // going blank. Routing through our server removes the third-party key and
+        // the shared rate limit entirely.
+        const getFreshRssUrl = (baseRssUrl) => `/api/rss?url=${encodeURIComponent(baseRssUrl)}`;
 
         // ==========================================
         // CUSTOM ROUTER
@@ -703,7 +704,7 @@
                 };
                 if (newsItems.length === 0) setNewsLoading(true);
                 fetchNewsData();
-                const intervalId = setInterval(fetchNewsData, 60000);
+                const intervalId = setInterval(fetchNewsData, 120000);
                 return () => { isMounted = false; clearInterval(intervalId); };
             }, [path]); 
 
@@ -756,8 +757,8 @@
                     } catch (e) { console.error(e); } finally { if(isMounted) setSocialLoading(false); }
                 };
                 if(socialFeed.length === 0) setSocialLoading(true);
-                fetchHub(); 
-                const id = setInterval(fetchHub, 60000);
+                fetchHub();
+                const id = setInterval(fetchHub, 120000);
                 return () => { isMounted = false; clearInterval(id); };
             }, [path]);
 
