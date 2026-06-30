@@ -1,0 +1,109 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" role="img" aria-label="World Cup Free Kicks game cover">
+  <defs>
+    <linearGradient id="fkSky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#012616"/>
+      <stop offset="55%" stop-color="#034A2F"/>
+      <stop offset="100%" stop-color="#02331F"/>
+    </linearGradient>
+    <radialGradient id="fkGlowL" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="fkGlowGold" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFD700" stop-opacity="0.45"/>
+      <stop offset="100%" stop-color="#FFD700" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="fkPitch" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#045A38"/>
+      <stop offset="100%" stop-color="#023D27"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="800" height="600" fill="url(#fkSky)"/>
+
+  <!-- floodlight glow -->
+  <circle cx="90" cy="60" r="220" fill="url(#fkGlowL)"/>
+  <circle cx="730" cy="40" r="220" fill="url(#fkGlowL)"/>
+
+  <!-- crowd suggestion -->
+  <g fill="#FFD700" opacity="0.18">
+    <rect x="0" y="18" width="800" height="26"/>
+  </g>
+  <g fill="#012616" opacity="0.55">
+    <rect x="0" y="44" width="800" height="14"/>
+  </g>
+
+  <!-- pitch -->
+  <rect x="0" y="430" width="800" height="170" fill="url(#fkPitch)"/>
+  <g stroke="#FFFFFF" stroke-opacity="0.16" stroke-width="34">
+    <line x1="0" y1="470" x2="800" y2="470"/>
+    <line x1="0" y1="540" x2="800" y2="540"/>
+  </g>
+  <!-- penalty arc -->
+  <path d="M 230 600 A 230 230 0 0 1 690 600" fill="none" stroke="#FFFFFF" stroke-opacity="0.55" stroke-width="4"/>
+  <line x1="0" y1="430" x2="800" y2="430" stroke="#FFFFFF" stroke-opacity="0.5" stroke-width="3"/>
+
+  <!-- goal frame, top right of the pitch -->
+  <g stroke="#F4F6F8" stroke-width="7" fill="none" opacity="0.95">
+    <path d="M 560 250 L 560 430 M 760 250 L 760 430 M 560 250 L 760 250"/>
+  </g>
+  <g stroke="#F4F6F8" stroke-opacity="0.25" stroke-width="2">
+    <line x1="585" y1="250" x2="585" y2="430"/>
+    <line x1="610" y1="250" x2="610" y2="430"/>
+    <line x1="635" y1="250" x2="635" y2="430"/>
+    <line x1="660" y1="250" x2="660" y2="430"/>
+    <line x1="685" y1="250" x2="685" y2="430"/>
+    <line x1="710" y1="250" x2="710" y2="430"/>
+    <line x1="735" y1="250" x2="735" y2="430"/>
+    <line x1="560" y1="280" x2="760" y2="280"/>
+    <line x1="560" y1="320" x2="760" y2="320"/>
+    <line x1="560" y1="360" x2="760" y2="360"/>
+    <line x1="560" y1="400" x2="760" y2="400"/>
+  </g>
+
+  <!-- defensive wall -->
+  <g fill="#0B132B">
+    <g transform="translate(330,330)">
+      <rect x="-22" y="10" width="44" height="100" rx="20"/>
+      <circle cx="0" cy="-8" r="24"/>
+    </g>
+    <g transform="translate(385,322) rotate(-6)">
+      <rect x="-24" y="6" width="48" height="108" rx="22"/>
+      <circle cx="0" cy="-14" r="25"/>
+    </g>
+    <g transform="translate(443,318)">
+      <rect x="-24" y="0" width="48" height="112" rx="22"/>
+      <circle cx="0" cy="-20" r="25"/>
+      <rect x="-30" y="2" width="18" height="55" rx="9" transform="rotate(-35 -30 2)"/>
+    </g>
+    <g transform="translate(500,330) rotate(5)">
+      <rect x="-22" y="10" width="44" height="100" rx="20"/>
+      <circle cx="0" cy="-8" r="24"/>
+    </g>
+  </g>
+  <g fill="#DA291C" opacity="0.9">
+    <circle cx="330" cy="365" r="9"/>
+    <circle cx="385" cy="358" r="9"/>
+    <circle cx="443" cy="354" r="9"/>
+    <circle cx="500" cy="366" r="9"/>
+  </g>
+
+  <!-- trajectory arc -->
+  <path d="M 175 470 C 230 300, 470 190, 690 300" fill="none" stroke="#FFD700" stroke-width="5" stroke-dasharray="2 16" stroke-linecap="round" opacity="0.95"/>
+  <circle cx="430" cy="225" r="55" fill="url(#fkGlowGold)"/>
+
+  <!-- ball at the spot -->
+  <circle cx="175" cy="470" r="26" fill="#F4F6F8"/>
+  <circle cx="175" cy="470" r="26" fill="none" stroke="#0B132B" stroke-opacity="0.15" stroke-width="2"/>
+  <g fill="#0B132B" opacity="0.85">
+    <polygon points="175,452 184,460 180,471 170,471 166,460"/>
+    <polygon points="160,478 168,484 165,492 156,492 153,484"/>
+    <polygon points="190,478 198,484 195,492 186,492 183,484"/>
+  </g>
+
+  <!-- ball in flight, near goal -->
+  <circle cx="690" cy="300" r="17" fill="#F4F6F8"/>
+  <g fill="#0B132B" opacity="0.85">
+    <polygon points="690,290 696,295 693,302 687,302 684,295"/>
+  </g>
+</svg>

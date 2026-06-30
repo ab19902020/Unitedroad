@@ -64,9 +64,25 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Montserrat:ital,wght@0,700;0,800;0,900;1,800;1,900&display=swap');
         
+        html { scroll-behavior: smooth; }
         body { margin: 0; padding: 0; background-color: #F9FAFB; color: #111827; overflow-x: hidden; font-family: 'Inter', system_ui, sans-serif; -webkit-font-smoothing: antialiased; }
         .font-heading { font-family: 'Montserrat', sans-serif; }
         .font-body { font-family: 'Inter', sans-serif; }
+
+        /* Brand-matched text selection */
+        ::selection { background: #DA291C; color: #ffffff; }
+
+        /* Accessible, on-brand keyboard focus ring (mouse clicks stay clean) */
+        a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible {
+            outline: 2px solid #FFD700; outline-offset: 3px; border-radius: 4px;
+        }
+
+        /* Slim, branded scrollbar instead of the default browser chrome */
+        ::-webkit-scrollbar { width: 10px; height: 10px; }
+        ::-webkit-scrollbar-track { background: #F3F4F6; }
+        ::-webkit-scrollbar-thumb { background: #034A2F; border-radius: 10px; border: 2px solid #F3F4F6; }
+        ::-webkit-scrollbar-thumb:hover { background: #DA291C; }
+        html { scrollbar-color: #034A2F #F3F4F6; scrollbar-width: thin; }
         
         .audio-bar { animation: audioBounce 980ms infinite ease-in-out alternate; }
         .paused .audio-bar { animation-play-state: paused !important; height: 5px !important; }
@@ -144,6 +160,7 @@
         const InfoIcon = (props) => <LucideIcon d={<><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></>} {...props} />;
         const ArchiveIcon = (props) => <LucideIcon d={<><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></>} {...props} />;
         const ClockIcon = (props) => <LucideIcon d={<><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></>} {...props} />;
+        const Lock = (props) => <LucideIcon d={<><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></>} {...props} />;
         
         // UPGRADE ICONS
         const Activity = (props) => <LucideIcon d={<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>} {...props} />;
@@ -181,27 +198,27 @@
 
         const GAMES_LIBRARY = [
             {
-                id: 'united-rhythm', title: 'United Rhythm',
+                id: 'united-rhythm', title: 'United Rhythm', tag: 'RHYTHM',
                 description: 'The ultimate matchday music game experience. Hit the beats to the sound of Old Trafford chants.',
                 thumbnail: 'https://iili.io/CFSZbEB.jpg', url: 'https://raw.githack.com/ab19902020/UNITEDRythm-/main/Index.html', isComingSoon: false
             },
             {
-                id: 'world-cup-free-kicks', title: 'World Cup Free Kicks',
+                id: 'world-cup-free-kicks', title: 'World Cup Free Kicks', tag: 'SPORTS',
                 description: 'Step up like Beckham or Ronaldo. Curve the ball past the wall and score the ultimate free kick.',
-                thumbnail: 'https://images.unsplash.com/photo-1518605368461-1ee72ebf49e6?auto=format&fit=crop&w=800&q=80', url: 'https://raw.githack.com/ab19902020/Worldcupfreekicks/main/index.html', isComingSoon: false
+                thumbnail: '/assets/games/freekick-thumb.svg', url: 'https://raw.githack.com/ab19902020/Worldcupfreekicks/main/index.html', isComingSoon: false
             },
             {
-                id: 'man-utd-quiz', title: 'Ultimate United Quiz',
+                id: 'man-utd-quiz', title: 'Ultimate United Quiz', tag: 'TRIVIA',
                 description: 'Test your Manchester United knowledge! From legendary players to historic finals, see if you can achieve a perfect score.',
-                thumbnail: 'https://images.unsplash.com/photo-1574629810360-7efbb6b6973f?auto=format&fit=crop&w=800&q=80', url: 'https://raw.githack.com/ab19902020/Manutdquiz/main/index.html', isComingSoon: false
+                thumbnail: '/assets/games/quiz-thumb.svg', url: 'https://raw.githack.com/ab19902020/Manutdquiz/main/index.html', isComingSoon: false
             },
             {
-                id: 'stretford-end-striker', title: 'Stretford End Striker',
+                id: 'stretford-end-striker', title: 'Stretford End Striker', tag: 'SPORTS',
                 description: 'Score the winning goal in Fergie Time. Can you handle the pressure at the Stretford End?',
                 thumbnail: 'https://iili.io/CF4F3sS.jpg', url: '#', isComingSoon: true
             },
             {
-                id: 'gaffer-2026', title: 'Gaffer: 2026',
+                id: 'gaffer-2026', title: 'Gaffer: 2026', tag: 'SIMULATION',
                 description: 'Take the wheel. Manage the Manchester United squad to glory in this simulation challenge.',
                 thumbnail: 'https://images.unsplash.com/photo-1508344928928-7165b67de128?auto=format&fit=crop&w=800&q=80', url: '#', isComingSoon: true
             }
@@ -302,12 +319,13 @@
             return "My archives are vast, but my focus is singular. Ask me about our legends, the 1999 Treble, our top scorers, Old Trafford, or our current manager Michael Carrick! GGMU!";
         };
 
-        // --- STABLE PREMIUM CACHE BUSTER FOR SECONDARY FEEDS ---
-        // PURE URL is passed to rss2json so it only registers exactly 1 feed in your dashboard
-        const getFreshRssUrl = (baseRssUrl) => {
-            const buster = Date.now();
-            return `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(baseRssUrl)}&api_key=suaz9hy4g8krsoe7lt5dq46t9jucnimnzji3ipqi&_cb=${buster}`;
-        };
+        // --- SECONDARY FEEDS: served by our own Netlify Function (see netlify/functions/rss.mts) ---
+        // Previously these went straight to rss2json.com from the browser with an
+        // API key embedded in the page source, shared by every visitor. The site's
+        // own polling burned through that quota in minutes, which is why feeds kept
+        // going blank. Routing through our server removes the third-party key and
+        // the shared rate limit entirely.
+        const getFreshRssUrl = (baseRssUrl) => `/api/rss?url=${encodeURIComponent(baseRssUrl)}`;
 
         // ==========================================
         // CUSTOM ROUTER
@@ -703,7 +721,7 @@
                 };
                 if (newsItems.length === 0) setNewsLoading(true);
                 fetchNewsData();
-                const intervalId = setInterval(fetchNewsData, 60000);
+                const intervalId = setInterval(fetchNewsData, 120000);
                 return () => { isMounted = false; clearInterval(intervalId); };
             }, [path]); 
 
@@ -756,8 +774,8 @@
                     } catch (e) { console.error(e); } finally { if(isMounted) setSocialLoading(false); }
                 };
                 if(socialFeed.length === 0) setSocialLoading(true);
-                fetchHub(); 
-                const id = setInterval(fetchHub, 60000);
+                fetchHub();
+                const id = setInterval(fetchHub, 120000);
                 return () => { isMounted = false; clearInterval(id); };
             }, [path]);
 
@@ -877,7 +895,7 @@
 
             // REUSABLE NEWS CARD
             const NewsCard = ({ n }) => (
-                <a href={n.link} target="_blank" rel="nofollow" className="bg-white rounded-[24px] overflow-hidden border border-gray-200 shadow-sm hover:shadow-lg hover:border-[#DA291C] transition-all group flex flex-col">
+                <a href={n.link} target="_blank" rel="nofollow" className="bg-white rounded-[24px] overflow-hidden border border-gray-200 shadow-sm hover:shadow-xl hover:border-[#DA291C] hover:-translate-y-1.5 transition-all duration-300 group flex flex-col">
                     <div className="aspect-[2/1] relative bg-[#0B132B] flex items-center justify-center border-b border-gray-100">
                         <img src={n.img} alt={n.title} className={`w-full h-full ${n.img === LINKS.logoUrl ? 'object-contain opacity-30 p-8 scale-110' : 'object-cover'} group-hover:scale-105 transition-transform duration-500`} />
                     </div>
@@ -1451,7 +1469,7 @@
                     const thumb = vId ? `https://img.youtube.com/vi/${vId}/maxresdefault.jpg` : item.thumbnail;
                     const hasImg = thumb && thumb !== 'self' && thumb !== 'default';
                     return (
-                        <a href={item.link} target="_blank" rel="nofollow" className={`bg-white rounded-[24px] overflow-hidden border border-gray-200 shadow-sm hover:shadow-xl ${isReddit ? 'hover:border-[#FF4500]' : 'hover:border-[#DA291C]'} transition-all group flex flex-col min-h-[250px]`}>
+                        <a href={item.link} target="_blank" rel="nofollow" className={`bg-white rounded-[24px] overflow-hidden border border-gray-200 shadow-sm hover:shadow-xl hover:-translate-y-1.5 ${isReddit ? 'hover:border-[#FF4500]' : 'hover:border-[#DA291C]'} transition-all duration-300 group flex flex-col min-h-[250px]`}>
                             <div className="p-5 flex items-center gap-3 border-b border-gray-100 bg-gray-50/50">
                                 <img src={item.avatar} alt={item.creator} className="w-10 h-10 rounded-full border border-gray-200 object-cover bg-white" />
                                 <div className="min-w-0"><div className={`font-heading font-black text-sm text-gray-900 truncate ${isReddit ? 'group-hover:text-[#FF4500]' : 'group-hover:text-[#DA291C]'}`}>{item.creator}</div><div className="text-[10px] text-gray-400 font-bold uppercase tracking-wider truncate">{item.handle || 'UPDATE'} • {item.pubDate ? timeAgo(item.pubDate) : 'Recent'}</div></div>
@@ -1697,15 +1715,17 @@
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
                                 {GAMES_LIBRARY.map((game) => (
-                                    <div key={game.id} className="relative group rounded-[32px] overflow-hidden bg-[#034A2F] border border-[#FFD700]/20 shadow-2xl flex flex-col h-[400px]">
+                                    <div key={game.id} className="relative group rounded-[32px] overflow-hidden bg-[#034A2F] border border-[#FFD700]/20 shadow-2xl flex flex-col h-[400px] transition-all duration-500 hover:-translate-y-2 hover:border-[#FFD700]/50 hover:shadow-[0_25px_60px_-10px_rgba(255,215,0,0.25)]">
                                         <div className="aspect-[4/3] w-full relative overflow-hidden bg-gray-900 border-b border-[#FFD700]/20">
                                             <img src={game.thumbnail} alt={`Cover for ${game.title}`} className={`w-full h-full object-cover transition-transform duration-700 ${!game.isComingSoon && 'group-hover:scale-105'} ${game.isComingSoon && 'grayscale opacity-50'}`} />
                                             <div className="absolute inset-0 bg-gradient-to-t from-[#034A2F] to-transparent opacity-80"></div>
-                                            {game.isComingSoon && (<div className="absolute inset-0 flex items-center justify-center backdrop-blur-sm"><div className="bg-black/60 border border-white/20 text-white font-heading font-black text-xs tracking-widest px-6 py-2 rounded-full uppercase">Coming Soon</div></div>)}
+                                            {game.tag && (<div className="absolute top-4 left-4 z-10 bg-black/50 backdrop-blur-sm border border-white/10 text-[#FFD700] text-[9px] font-heading font-black tracking-[2px] px-3 py-1.5 rounded-full uppercase">{game.tag}</div>)}
+                                            {!game.isComingSoon && (<div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-[shimmer_1.2s_infinite] pointer-events-none"></div>)}
+                                            {game.isComingSoon && (<div className="absolute inset-0 flex items-center justify-center backdrop-blur-sm"><div className="bg-black/60 border border-[#FFD700]/30 text-[#FFD700] font-heading font-black text-xs tracking-widest px-6 py-2 rounded-full uppercase flex items-center gap-2"><Lock className="w-3.5 h-3.5"/> Coming Soon</div></div>)}
                                         </div>
                                         <div className="p-6 md:p-8 flex flex-col flex-1 justify-between relative z-10 bg-gradient-to-b from-[#034A2F] to-[#012616]">
-                                            <div><h2 className="text-2xl font-heading font-black text-white tracking-tight mb-2">{game.title}</h2><p className="text-white/70 font-body text-sm font-medium leading-relaxed">{game.description}</p></div>
-                                            {!game.isComingSoon ? (<button onClick={() => { setActiveGame(game); window.scrollTo(0, 0); }} className="w-full mt-6 bg-[#DA291C] hover:bg-red-700 text-white font-heading font-black text-xs tracking-widest uppercase py-4 rounded-full flex items-center justify-center gap-2 transition-colors shadow-lg"><Play className="w-4 h-4" fill="currentColor"/> Play Now</button>) : (<button disabled className="w-full mt-6 bg-white/5 text-white/30 border border-white/10 font-heading font-black text-xs tracking-widest uppercase py-4 rounded-full flex items-center justify-center gap-2 cursor-not-allowed">Locked</button>)}
+                                            <div><h2 className="text-2xl font-heading font-black text-white tracking-tight mb-2 group-hover:text-[#FFD700] transition-colors">{game.title}</h2><p className="text-white/70 font-body text-sm font-medium leading-relaxed">{game.description}</p></div>
+                                            {!game.isComingSoon ? (<button onClick={() => { setActiveGame(game); window.scrollTo(0, 0); }} className="relative overflow-hidden w-full mt-6 bg-[#DA291C] hover:bg-red-700 text-white font-heading font-black text-xs tracking-widest uppercase py-4 rounded-full flex items-center justify-center gap-2 transition-all hover:-translate-y-0.5 shadow-lg hover:shadow-red-900/40"><Play className="w-4 h-4" fill="currentColor"/> Play Now</button>) : (<button disabled className="w-full mt-6 bg-white/5 text-white/30 border border-white/10 font-heading font-black text-xs tracking-widest uppercase py-4 rounded-full flex items-center justify-center gap-2 cursor-not-allowed">Locked</button>)}
                                         </div>
                                     </div>
                                 ))}
@@ -1723,7 +1743,7 @@
                 const groupedArchive = groupArchive(archiveArticles);
 
                 const ArticleCard = ({ post }) => (
-                    <div onClick={() => doNavigate(`/article/${post.id}`)} className="bg-white rounded-[32px] overflow-hidden border border-gray-200 shadow-sm hover:shadow-xl hover:border-[#DA291C] transition-all cursor-pointer group flex flex-col">
+                    <div onClick={() => doNavigate(`/article/${post.id}`)} className="bg-white rounded-[32px] overflow-hidden border border-gray-200 shadow-sm hover:shadow-2xl hover:border-[#DA291C] hover:-translate-y-1.5 transition-all duration-300 cursor-pointer group flex flex-col">
                         <div className="aspect-video relative overflow-hidden bg-gray-100">
                             <img src={post.image} alt={post.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"/>
                         </div>
