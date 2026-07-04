@@ -205,7 +205,7 @@
             {
                 id: 'world-cup-free-kicks', title: 'World Cup Free Kicks', tag: 'SPORTS',
                 description: 'Step up like Beckham or Ronaldo. Curve the ball past the wall and score the ultimate free kick.',
-                thumbnail: '/assets/games/freekick-thumb.svg', url: 'https://raw.githack.com/ab19902020/Worldcupfreekicks/main/index.html', isComingSoon: false
+                thumbnail: '/assets/games/freekick-thumb.svg', url: 'https://raw.githack.com/ab19902020/Worldcupfreekicks/main/Index.html', isComingSoon: false
             },
             {
                 id: 'man-utd-quiz', title: 'Ultimate United Quiz', tag: 'TRIVIA',
@@ -538,6 +538,7 @@
                         const feeds = [
                             'https://www.manchestereveningnews.co.uk/sport/football/transfer-news/?service=rss',
                             'https://www.skysports.com/rss/11065',
+                            'https://thepeoplesperson.com/feed/',
                             'https://www.reddit.com/r/reddevils/search.rss?q=flair%3ATransfer&restrict_sr=1&sort=hot'
                         ];
                         const results = await Promise.all(feeds.map(url => fetch(getFreshRssUrl(url)).then(r => r.ok ? r.json() : null).catch(()=>null)));
@@ -573,7 +574,7 @@
                 let isMounted = true;
                 const fetchAcademy = async () => {
                     try {
-                        const feeds = ['https://www.manchestereveningnews.co.uk/sport/football/manchester-united-fc/?service=rss', 'https://talksport.com/football/team/manchester-united/feed/'];
+                        const feeds = ['https://www.manchestereveningnews.co.uk/sport/football/manchester-united-fc/?service=rss', 'https://talksport.com/football/team/manchester-united/feed/', 'https://thepeoplesperson.com/feed/'];
                         const results = await Promise.all(feeds.map(url => fetch(getFreshRssUrl(url)).then(r => r.ok ? r.json() : null).catch(()=>null)));
                         
                         let combined = [];
@@ -688,7 +689,9 @@
                             f('http://feeds.bbci.co.uk/sport/football/teams/manchester-united/rss.xml'), f('https://www.skysports.com/rss/11065'),
                             f('https://ir.manutd.com/rss/news-releases.aspx'), f('https://www.manchestereveningnews.co.uk/sport/football/manchester-united-fc/?service=rss'),
                             f('https://www.theguardian.com/football/manchester-united/rss'), f('https://www.independent.co.uk/sport/football/teams/manchester-united/rss'),
-                            f('https://talksport.com/football/team/manchester-united/feed/'), f('https://www.dailymail.co.uk/sport/teampages/manchester-united.rss')
+                            f('https://talksport.com/football/team/manchester-united/feed/'), f('https://www.dailymail.co.uk/sport/teampages/manchester-united.rss'),
+                            f('https://www.mirror.co.uk/all-about/manchester-united?service=rss'),
+                            f('https://thepeoplesperson.com/feed/'), f('https://strettynews.com/feed/'), f('https://thebusbybabe.sbnation.com/rss/index.xml')
                         ]);
 
                         let combined = [];
@@ -696,9 +699,12 @@
 
                         processStandard(results[0], 'BBC Sport', 'PRESS'); processStandard(results[1], 'Sky Sports', 'PRESS'); processStandard(results[2], 'Official MUFC', 'CLUB'); processStandard(results[3], 'MEN', 'PRESS');
                         processStandard(results[4], 'The Guardian', 'PRESS'); processStandard(results[5], 'The Independent', 'PRESS'); processStandard(results[6], 'talkSPORT', 'PRESS'); processStandard(results[7], 'Daily Mail', 'PRESS');
+                        processStandard(results[8], 'Mirror', 'PRESS');
+                        processStandard(results[9], 'Peoples Person', 'FANZONE'); processStandard(results[10], 'Stretty News', 'FANZONE'); processStandard(results[11], 'The Busby Babe', 'FANZONE');
 
                         combined = combined.filter(item => {
-                            if (item.category === 'CLUB') return true;
+                            // Club feed and dedicated MUFC fan sites are 100% United content already
+                            if (item.category === 'CLUB' || item.category === 'FANZONE') return true;
                             const t = ((item.title || '') + " " + (item.description || '')).toLowerCase();
                             return ['manchester united','man utd','mufc','united','old trafford','red devils','carrington','bruno','mainoo','garnacho','hojlund','onana','martinez','manager','premier league','transfer'].some(kw => t.includes(kw));
                         });
@@ -1372,7 +1378,7 @@
                                 </div>
                                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                                     <div className="flex flex-wrap gap-2 md:gap-3">
-                                        {['ALL', 'CLUB', 'PRESS'].map(f => (
+                                        {['ALL', 'CLUB', 'PRESS', 'FANZONE'].map(f => (
                                             <button key={f} onClick={() => setNewsFilter(f)} className={`px-4 md:px-6 py-2.5 rounded-full text-[10px] md:text-xs font-heading font-black tracking-[1.5px] transition-all border ${newsFilter === f ? 'bg-gray-900 text-white border-gray-900 shadow-md' : 'bg-white text-gray-600 border-gray-200 hover:border-[#DA291C] hover:text-[#DA291C]'}`}>{f}</button>
                                         ))}
                                     </div>
