@@ -18,6 +18,23 @@ United Road is a passionate, independent fan project created for the Manchester 
 - Latest news and transfer rumours
 - Matchday atmosphere content
 
+---
+
+## Games
+
+The web arcade lives at `#/games`, driven by the `GAMES_LIBRARY` array in `Index.html`.
+
+### Red Devil Manager 26/27 — featured
+
+The Manchester United football manager game for the 2026/27 season: name your XI, drill the
+tactics, work the transfer window and chase the title. It is the headline title on the site and
+has its own deep link at **`#/manager`**, which boots straight into the game.
+
+- Game source: [ab19902020/Manchester-United-manager-](https://github.com/ab19902020/Manchester-United-manager-)
+- Cover art: `assets/games/manager-thumb.svg`
+
+Other titles: United Rhythm, World Cup Free Kicks and the Ultimate United Quiz.
+
 This is **not** an official Manchester United website.
 
 ---
@@ -88,4 +105,4 @@ If you enjoy the chants and games, please share unitedroad.uk with other Red Dev
 
 ---
 
-*Last updated: June 2026*
+*Last updated: August 2026*

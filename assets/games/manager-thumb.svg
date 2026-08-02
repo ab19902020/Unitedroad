@@ -1,0 +1,151 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600" role="img" aria-label="Red Devil Manager 26/27 Manchester United football management game cover">
+  <defs>
+    <linearGradient id="rdmBase" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#12040A"/>
+      <stop offset="45%" stop-color="#2A0708"/>
+      <stop offset="100%" stop-color="#08030A"/>
+    </linearGradient>
+    <linearGradient id="rdmScrim" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0%" stop-color="#050208" stop-opacity="0.95"/>
+      <stop offset="46%" stop-color="#050208" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#050208" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="rdmRedGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#DA291C" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#DA291C" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="rdmGoldGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFD700" stop-opacity="0.42"/>
+      <stop offset="100%" stop-color="#FFD700" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="rdmGold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFF0A8"/>
+      <stop offset="45%" stop-color="#FFD700"/>
+      <stop offset="100%" stop-color="#C9931B"/>
+    </linearGradient>
+    <linearGradient id="rdmRed" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FF4436"/>
+      <stop offset="100%" stop-color="#A81409"/>
+    </linearGradient>
+    <clipPath id="rdmFrame"><rect width="800" height="600"/></clipPath>
+  </defs>
+
+  <g clip-path="url(#rdmFrame)">
+    <rect width="800" height="600" fill="url(#rdmBase)"/>
+
+    <!-- floodlight bloom -->
+    <circle cx="620" cy="90" r="330" fill="url(#rdmRedGlow)"/>
+    <circle cx="150" cy="540" r="300" fill="url(#rdmGoldGlow)"/>
+
+    <!-- ===== TACTICS BOARD: angled top-down pitch ===== -->
+    <g transform="translate(455 300) rotate(-9) translate(-455 -300)" opacity="0.9">
+      <rect x="300" y="20" width="560" height="560" rx="10" fill="#0B2B1C" fill-opacity="0.55" stroke="#FFFFFF" stroke-opacity="0.16" stroke-width="3"/>
+      <!-- mown stripes -->
+      <g fill="#FFFFFF" fill-opacity="0.035">
+        <rect x="300" y="20" width="560" height="70"/>
+        <rect x="300" y="160" width="560" height="70"/>
+        <rect x="300" y="300" width="560" height="70"/>
+        <rect x="300" y="440" width="560" height="70"/>
+      </g>
+      <!-- markings -->
+      <g fill="none" stroke="#FFFFFF" stroke-opacity="0.34" stroke-width="3">
+        <line x1="300" y1="300" x2="860" y2="300"/>
+        <circle cx="580" cy="300" r="82"/>
+        <rect x="440" y="20" width="280" height="98"/>
+        <rect x="518" y="20" width="124" height="42"/>
+        <rect x="440" y="482" width="280" height="98"/>
+        <rect x="518" y="538" width="124" height="42"/>
+      </g>
+      <circle cx="580" cy="300" r="7" fill="#FFFFFF" fill-opacity="0.4"/>
+
+      <!-- movement arrows -->
+      <g fill="none" stroke="url(#rdmGold)" stroke-width="4" stroke-linecap="round" stroke-dasharray="14 11" opacity="0.85">
+        <path d="M 400 430 C 430 350 470 320 545 300"/>
+        <path d="M 760 430 C 730 350 690 320 615 300"/>
+        <path d="M 580 218 C 580 180 580 160 580 128"/>
+      </g>
+      <g fill="url(#rdmGold)" opacity="0.9">
+        <path d="M 580 108 l 13 26 l -26 0 Z"/>
+      </g>
+
+      <!-- squad tokens: 4-2-3-1 -->
+      <g>
+        <!-- back four -->
+        <g fill="url(#rdmRed)" stroke="#FFE9E7" stroke-width="3">
+          <circle cx="400" cy="470" r="23"/>
+          <circle cx="510" cy="500" r="23"/>
+          <circle cx="650" cy="500" r="23"/>
+          <circle cx="760" cy="470" r="23"/>
+          <!-- double pivot -->
+          <circle cx="500" cy="368" r="23"/>
+          <circle cx="660" cy="368" r="23"/>
+          <!-- attacking three -->
+          <circle cx="390" cy="245" r="23"/>
+          <circle cx="580" cy="255" r="23"/>
+          <circle cx="770" cy="245" r="23"/>
+        </g>
+        <!-- keeper -->
+        <circle cx="580" cy="548" r="21" fill="#0B132B" stroke="url(#rdmGold)" stroke-width="3"/>
+        <!-- striker: highlighted -->
+        <circle cx="580" cy="118" r="30" fill="url(#rdmGold)" stroke="#FFFFFF" stroke-width="3"/>
+        <circle cx="580" cy="118" r="42" fill="none" stroke="#FFD700" stroke-opacity="0.35" stroke-width="3"/>
+      </g>
+    </g>
+
+    <!-- scrim so the title stays legible over the board -->
+    <rect width="800" height="600" fill="url(#rdmScrim)"/>
+
+    <!-- ===== DEVIL TRIDENT CREST ===== -->
+    <g transform="translate(688 452)" opacity="0.95">
+      <circle r="86" fill="#0B0308" fill-opacity="0.75" stroke="url(#rdmGold)" stroke-opacity="0.5" stroke-width="3"/>
+      <g fill="url(#rdmGold)">
+        <rect x="-5" y="-14" width="10" height="72" rx="5"/>
+        <path d="M -44 -46 v 26 a 44 44 0 0 0 88 0 v -26 h -14 v 26 a 30 30 0 0 1 -60 0 v -26 Z"/>
+        <rect x="-9" y="-56" width="18" height="46" rx="4"/>
+        <path d="M -51 -50 l 7 -18 l 7 18 Z"/>
+        <path d="M -7 -60 l 7 -18 l 7 18 Z"/>
+        <path d="M 37 -50 l 7 -18 l 7 18 Z"/>
+        <path d="M -18 58 h 36 l -10 14 h -16 Z"/>
+      </g>
+    </g>
+
+    <!-- ===== TITLE BLOCK ===== -->
+    <g font-family="Montserrat, 'Arial Black', Arial, sans-serif">
+      <!-- Small game cards crop this art to y=127-473 and overlay tag chips down to y~221, so the
+           title and season badge live in y=232-470. Everything below 473 is banner-only. -->
+      <text x="56" y="290" font-size="80" font-weight="900" letter-spacing="-2" fill="#FFFFFF">RED DEVIL</text>
+      <text x="56" y="370" font-size="80" font-weight="900" letter-spacing="-2" fill="url(#rdmGold)">MANAGER</text>
+
+      <!-- season badge -->
+      <g transform="translate(56 398)">
+        <rect width="216" height="72" rx="12" fill="#FFFFFF" fill-opacity="0.06" stroke="url(#rdmGold)" stroke-width="3"/>
+        <text x="24" y="34" font-size="15" font-weight="900" letter-spacing="4" fill="#FFD700">SEASON</text>
+        <text x="24" y="62" font-size="34" font-weight="900" letter-spacing="1" fill="#FFFFFF">26 / 27</text>
+        <rect x="150" y="14" width="3" height="44" fill="#FFD700" fill-opacity="0.5"/>
+        <text x="168" y="34" font-size="13" font-weight="900" letter-spacing="2" fill="#FFFFFF" fill-opacity="0.75">FULL</text>
+        <text x="168" y="54" font-size="13" font-weight="900" letter-spacing="2" fill="#FFFFFF" fill-opacity="0.75">SIM</text>
+      </g>
+
+      <text x="58" y="508" font-size="19" font-weight="900" letter-spacing="4" fill="#FFFFFF" fill-opacity="0.85">TAKE CHARGE AT OLD TRAFFORD</text>
+
+      <!-- feature pills -->
+      <g font-size="14" font-weight="900" letter-spacing="2">
+        <g transform="translate(56 526)">
+          <rect width="158" height="42" rx="21" fill="#FFFFFF" fill-opacity="0.08" stroke="#FFFFFF" stroke-opacity="0.22" stroke-width="2"/>
+          <text x="79" y="27" text-anchor="middle" fill="#FFFFFF" fill-opacity="0.9">TRANSFERS</text>
+        </g>
+        <g transform="translate(226 526)">
+          <rect width="140" height="42" rx="21" fill="#FFFFFF" fill-opacity="0.08" stroke="#FFFFFF" stroke-opacity="0.22" stroke-width="2"/>
+          <text x="70" y="27" text-anchor="middle" fill="#FFFFFF" fill-opacity="0.9">TACTICS</text>
+        </g>
+        <g transform="translate(378 526)">
+          <rect width="152" height="42" rx="21" fill="#DA291C"/>
+          <text x="76" y="27" text-anchor="middle" fill="#FFFFFF">MATCHDAY</text>
+        </g>
+      </g>
+    </g>
+
+    <!-- frame -->
+    <rect x="1.5" y="1.5" width="797" height="597" fill="none" stroke="#FFD700" stroke-opacity="0.28" stroke-width="3"/>
+  </g>
+</svg>
