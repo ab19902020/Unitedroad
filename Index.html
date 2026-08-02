@@ -34,8 +34,8 @@
     <!--          ON-PAGE SEO & METADATA            -->
     <!-- ========================================== -->
     <title>United Road | Manchester United Fan Hub, Chants & News</title>
-    <meta id="meta-description" name="description" content="The ultimate Manchester United fan hub. Listen to United Road, Old Trafford chants, read our original blog, get news, and play Man Utd arcade games.">
-    <meta name="keywords" content="take me home united road lyrics, united road chant, man utd chants, old trafford chants, manchester united blog, mufc news">
+    <meta id="meta-description" name="description" content="The ultimate Manchester United fan hub. Play Red Devil Manager 26/27, the free Man Utd football manager game, listen to United Road and Old Trafford chants, read our blog and get MUFC news.">
+    <meta name="keywords" content="man utd manager game, manchester united football manager game, red devil manager 26/27, take me home united road lyrics, united road chant, man utd chants, old trafford chants, manchester united blog, mufc news">
     <meta name="author" content="United Road">
     <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
     
@@ -45,8 +45,8 @@
     <!-- Open Graph / Social Media Sharing -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://unitedroad.uk/">
-    <meta property="og:title" content="United Road | Manchester United Chants, Blog & News">
-    <meta property="og:description" content="The ultimate hub for Manchester United faithful. Original articles, chants, news, and history.">
+    <meta property="og:title" content="United Road | Red Devil Manager 26/27, Man Utd Chants, Blog & News">
+    <meta property="og:description" content="Play Red Devil Manager 26/27 free — the Manchester United football manager game. Plus original articles, chants, news, and history for the United faithful.">
     <meta property="og:image" content="https://iili.io/C2QPnkX.md.png">
 
     <!-- Node.js Process Polyfill for UMD modules -->
@@ -119,12 +119,32 @@
         .netflix-row::-webkit-scrollbar { display: none; }
         .netflix-row { -ms-overflow-style: none; scrollbar-width: none; scroll-behavior: smooth; }
     </style>
+    <!-- Structured data: featured game -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "VideoGame",
+      "name": "Red Devil Manager 26/27",
+      "alternateName": "Manchester United Football Manager 26/27",
+      "description": "The Manchester United football manager game for the 2026/27 season. Take charge at Old Trafford, name your XI, set the tactics, work the transfer window and chase the title.",
+      "url": "https://unitedroad.uk/#/manager",
+      "image": "https://unitedroad.uk/assets/games/manager-thumb.svg",
+      "genre": ["Sports", "Simulation", "Management"],
+      "gamePlatform": "Web browser",
+      "applicationCategory": "Game",
+      "playMode": "SinglePlayer",
+      "publisher": { "@type": "Organization", "name": "United Road", "url": "https://unitedroad.uk" },
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "GBP", "availability": "https://schema.org/InStock" }
+    }
+    </script>
 </head>
 <body>
     <noscript>
         <div style="padding: 20px; font-family: sans-serif;">
-            <h1>United Road - Manchester United Songs, Chants & News</h1>
+            <h1>United Road - Manchester United Songs, Chants, News & Games</h1>
             <p>Welcome to United Road. Listen to Man Utd songs, read our original blog, get MUFC news, and play games.</p>
+            <h2>Red Devil Manager 26/27 - The Manchester United Football Manager Game</h2>
+            <p>Test your skills as the Man Utd manager. Take charge at Old Trafford for the full 2026/27 season with the latest squad, ratings and upgrades - name your XI, drill the tactics, work the transfer window and chase the title. Free to play in your browser.</p>
         </div>
     </noscript>
 
@@ -166,6 +186,8 @@
         const Activity = (props) => <LucideIcon d={<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>} {...props} />;
         const Crosshair = (props) => <LucideIcon d={<><circle cx="12" cy="12" r="10"/><line x1="22" x2="18" y1="12" y2="12"/><line x1="6" x2="2" y1="12" y2="12"/><line x1="12" x2="12" y1="6" y2="2"/><line x1="12" x2="12" y1="22" y2="18"/></>} {...props} />;
         const Star = (props) => <LucideIcon d={<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>} {...props} />;
+        const Users = (props) => <LucideIcon d={<><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></>} {...props} />;
+        const Clipboard = (props) => <LucideIcon d={<><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 12h6"/><path d="M9 16h4"/></>} {...props} />;
 
         const SpotifyIcon = () => <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.24 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.84.24 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.6.18-1.2.72-1.381 4.26-1.261 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg>;
         const YouTubeIcon = () => <svg viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>;
@@ -198,6 +220,14 @@
 
         const GAMES_LIBRARY = [
             {
+                id: 'red-devil-manager', title: 'Red Devil Manager 26/27', tag: 'MANAGER',
+                description: 'Take charge of Manchester United for the full 2026/27 season. Pick the XI, set your tactics and win the lot.',
+                thumbnail: '/assets/games/manager-thumb.svg', url: 'https://raw.githack.com/ab19902020/Manchester-United-manager-/main/red-devil-manager.html', isComingSoon: false,
+                featured: true,
+                subtitle: 'The Manchester United Football Manager Game',
+                longDescription: 'Test your skills as the Man Utd manager. Take charge at Old Trafford for the full 2026/27 season with the latest squad, ratings and upgrades — name your XI, drill the tactics, work the transfer window and chase the title.'
+            },
+            {
                 id: 'united-rhythm', title: 'United Rhythm', tag: 'RHYTHM',
                 description: 'The ultimate matchday music game experience. Hit the beats to the sound of Old Trafford chants.',
                 thumbnail: 'https://iili.io/CFSZbEB.jpg', url: 'https://raw.githack.com/ab19902020/UNITEDRythm-/main/Index.html', isComingSoon: false
@@ -216,13 +246,11 @@
                 id: 'stretford-end-striker', title: 'Stretford End Striker', tag: 'SPORTS',
                 description: 'Score the winning goal in Fergie Time. Can you handle the pressure at the Stretford End?',
                 thumbnail: 'https://iili.io/CF4F3sS.jpg', url: '#', isComingSoon: true
-            },
-            {
-                id: 'gaffer-2026', title: 'Gaffer: 2026', tag: 'SIMULATION',
-                description: 'Take the wheel. Manage the Manchester United squad to glory in this simulation challenge.',
-                thumbnail: 'https://images.unsplash.com/photo-1508344928928-7165b67de128?auto=format&fit=crop&w=800&q=80', url: '#', isComingSoon: true
             }
         ];
+
+        // The headline title, surfaced across the home page, the games hub and its own /manager route.
+        const FEATURED_GAME = GAMES_LIBRARY.find(g => g.featured) || GAMES_LIBRARY[0];
 
         const LEGACY_STATS = [
             { number: 20, label: "League Titles", sub: "English Record", icon: Trophy },
@@ -231,7 +259,7 @@
             { number: 1878, label: "Founded", sub: "Newton Heath", icon: Shield },
         ];
 
-        const SUGGESTED_PROMPTS = ["Who is the current manager?", "Tell me about the 1999 Treble", "What's the stadium capacity?", "Who is our top scorer?"];
+        const SUGGESTED_PROMPTS = ["How do I play Red Devil Manager 26/27?", "Who is the current manager?", "Tell me about the 1999 Treble", "Who is our top scorer?"];
 
         // --- SAFE PARSERS FOR MOBILE/SAFARI STABILITY ---
         const safeDateParse = (dateString) => {
@@ -308,6 +336,7 @@
 
         const getLocalOracleResponse = (input) => {
             const query = input.toLowerCase();
+            if (query.includes("manager game") || query.includes("red devil manager") || query.includes("football manager") || query.includes("management sim") || query.includes("manage united") || query.includes("26/27") || query.includes("2026/27")) return "That'll be Red Devil Manager 26/27 \u2014 our full Manchester United football manager game. Take charge at Old Trafford for the whole 2026/27 season: name your XI, drill the tactics, work the transfer window and chase the title. Hit 'MANAGER 26/27' in the menu to kick off.";
             if (query.includes("manager") || query.includes("carrick") || query.includes("boss")) return "Michael Carrick is currently at the wheel, managing Manchester United in 2026! He understands the absolute DNA of this club perfectly. Glory Glory Man United!";
             if (query.includes("treble") || query.includes("1999") || query.includes("bayern")) return "The 1999 Treble! The absolute pinnacle of English football. We won the Premier League, FA Cup, and of course, that magical night in Barcelona against Bayern Munich where Teddy and Ole won it in injury time. 'And Solskjaer has won it!'";
             if (query.includes("top scorer") || query.includes("goals") || query.includes("rooney")) return "Wayne Rooney is Manchester United's all-time record goalscorer, hitting the back of the net 253 times for the Red Devils. An absolute legend.";
@@ -315,7 +344,7 @@
             if (query.includes("stadium") || query.includes("capacity") || query.includes("old trafford")) return "Old Trafford, the Theatre of Dreams! It's the largest club football stadium in the United Kingdom, with a capacity of 74,310. It has been our home since 1910.";
             if (query.includes("founded") || query.includes("history") || query.includes("newton heath")) return "Manchester United was originally founded in 1878 as Newton Heath LYR Football Club by the Carriage and Wagon department of the Lancashire and Yorkshire Railway depot. We officially changed our name to Manchester United in 1902.";
             if (query.includes("goldbridge") || query.includes("howson") || query.includes("stand") || query.includes("uptv")) return "Mark Goldbridge (The United Stand), Stephen Howson, and United Peoples TV are massive independent voices in the Manchester United fan community! You can catch their latest videos right here in our Social Hub.";
-            if (query.includes("games") || query.includes("arcade") || query.includes("rhythm") || query.includes("quiz")) return "Head over to the Games Hub in the menu! You can play our brand new releases like 'United Rhythm' and the 'Ultimate United Quiz', and stay tuned for more exclusive games dropping soon.";
+            if (query.includes("games") || query.includes("arcade") || query.includes("rhythm") || query.includes("quiz")) return "Head over to the Games Hub in the menu! Our headline title is 'Red Devil Manager 26/27', the Manchester United football manager game, alongside 'United Rhythm' and the 'Ultimate United Quiz'.";
             return "My archives are vast, but my focus is singular. Ask me about our legends, the 1999 Treble, our top scorers, Old Trafford, or our current manager Michael Carrick! GGMU!";
         };
 
@@ -460,6 +489,7 @@
                     '/vault': 'Take Me Home United Road Lyrics & Chants | United Road',
                     '/videos': 'Videos & Movies | United Road',
                     '/games': 'Man Utd Arcade & Web Games | United Road',
+                    '/manager': 'Red Devil Manager 26/27 | Man Utd Football Manager Game | United Road',
                     '/articles': 'Original Manchester United Blog & Articles | United Road',
                     '/transfers': 'LIVE: Transfer Strategy | United Road',
                     '/academy': 'Academy Watch & Next Gen | United Road',
@@ -871,6 +901,20 @@
                 }
             };
 
+            // Jump straight into Red Devil Manager 26/27 from anywhere on the site. Launching the
+            // game here as well as in the route effect covers the case where we are already on
+            // /manager (the user exited the game), where no hashchange fires to trigger the effect.
+            const playFeaturedGame = () => {
+                doNavigate('/manager');
+                setActiveGame(FEATURED_GAME);
+                window.scrollTo(0, 0);
+            };
+
+            // The /manager route is a deep link that boots the featured game immediately.
+            useEffect(() => {
+                if (path === '/manager') setActiveGame(FEATURED_GAME);
+            }, [path]);
+
             const handleOracleSubmit = (e, promptOverride = null) => {
                 e?.preventDefault();
                 const query = promptOverride || oracleInput.trim();
@@ -929,7 +973,7 @@
                                 <span className="text-[10px] font-heading font-black tracking-[2.5px] text-[#DA291C]">THE OFFICIAL MATCHDAY ANTHEM</span>
                             </div>
                             <h1 className="text-[64px] sm:text-[96px] lg:text-[128px] font-heading font-black uppercase tracking-[-3px] leading-[0.85] mb-6 text-gray-900 drop-shadow-sm">TAKE ME<br />HOME,<br /><span className="text-[#DA291C]">UNITED ROAD</span></h1>
-                            <p className="max-w-lg mx-auto text-xl sm:text-3xl font-body text-gray-700 font-medium tracking-tight mb-10">The anointed soundtrack of the Theatre of Dreams. Find Man Utd chants and play official web arcade games.</p>
+                            <p className="max-w-lg mx-auto text-xl sm:text-3xl font-body text-gray-700 font-medium tracking-tight mb-10">The anointed soundtrack of the Theatre of Dreams. Find Man Utd chants, and take charge for the 26/27 season in Red Devil Manager.</p>
                             
                             <div className="flex flex-col sm:flex-row justify-center gap-3 w-full max-w-2xl mx-auto mb-8 px-4">
                                 <button onClick={() => doNavigate('/hub')} className="w-full sm:w-auto px-6 py-4 bg-[#0B132B] text-[#FFD700] font-heading font-black text-xs md:text-sm tracking-[2px] flex items-center justify-center gap-2 hover:bg-black rounded-full shadow-xl transition-all border border-[#FFD700]/20"><Activity className="w-4 h-4"/> SOCIAL HUB</button>
@@ -937,14 +981,23 @@
                             </div>
 
                             <div className="flex flex-col items-center gap-6 w-full mt-4">
-                                <button onClick={() => { doNavigate('/games'); setActiveGame(GAMES_LIBRARY[0]); }} className="group relative overflow-hidden px-8 sm:px-12 py-4 sm:py-5 bg-gradient-to-r from-[#034A2F] to-[#012616] border border-[#FFD700]/30 text-white font-heading font-black tracking-[2px] flex items-center justify-center gap-4 rounded-full shadow-[0_15px_30px_rgba(3,74,47,0.5)] hover:shadow-[0_20px_40px_rgba(3,74,47,0.7)] hover:-translate-y-1 transition-all w-full max-w-lg">
+                                <button onClick={playFeaturedGame} className="group relative overflow-hidden px-8 sm:px-12 py-4 sm:py-5 bg-gradient-to-r from-[#DA291C] to-[#8B1109] border border-[#FFD700]/40 text-white font-heading font-black tracking-[2px] flex items-center justify-center gap-4 rounded-full shadow-[0_15px_30px_rgba(218,41,28,0.45)] hover:shadow-[0_20px_45px_rgba(218,41,28,0.65)] hover:-translate-y-1 transition-all w-full max-w-lg">
+                                    <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]"></div>
+                                    <div className="w-10 h-10 bg-[#FFD700]/25 rounded-full flex items-center justify-center flex-shrink-0"><Clipboard className="w-6 h-6 text-[#FFD700]" /></div>
+                                    <div className="flex flex-col items-start text-left">
+                                        <span className="text-[10px] text-[#FFD700] tracking-widest leading-none mb-1 uppercase">New • Man Utd Manager Game</span>
+                                        <span className="text-base sm:text-xl leading-none">PLAY RED DEVIL MANAGER 26/27</span>
+                                    </div>
+                                    <ChevronRight className="w-6 h-6 ml-auto text-white/60 group-hover:text-white transition-colors flex-shrink-0" />
+                                </button>
+                                <button onClick={() => { doNavigate('/games'); setActiveGame(GAMES_LIBRARY.find(g => g.id === 'united-rhythm')); }} className="group relative overflow-hidden px-8 sm:px-12 py-4 sm:py-5 bg-gradient-to-r from-[#034A2F] to-[#012616] border border-[#FFD700]/30 text-white font-heading font-black tracking-[2px] flex items-center justify-center gap-4 rounded-full shadow-[0_15px_30px_rgba(3,74,47,0.5)] hover:shadow-[0_20px_40px_rgba(3,74,47,0.7)] hover:-translate-y-1 transition-all w-full max-w-lg">
                                     <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]"></div>
-                                    <div className="w-10 h-10 bg-[#FFD700]/20 rounded-full flex items-center justify-center"><Gamepad className="w-6 h-6 text-[#FFD700]" /></div>
+                                    <div className="w-10 h-10 bg-[#FFD700]/20 rounded-full flex items-center justify-center flex-shrink-0"><Gamepad className="w-6 h-6 text-[#FFD700]" /></div>
                                     <div className="flex flex-col items-start text-left">
                                         <span className="text-[10px] text-[#FFD700] tracking-widest leading-none mb-1 uppercase">Official Web Arcade</span>
                                         <span className="text-base sm:text-xl leading-none">PLAY UNITED RHYTHM</span>
                                     </div>
-                                    <ChevronRight className="w-6 h-6 ml-auto text-white/50 group-hover:text-white transition-colors" />
+                                    <ChevronRight className="w-6 h-6 ml-auto text-white/50 group-hover:text-white transition-colors flex-shrink-0" />
                                 </button>
                                 <div className="flex flex-col sm:flex-row gap-4 justify-center w-full">
                                     <button onClick={() => doNavigate('/matchday')} className="px-14 py-5 bg-[#DA291C] text-white font-heading font-black text-sm tracking-[2.5px] flex items-center justify-center gap-3 hover:bg-red-700 rounded-full shadow-[0_5px_15px_rgba(218,41,28,0.4)] transition-all">LIVE MATCH & TABLE <ChevronRight className="w-4 h-4" /></button>
@@ -1024,6 +1077,52 @@
                             </div>
                         </div>
                     </section>
+                    {/* ===== FEATURED: RED DEVIL MANAGER 26/27 ===== */}
+                    <section className="py-20 md:py-28 bg-[#0B0308] border-b border-[#FFD700]/25 relative overflow-hidden">
+                        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_20%_20%,rgba(218,41,28,0.28)_0%,transparent_60%)] pointer-events-none"></div>
+                        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_80%_80%,rgba(255,215,0,0.14)_0%,transparent_55%)] pointer-events-none"></div>
+                        <div className="max-w-[1680px] mx-auto px-5 md:px-10 relative z-10">
+                            <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
+                                <button onClick={playFeaturedGame} aria-label="Play Red Devil Manager 26/27" className="group relative block w-full rounded-[32px] overflow-hidden border border-[#FFD700]/30 shadow-[0_30px_80px_-20px_rgba(218,41,28,0.55)] hover:border-[#FFD700]/70 transition-all hover:-translate-y-1">
+                                    <img src={FEATURED_GAME.thumbnail} alt="Red Devil Manager 26/27 — the Manchester United football manager game" className="w-full aspect-[4/3] object-cover group-hover:scale-[1.03] transition-transform duration-700"/>
+                                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-[shimmer_1.4s_infinite] pointer-events-none"></div>
+                                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40">
+                                        <div className="w-20 h-20 rounded-full bg-[#DA291C] flex items-center justify-center shadow-2xl border-2 border-white/30"><Play className="w-9 h-9 text-white ml-1" fill="currentColor"/></div>
+                                    </div>
+                                </button>
+                                <div className="text-left">
+                                    <div className="inline-flex items-center gap-2.5 bg-[#DA291C] px-4 py-2 rounded-full mb-6 shadow-lg">
+                                        <span className="w-2 h-2 bg-[#FFD700] rounded-full animate-pulse"></span>
+                                        <span className="text-[10px] font-heading font-black tracking-[2.5px] text-white uppercase">New Release • Season 26/27</span>
+                                    </div>
+                                    <h2 className="text-4xl sm:text-5xl md:text-6xl font-heading font-black tracking-[-2px] text-white leading-[0.95] mb-3">RED DEVIL<br/><span className="text-[#FFD700]">MANAGER 26/27</span></h2>
+                                    <p className="text-white/60 font-heading font-black text-xs tracking-[3px] uppercase mb-6">The Manchester United Football Manager Game</p>
+                                    <p className="text-white/80 font-body text-base md:text-lg leading-relaxed max-w-xl mb-8">{FEATURED_GAME.longDescription}</p>
+                                    <div className="grid grid-cols-2 gap-3 max-w-xl mb-9">
+                                        {[{icon: Users, label: 'Updated 26/27 squad'}, {icon: Crosshair, label: 'Transfer window'}, {icon: Clipboard, label: 'Tactics & formations'}, {icon: Trophy, label: 'Full season & trophies'}].map((f, i) => {
+                                            const Icon = f.icon;
+                                            return (
+                                                <div key={i} className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-2xl px-4 py-3.5">
+                                                    <Icon className="w-5 h-5 text-[#FFD700] flex-shrink-0"/>
+                                                    <span className="font-heading font-bold text-white/85 text-[11px] sm:text-xs tracking-wide uppercase leading-tight">{f.label}</span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                    <div className="flex flex-col sm:flex-row gap-3">
+                                        <button onClick={playFeaturedGame} className="group relative overflow-hidden px-10 py-5 bg-[#DA291C] hover:bg-red-700 text-white font-heading font-black text-sm tracking-[2.5px] rounded-full shadow-[0_10px_30px_rgba(218,41,28,0.5)] flex items-center justify-center gap-3 transition-all hover:-translate-y-0.5">
+                                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]"></div>
+                                            <Play className="w-4 h-4" fill="currentColor"/> PLAY FREE NOW
+                                        </button>
+                                        <button onClick={() => doNavigate('/games')} className="px-10 py-5 border border-[#FFD700]/40 hover:border-[#FFD700] hover:bg-white/5 text-white font-heading font-black text-sm tracking-[2.5px] rounded-full flex items-center justify-center gap-3 transition-all">
+                                            ALL GAMES <ChevronRight className="w-4 h-4"/>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
                     <section className="py-20 md:py-28 bg-[#02331F] border-y border-[#FFD700]/30 relative overflow-hidden">
                         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(255,215,0,0.08)_0%,transparent_70%)] pointer-events-none"></div>
                         <div className="max-w-[1680px] mx-auto px-5 md:px-10 relative z-10">
@@ -1692,8 +1791,8 @@
                         <div className="fixed inset-0 z-[250] bg-black flex flex-col w-full h-full">
                             <div className="bg-[#111] border-b border-[#222] p-4 md:p-6 flex justify-between items-center z-10 shadow-lg">
                                 <div className="flex items-center gap-4">
-                                    <Gamepad className="w-6 h-6 text-[#DA291C]" />
-                                    <div><h2 className="font-heading font-black text-xl md:text-2xl text-white tracking-tight leading-none">{activeGame.title}</h2><p className="text-[10px] font-heading text-gray-400 tracking-[2px] mt-1 uppercase">United Arcade</p></div>
+                                    {activeGame.featured ? <Clipboard className="w-6 h-6 text-[#DA291C]" /> : <Gamepad className="w-6 h-6 text-[#DA291C]" />}
+                                    <div><h2 className="font-heading font-black text-xl md:text-2xl text-white tracking-tight leading-none">{activeGame.title}</h2><p className="text-[10px] font-heading text-gray-400 tracking-[2px] mt-1 uppercase">{activeGame.subtitle || 'United Arcade'}</p></div>
                                 </div>
                                 <button onClick={() => setActiveGame(null)} className="bg-[#DA291C] hover:bg-red-700 text-white px-5 py-2.5 rounded-full font-heading font-black text-xs md:text-sm tracking-widest uppercase flex items-center gap-2 transition-colors">
                                     <X className="w-4 h-4"/> Exit Game
@@ -1717,15 +1816,49 @@
                                 <div className="w-16 h-16 bg-[#DA291C] rounded-2xl flex items-center justify-center shadow-lg mb-6 shadow-[#DA291C]/20 border border-red-500"><Gamepad className="w-8 h-8 text-white"/></div>
                                 <span className="uppercase font-heading tracking-[4px] text-xs font-black text-[#FFD700] mb-3">THE ARCADE</span>
                                 <h1 className="text-5xl md:text-7xl font-heading font-black tracking-[-2px] text-white">United Games</h1>
-                                <p className="text-white/70 font-body text-base md:text-lg mt-4 max-w-lg mx-auto font-medium">Test your skills in the official web arcade. Man Utd music games and more titles dropping soon.</p>
+                                <p className="text-white/70 font-body text-base md:text-lg mt-4 max-w-lg mx-auto font-medium">Test your skills in the official web arcade — headlined by Red Devil Manager 26/27, the Manchester United football manager game.</p>
                             </div>
+
+                            {/* ===== FEATURED BANNER: RED DEVIL MANAGER 26/27 ===== */}
+                            <div className="mb-14 rounded-[32px] overflow-hidden border border-[#FFD700]/30 bg-[#0B0308] shadow-[0_30px_80px_-25px_rgba(218,41,28,0.6)] relative">
+                                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_25%_30%,rgba(218,41,28,0.3)_0%,transparent_60%)] pointer-events-none"></div>
+                                <div className="grid md:grid-cols-2 gap-0 items-center relative z-10">
+                                    <button onClick={() => { setActiveGame(FEATURED_GAME); window.scrollTo(0, 0); }} aria-label="Play Red Devil Manager 26/27" className="group relative block w-full overflow-hidden">
+                                        <img src={FEATURED_GAME.thumbnail} alt="Red Devil Manager 26/27 — the Manchester United football manager game" className="w-full h-auto object-cover group-hover:scale-[1.03] transition-transform duration-700"/>
+                                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-[shimmer_1.4s_infinite] pointer-events-none"></div>
+                                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40">
+                                            <div className="w-20 h-20 rounded-full bg-[#DA291C] flex items-center justify-center shadow-2xl border-2 border-white/30"><Play className="w-9 h-9 text-white ml-1" fill="currentColor"/></div>
+                                        </div>
+                                    </button>
+                                    <div className="p-8 md:p-10 lg:p-12 flex flex-col justify-center text-left">
+                                        <div className="inline-flex self-start items-center gap-2.5 bg-[#DA291C] px-4 py-2 rounded-full mb-5 shadow-lg">
+                                            <span className="w-2 h-2 bg-[#FFD700] rounded-full animate-pulse"></span>
+                                            <span className="text-[10px] font-heading font-black tracking-[2.5px] text-white uppercase">Featured • Season 26/27</span>
+                                        </div>
+                                        <h2 className="text-3xl sm:text-4xl lg:text-5xl font-heading font-black tracking-[-1.5px] text-white leading-[0.95] mb-3">RED DEVIL<br/><span className="text-[#FFD700]">MANAGER 26/27</span></h2>
+                                        <p className="text-white/60 font-heading font-black text-[10px] sm:text-xs tracking-[3px] uppercase mb-5">{FEATURED_GAME.subtitle}</p>
+                                        <p className="text-white/80 font-body text-sm md:text-base leading-relaxed mb-7">{FEATURED_GAME.longDescription}</p>
+                                        <div className="flex flex-wrap gap-2 mb-8">
+                                            {['FULL SEASON', 'LATEST SQUAD', 'TRANSFERS', 'TACTICS', 'TROPHIES'].map((t) => (
+                                                <span key={t} className="bg-white/5 border border-white/15 text-white/80 font-heading font-black text-[9px] tracking-[2px] px-3.5 py-2 rounded-full uppercase">{t}</span>
+                                            ))}
+                                        </div>
+                                        <button onClick={() => { setActiveGame(FEATURED_GAME); window.scrollTo(0, 0); }} className="group relative overflow-hidden self-start px-10 py-4 bg-[#DA291C] hover:bg-red-700 text-white font-heading font-black text-xs sm:text-sm tracking-[2.5px] rounded-full shadow-[0_10px_30px_rgba(218,41,28,0.5)] flex items-center justify-center gap-3 transition-all hover:-translate-y-0.5">
+                                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]"></div>
+                                            <Play className="w-4 h-4" fill="currentColor"/> PLAY FREE NOW
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
                                 {GAMES_LIBRARY.map((game) => (
-                                    <div key={game.id} className="relative group rounded-[32px] overflow-hidden bg-[#034A2F] border border-[#FFD700]/20 shadow-2xl flex flex-col h-[400px] transition-all duration-500 hover:-translate-y-2 hover:border-[#FFD700]/50 hover:shadow-[0_25px_60px_-10px_rgba(255,215,0,0.25)]">
+                                    <div key={game.id} className={`relative group rounded-[32px] overflow-hidden bg-[#034A2F] shadow-2xl flex flex-col h-[400px] transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_25px_60px_-10px_rgba(255,215,0,0.25)] ${game.featured ? 'border-2 border-[#FFD700]/60 hover:border-[#FFD700]' : 'border border-[#FFD700]/20 hover:border-[#FFD700]/50'}`}>
                                         <div className="aspect-[4/3] w-full relative overflow-hidden bg-gray-900 border-b border-[#FFD700]/20">
                                             <img src={game.thumbnail} alt={`Cover for ${game.title}`} className={`w-full h-full object-cover transition-transform duration-700 ${!game.isComingSoon && 'group-hover:scale-105'} ${game.isComingSoon && 'grayscale opacity-50'}`} />
                                             <div className="absolute inset-0 bg-gradient-to-t from-[#034A2F] to-transparent opacity-80"></div>
                                             {game.tag && (<div className="absolute top-4 left-4 z-10 bg-black/50 backdrop-blur-sm border border-white/10 text-[#FFD700] text-[9px] font-heading font-black tracking-[2px] px-3 py-1.5 rounded-full uppercase">{game.tag}</div>)}
+                                            {game.featured && (<div className="absolute top-4 right-4 z-10 bg-[#DA291C] text-white text-[9px] font-heading font-black tracking-[2px] px-3 py-1.5 rounded-full uppercase flex items-center gap-1.5 shadow-lg"><Star className="w-3 h-3" fill="currentColor"/> Featured</div>)}
                                             {!game.isComingSoon && (<div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-[shimmer_1.2s_infinite] pointer-events-none"></div>)}
                                             {game.isComingSoon && (<div className="absolute inset-0 flex items-center justify-center backdrop-blur-sm"><div className="bg-black/60 border border-[#FFD700]/30 text-[#FFD700] font-heading font-black text-xs tracking-widest px-6 py-2 rounded-full uppercase flex items-center gap-2"><Lock className="w-3.5 h-3.5"/> Coming Soon</div></div>)}
                                         </div>
@@ -1892,6 +2025,7 @@
                     case '/videos': return renderVideosPage();
                     case '/oracle': return renderOraclePage();
                     case '/games': return renderGamesPage();
+                    case '/manager': return renderGamesPage();
                     case '/articles': return renderBlogList();
                     case '/contact': return renderContactPage();
                     case '/transfers': return renderTransferPage();
@@ -1954,13 +2088,16 @@
                                     <div className="w-10 h-10 md:w-11 md:h-11 flex items-center justify-center rounded-md shadow-sm overflow-hidden bg-black"><img src={LINKS.logoUrl} alt="United Road Logo" className="w-full h-full object-contain" /></div>
                                     <div><div className="font-heading font-black text-xl md:text-2xl tracking-[-1px] text-gray-900 leading-none">UNITED ROAD</div><div className="text-[8px] md:text-[9px] font-heading text-gray-500 font-bold tracking-[1.5px] uppercase mt-1">Live Intel Hub</div></div>
                                 </div>
-                                <div className="hidden lg:flex items-center gap-5 xl:gap-6 text-[10px] xl:text-[11px] font-heading font-black tracking-[2px]">
+                                <div className="hidden lg:flex items-center gap-3 xl:gap-5 text-[10px] xl:text-[11px] font-heading font-black tracking-[1.5px]">
                                     {[{id:'/',label:'HOME'}, {id:'/transfers',label:'TRANSFERS'}, {id:'/academy',label:'ACADEMY'}, {id:'/matchday',label:'LIVE MATCH'}, {id:'/news',label:'NEWS'}, {id:'/hub',label:'SOCIAL HUB'}, {id:'/articles',label:'ARTICLES'}, {id:'/vault',label:'VAULT'}, {id:'/videos',label:'VIDEOS / MOVIES'}, {id:'/oracle',label:'ORACLE'}, {id:'/games',label:'GAMES'}].map(item => (
                                         <button key={item.id} onClick={() => doNavigate(item.id)} className={`hover:text-[#DA291C] transition-colors uppercase flex items-center gap-1 ${(path === item.id || (item.id==='/articles' && path.startsWith('/article/'))) ? 'nav-active text-[#DA291C]' : 'text-gray-600'}`}>
                                             {item.id === '/transfers' && <div className="w-1.5 h-1.5 bg-[#DA291C] rounded-full animate-pulse"></div>}
                                             {item.label}
                                         </button>
                                     ))}
+                                    <button onClick={playFeaturedGame} className={`uppercase flex items-center gap-1.5 px-3.5 py-2 rounded-full border transition-all whitespace-nowrap ${path === '/manager' ? 'bg-[#DA291C] text-white border-[#DA291C]' : 'bg-[#DA291C]/10 text-[#DA291C] border-[#DA291C]/40 hover:bg-[#DA291C] hover:text-white hover:border-[#DA291C]'}`}>
+                                        <Clipboard className="w-3.5 h-3.5"/> MANAGER<span className="hidden xl:inline">&nbsp;26/27</span>
+                                    </button>
                                 </div>
                                 <button aria-label="Menu" onClick={() => setIsNavOpen(!isNavOpen)} className="lg:hidden p-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-900"><Menu className="w-6 h-6"/></button>
                             </div>
@@ -1968,6 +2105,10 @@
                             <AnimatePresence>
                                 {isNavOpen && (
                                     <MotionDiv initial={{opacity:0,y:-10}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-10}} className="lg:hidden bg-white border-b border-gray-200 absolute top-full w-full left-0 flex flex-col p-5 shadow-2xl z-40 max-h-[80vh] overflow-y-auto">
+                                        <button onClick={playFeaturedGame} className="text-left py-4 px-5 mb-3 rounded-xl font-heading font-black tracking-widest uppercase text-xs border border-[#DA291C] bg-[#DA291C] text-white flex items-center justify-between shadow-lg">
+                                            <span className="flex items-center gap-2"><Clipboard className="w-4 h-4 text-[#FFD700]"/> MANAGER 26/27</span>
+                                            <span className="text-[9px] bg-white/20 px-2 py-1 rounded-full">NEW</span>
+                                        </button>
                                         {[{id:'/',label:'HOME'}, {id:'/transfers',label:'TRANSFERS'}, {id:'/academy',label:'ACADEMY'}, {id:'/matchday',label:'LIVE MATCH'}, {id:'/news',label:'NEWS'}, {id:'/hub',label:'SOCIAL HUB'}, {id:'/articles',label:'ARTICLES'}, {id:'/vault',label:'CHANTS & VAULT'}, {id:'/videos',label:'VIDEOS / MOVIES'}, {id:'/oracle',label:'ORACLE'}, {id:'/games',label:'GAMES'}].map(item => (
                                             <button key={item.id} onClick={() => doNavigate(item.id)} className={`text-left py-4 px-5 mb-2 rounded-xl font-heading font-black tracking-widest uppercase text-xs border transition-colors flex items-center justify-between ${(path === item.id || (item.id==='/articles' && path.startsWith('/article/'))) ? 'bg-[#DA291C] text-white border-[#DA291C]' : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border-gray-100'}`}>
                                                 {item.label}
@@ -2043,7 +2184,10 @@
                                 </div>
                                 <div className="md:col-span-2 text-center md:text-left">
                                     <div className="uppercase font-heading text-[10px] tracking-[3px] text-white/40 mb-6 font-black drop-shadow-sm">EXPLORE</div>
-                                    <div className="space-y-4 text-[11px] tracking-widest font-heading font-bold">{['HOME','NEWS','SOCIAL HUB','ARTICLES','CHANTS & VAULT', 'VIDEOS / MOVIES', 'GAMES'].map((l,i) => <button key={i} onClick={() => doNavigate(l==='HOME'?'/':l.includes('CHANTS')?'/vault':l.includes('VIDEOS')?'/videos':`/${l.toLowerCase().split(' ')[0]}`)} className="block text-white/80 hover:text-[#DA291C] mx-auto md:mx-0 transition-colors uppercase">{l}</button>)}</div>
+                                    <div className="space-y-4 text-[11px] tracking-widest font-heading font-bold">
+                                        {['HOME','NEWS','SOCIAL HUB','ARTICLES','CHANTS & VAULT', 'VIDEOS / MOVIES', 'GAMES'].map((l,i) => <button key={i} onClick={() => doNavigate(l==='HOME'?'/':l.includes('CHANTS')?'/vault':l.includes('VIDEOS')?'/videos':`/${l.toLowerCase().split(' ')[0]}`)} className="block text-white/80 hover:text-[#DA291C] mx-auto md:mx-0 transition-colors uppercase">{l}</button>)}
+                                        <button onClick={playFeaturedGame} className="flex items-center gap-2 text-[#FFD700] hover:text-[#DA291C] mx-auto md:mx-0 transition-colors uppercase"><Clipboard className="w-3.5 h-3.5"/> MANAGER 26/27</button>
+                                    </div>
                                 </div>
                                 <div className="md:col-span-2 text-center md:text-left">
                                     <div className="uppercase font-heading text-[10px] tracking-[3px] text-white/40 mb-6 font-black drop-shadow-sm">LEGAL</div>
