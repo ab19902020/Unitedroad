@@ -16,6 +16,7 @@
 import { getStore } from '@netlify/blobs'
 import { fetchFeed, stripTags, type FeedItem } from './feed.mts'
 import { UNITED_ROAD_BRAIN, BATCH, RELATED_CONTEXT_COUNT } from './brain.mts'
+import { getWorkerAuth } from './worker-auth.mts'
 
 const DEEPSEEK_ENDPOINT = 'https://api.deepseek.com/chat/completions'
 const DEFAULT_MODEL = 'deepseek-v4-flash'
@@ -461,11 +462,13 @@ export const recordRejection = async (): Promise<void> => {
 }
 
 /** Everything /api/desk-status needs, with no secrets in it. */
-export const readStatus = async () => {
+export const readStatus = async (contextSiteId?: string) => {
   const index = await readIndex()
+  const auth = getWorkerAuth(contextSiteId)
   return {
     deepseekKeySet: !!process.env.DEEPSEEK_API_KEY,
     writerTokenSet: !!process.env.ARTICLE_WRITER_TOKEN,
+    authMode: auth.mode,
     model: process.env.DEEPSEEK_MODEL || DEFAULT_MODEL,
     articleCount: index.articles.length,
     latestArticle: index.articles[0]

@@ -12,7 +12,7 @@
 // calls it) and any manual run:
 //
 //   curl -X POST https://unitedroad.uk/.netlify/functions/article-desk-background \
-//        -H "Authorization: Bearer $ARTICLE_WRITER_TOKEN" \
+//        -H "Authorization: Bearer $SECRET" \
 //        -H "Content-Type: application/json" \
 //        -d '{"max":3,"force":true}'
 //
@@ -21,24 +21,28 @@
 // /api/articles or the function log for the result.
 //
 // Because a public URL that spends money on every hit would be an obvious
-// thing to abuse, the endpoint is closed unless ARTICLE_WRITER_TOKEN is set
-// and the caller presents it.
+// thing to abuse, the caller must present a shared secret. That is
+// ARTICLE_WRITER_TOKEN when it is set, and otherwise the site's own ID, which
+// Netlify hands to every function via the request context — so the endpoint is
+// protected without the owner having to configure anything. See worker-auth.mts.
 
 import { runDailyBatch, recordRun, recordRejection } from '../lib/article-writer.mts'
+import type { Context } from '@netlify/functions'
+import { getWorkerAuth, secretMatches } from '../lib/worker-auth.mts'
 
-export default async (req: Request) => {
-  const expected = process.env.ARTICLE_WRITER_TOKEN
-  if (!expected) {
-    console.warn('[article-desk] refused: ARTICLE_WRITER_TOKEN is not set on this site.')
-    return new Response('ARTICLE_WRITER_TOKEN is not configured.', { status: 503 })
+export default async (req: Request, context: Context) => {
+  const auth = getWorkerAuth(context?.site?.id)
+  if (auth.mode === 'none') {
+    console.warn('[article-desk] refused: no ARTICLE_WRITER_TOKEN, and no site id in the request context to fall back on.')
+    return new Response('Worker secret is not configured.', { status: 503 })
   }
 
   const presented = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim()
-  if (!presented || presented !== expected) {
+  if (!presented || !secretMatches(presented, auth.secret)) {
     // Netlify already answered 202 before this handler ran, so the caller
     // cannot see this 401. Record it instead — /api/desk-status surfaces it,
     // which is the only way a bad token is discoverable without reading logs.
-    console.warn('[article-desk] rejected: bad or missing ARTICLE_WRITER_TOKEN.')
+    console.warn(`[article-desk] rejected: presented secret did not match (auth mode: ${auth.mode}).`)
     await recordRejection()
     return new Response('Unauthorized.', { status: 401 })
   }

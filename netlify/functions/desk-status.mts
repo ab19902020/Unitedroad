@@ -9,7 +9,7 @@
 // It reports whether the environment variables are present as booleans only.
 // It never returns their values.
 
-import type { Config } from '@netlify/functions'
+import type { Config, Context } from '@netlify/functions'
 import { readStatus } from '../lib/article-writer.mts'
 
 const ago = (ts: number | null | undefined): string | null => {
@@ -23,24 +23,24 @@ const ago = (ts: number | null | undefined): string | null => {
   return `${days} day${days === 1 ? '' : 's'} ago`
 }
 
-export default async () => {
-  const s = await readStatus()
+export default async (_req: Request, context: Context) => {
+  const s = await readStatus(context?.site?.id)
 
   // Work out the single most useful sentence to show first, so the answer to
   // "why are there no articles?" is at the top rather than inferred.
   let diagnosis: string
   if (!s.deepseekKeySet) {
     diagnosis = 'DEEPSEEK_API_KEY is not set on this deploy. Add it in Site configuration → Environment variables, then redeploy — variables only reach functions on a fresh build.'
-  } else if (!s.writerTokenSet) {
-    diagnosis = 'ARTICLE_WRITER_TOKEN is not set on this deploy. The daily cron needs it to reach the background worker. Add it, then redeploy.'
+  } else if (s.authMode === 'none') {
+    diagnosis = 'No shared secret is available for the background worker. Netlify normally provides SITE_ID automatically; if it is missing, set ARTICLE_WRITER_TOKEN in Site configuration → Environment variables and redeploy.'
   } else if (s.articleCount > 0) {
     diagnosis = `Working. ${s.articleCount} article(s) stored, most recent ${ago(s.latestArticle?.at)}.`
   } else if (s.lastRun) {
-    diagnosis = `Both variables are set and the desk ran ${ago(s.lastRun.at)}, but published nothing. See lastRun.notes below for the reason.`
+    diagnosis = `Configured correctly and the desk ran ${ago(s.lastRun.at)}, but published nothing. See lastRun.notes below for the reason.`
   } else if (s.lastRejectedAt) {
-    diagnosis = `Both variables are set, but the last call to the worker was rejected ${ago(s.lastRejectedAt)} because the token did not match. Check the token in your request against ARTICLE_WRITER_TOKEN.`
+    diagnosis = `Configured correctly, but the last call to the worker was rejected ${ago(s.lastRejectedAt)} because the secret did not match. Check the token in your request against ARTICLE_WRITER_TOKEN.`
   } else {
-    diagnosis = 'Both variables are set, but the desk has never run on this deploy. Either wait for the next scheduled run, or trigger one manually (see README).'
+    diagnosis = 'Configured correctly, but the desk has never run on this deploy. Either wait for the next scheduled run (07:15 or 16:15 UTC), or trigger one manually (see README).'
   }
 
   return Response.json(
@@ -49,6 +49,9 @@ export default async () => {
       diagnosis,
       config: {
         deepseekKeySet: s.deepseekKeySet,
+        // 'token' means ARTICLE_WRITER_TOKEN is set; 'site-id' means it is not
+        // and the worker is using Netlify's SITE_ID instead, which is fine.
+        authMode: s.authMode,
         writerTokenSet: s.writerTokenSet,
         model: s.model,
         schedule: '07:15 and 16:15 UTC daily',
