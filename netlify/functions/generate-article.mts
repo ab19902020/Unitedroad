@@ -1,18 +1,19 @@
 // Daily cron for the United Road AI article desk.
 //
-// Netlify caps scheduled functions at 30 seconds, which is not enough to fetch
-// a dozen feeds and wait on DeepSeek to write 700 words. So this function does
-// almost nothing itself: it hands the job to the background worker
-// (article-desk.mts, 15 minute limit) and returns.
+// Netlify caps scheduled functions at 30 seconds. A measured run takes around
+// 53 seconds *per article* — fetching a dozen feeds, then waiting on DeepSeek
+// to reason and write ~600 words — and the desk writes up to three a day, so
+// doing the work here is not an option. This function does almost nothing
+// itself: it hands the job to the background worker
+// (article-desk-background.mts, 15 minute limit) and returns.
 //
 // Site environment variables:
 //   DEEPSEEK_API_KEY      required — the DeepSeek key, server-side only
-//   ARTICLE_WRITER_TOKEN  strongly recommended — shared secret used to call the
-//                         background worker, and to protect it from the public
+//   ARTICLE_WRITER_TOKEN  required — shared secret used to call the background
+//                         worker, and to keep the public out of it
 //   DEEPSEEK_MODEL        optional — defaults to deepseek-v4-flash
 
 import type { Config } from '@netlify/functions'
-import { runArticleGeneration } from '../lib/article-writer.mts'
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
@@ -26,36 +27,38 @@ export default async () => {
   const token = process.env.ARTICLE_WRITER_TOKEN
   const siteUrl = process.env.URL || process.env.DEPLOY_PRIME_URL
 
-  if (token && siteUrl) {
-    try {
-      const res = await fetch(`${siteUrl}/.netlify/functions/article-desk-background`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ source: 'cron' }),
-      })
-      console.log(`[article-desk] cron handed off to the background worker (${res.status}).`)
-      return json({ status: 'dispatched', workerStatus: res.status })
-    } catch (err) {
-      console.error('[article-desk] handoff failed, running inline instead:', (err as Error).message)
-    }
-  } else {
-    console.warn(
-      '[article-desk] ARTICLE_WRITER_TOKEN is not set, so the run happens inline and may hit the 30s scheduled-function limit. Set the token to move the work to the background worker.',
+  // Deliberately no inline fallback. A run takes roughly 53 seconds per
+  // article and this function is killed at 30, so running it here would
+  // reliably pay DeepSeek for a result that is thrown away. Better to do
+  // nothing and say loudly why.
+  if (!token) {
+    console.error(
+      '[article-desk] cron skipped: ARTICLE_WRITER_TOKEN is not set. The daily run needs it to call the background worker — writing takes ~53s per article and scheduled functions are capped at 30s. Set it in Site configuration → Environment variables.',
     )
+    return json({ status: 'skipped', reason: 'ARTICLE_WRITER_TOKEN is not set.' })
   }
 
-  // Inline fallback. Works, but a long generation can be cut off by the 30
-  // second ceiling — hence the warning above.
+  if (!siteUrl) {
+    console.error('[article-desk] cron skipped: neither URL nor DEPLOY_PRIME_URL is available.')
+    return json({ status: 'skipped', reason: 'Site URL unavailable.' })
+  }
+
   try {
-    const result = await runArticleGeneration()
-    console.log(
-      result.status === 'published'
-        ? `[article-desk] published inline: "${result.article.title}"`
-        : `[article-desk] skipped: ${result.reason}`,
-    )
-    return json(result)
+    const res = await fetch(`${siteUrl}/.netlify/functions/article-desk-background`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ source: 'cron' }),
+    })
+    // A background function answers 202 immediately; anything else means the
+    // handoff itself failed and no article is being written.
+    if (res.status !== 202) {
+      console.error(`[article-desk] worker handoff returned ${res.status}, expected 202.`)
+      return json({ status: 'error', reason: `Worker returned ${res.status}.` }, 502)
+    }
+    console.log('[article-desk] cron handed off to the background worker.')
+    return json({ status: 'dispatched' })
   } catch (err) {
-    console.error('[article-desk] inline run failed:', (err as Error).message)
+    console.error('[article-desk] handoff failed:', (err as Error).message)
     return json({ status: 'error', message: (err as Error).message }, 500)
   }
 }
