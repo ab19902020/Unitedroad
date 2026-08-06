@@ -1,10 +1,11 @@
 // Daily cron for the United Road AI article desk.
 //
-// Netlify caps scheduled functions at 30 seconds. A measured end-to-end run —
-// fetch a dozen feeds, then wait on DeepSeek to reason and write ~700 words —
-// takes around 53 seconds, so doing the work here is not an option. This
-// function does almost nothing itself: it hands the job to the background
-// worker (article-desk-background.mts, 15 minute limit) and returns.
+// Netlify caps scheduled functions at 30 seconds. A measured run takes around
+// 53 seconds *per article* — fetching a dozen feeds, then waiting on DeepSeek
+// to reason and write ~600 words — and the desk writes up to three a day, so
+// doing the work here is not an option. This function does almost nothing
+// itself: it hands the job to the background worker
+// (article-desk-background.mts, 15 minute limit) and returns.
 //
 // Site environment variables:
 //   DEEPSEEK_API_KEY      required — the DeepSeek key, server-side only
@@ -13,7 +14,6 @@
 //   DEEPSEEK_MODEL        optional — defaults to deepseek-v4-flash
 
 import type { Config } from '@netlify/functions'
-import { runArticleGeneration } from '../lib/article-writer.mts'
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
@@ -27,13 +27,13 @@ export default async () => {
   const token = process.env.ARTICLE_WRITER_TOKEN
   const siteUrl = process.env.URL || process.env.DEPLOY_PRIME_URL
 
-  // Deliberately no inline fallback. A generation takes roughly 53 seconds and
-  // this function is killed at 30, so running it here would reliably pay
-  // DeepSeek for a result that is thrown away. Better to do nothing and say
-  // loudly why.
+  // Deliberately no inline fallback. A run takes roughly 53 seconds per
+  // article and this function is killed at 30, so running it here would
+  // reliably pay DeepSeek for a result that is thrown away. Better to do
+  // nothing and say loudly why.
   if (!token) {
     console.error(
-      '[article-desk] cron skipped: ARTICLE_WRITER_TOKEN is not set. The daily run needs it to call the background worker — a generation takes ~53s and scheduled functions are capped at 30s. Set it in Site configuration → Environment variables.',
+      '[article-desk] cron skipped: ARTICLE_WRITER_TOKEN is not set. The daily run needs it to call the background worker — writing takes ~53s per article and scheduled functions are capped at 30s. Set it in Site configuration → Environment variables.',
     )
     return json({ status: 'skipped', reason: 'ARTICLE_WRITER_TOKEN is not set.' })
   }

@@ -14,7 +14,7 @@
 //   curl -X POST https://unitedroad.uk/.netlify/functions/article-desk-background \
 //        -H "Authorization: Bearer $ARTICLE_WRITER_TOKEN" \
 //        -H "Content-Type: application/json" \
-//        -d '{"angle":"transfer","force":true}'
+//        -d '{"max":3,"force":true}'
 //
 // Background functions answer 202 immediately and finish the work afterwards,
 // so the response tells you the run started, not what it produced. Check
@@ -24,7 +24,7 @@
 // thing to abuse, the endpoint is closed unless ARTICLE_WRITER_TOKEN is set
 // and the caller presents it.
 
-import { runArticleGeneration } from '../lib/article-writer.mts'
+import { runDailyBatch } from '../lib/article-writer.mts'
 
 export default async (req: Request) => {
   const expected = process.env.ARTICLE_WRITER_TOKEN
@@ -47,20 +47,35 @@ export default async (req: Request) => {
 
   const startedAt = Date.now()
   try {
-    const result = await runArticleGeneration({
-      angleId: typeof body?.angle === 'string' ? body.angle : undefined,
+    const result = await runDailyBatch({
+      max: Number.isFinite(body?.max) ? Number(body.max) : undefined,
       force: body?.force === true,
     })
 
-    if (result.status === 'published') {
+    const seconds = Math.round((Date.now() - startedAt) / 1000)
+    if (result.published.length) {
       console.log(
-        `[article-desk] published "${result.article.title}" (${result.article.angle}, ${result.article.readMinutes} min read) from ${result.sourcesConsidered} candidate stories in ${Date.now() - startedAt}ms`,
+        `[article-desk] published ${result.published.length} article(s) in ${seconds}s from ${result.storiesAvailable} available stories:`,
       )
+      result.published.forEach((a) => console.log(`  • ${a.title} (${a.shape}/${a.tone}, ${a.readMinutes} min)`))
     } else {
-      console.log(`[article-desk] skipped: ${result.reason}`)
+      console.log(`[article-desk] published nothing (${result.status}) after ${seconds}s.`)
     }
+    // The notes explain every story that was considered and skipped, which is
+    // the first thing worth reading when a run produces less than expected.
+    result.notes.forEach((n) => console.log(`  - ${n}`))
 
-    return new Response(JSON.stringify(result), { headers: { 'Content-Type': 'application/json' } })
+    // Keep the response light: the articles themselves are already stored.
+    return new Response(
+      JSON.stringify({
+        status: result.status,
+        publishedCount: result.published.length,
+        titles: result.published.map((a) => a.title),
+        storiesAvailable: result.storiesAvailable,
+        notes: result.notes,
+      }),
+      { headers: { 'Content-Type': 'application/json' } },
+    )
   } catch (err) {
     // Netlify retries failed background invocations twice. A DeepSeek outage is
     // worth retrying; a bad prompt is not, and each retry costs a call — so

@@ -46,81 +46,203 @@ This is **not** an official Manchester United website.
 
 ## The AI Article Desk
 
-The site publishes its own articles automatically. Once a day a Netlify
-function reads the same Manchester United feeds the news and transfer pages
-use, hands the day's stories to DeepSeek with the United Road editorial
-"brain", and stores the finished piece in Netlify Blobs. The `/articles` page
-merges those with the Substack posts into one timeline; AI-written pieces carry
-an **AI Desk** badge, a note explaining how they were produced, and a list of
-the reporting they were written from.
+The site writes its own articles. Once a day a Netlify function reads the same
+Manchester United feeds the news and transfer pages use, works out which stories
+actually happened, and asks DeepSeek to write **up to three** of them up in the
+United Road house voice. Finished pieces are stored in Netlify Blobs and appear
+on `/articles` alongside the Substack posts, badged **AI Desk**, with the
+reporting they were written from listed at the bottom.
 
-### Setup
+On a quiet day it writes one. On a dead day it writes nothing. Publishing filler
+is worse than publishing nothing, so the desk is never obliged to fill a quota.
 
-Set these on the site (**Netlify → Site configuration → Environment variables**).
-The DeepSeek key is only ever read server-side and is never sent to the browser.
+---
 
-| Variable | Required | Purpose |
-| --- | --- | --- |
-| `DEEPSEEK_API_KEY` | yes | Your DeepSeek API key. |
-| `ARTICLE_WRITER_TOKEN` | yes | Any long random string you invent. Protects the writer endpoint and lets the daily cron reach the background worker. |
-| `DEEPSEEK_MODEL` | no | Defaults to `deepseek-v4-flash`. Set to `deepseek-v4-pro` for longer, more considered pieces at roughly 3× the cost. |
+### Step by step: switching it on in Netlify
 
-Both are required. A measured end-to-end generation takes **around 53 seconds**
-(most of it DeepSeek reasoning), and Netlify kills scheduled functions at 30,
-so the cron cannot do the work itself — it hands off to a background function,
-and `ARTICLE_WRITER_TOKEN` is how it authenticates that call. Without the token
-the daily job logs an error and skips rather than paying for a generation that
-would be thrown away.
+**1. Get a DeepSeek API key**
 
-Cost per article is roughly **$0.002** on `deepseek-v4-flash` (~4k prompt
-tokens, most of them cache hits, and ~6.5k output tokens including reasoning).
+Sign in at [platform.deepseek.com](https://platform.deepseek.com), go to **API
+Keys → Create new API key**, and copy it. You only see it once. Make sure the
+account has credit on it — the desk cannot write without it.
 
-### How it runs
+**2. Invent a writer token**
 
-- **Daily** — `netlify/functions/generate-article.mts` fires at 07:15 UTC and
-  hands the job to the background worker.
-- **On demand** — post to the worker yourself:
+Any long random string will do. On a Mac or Linux terminal:
 
-  ```bash
-  curl -X POST https://unitedroad.uk/.netlify/functions/article-desk-background \
-       -H "Authorization: Bearer $ARTICLE_WRITER_TOKEN" \
-       -H "Content-Type: application/json" \
-       -d '{"angle":"transfer","force":true}'
-  ```
+```bash
+openssl rand -hex 24
+```
 
-  `angle` is one of `transfer`, `analysis`, `roundup`, `squad` (the cron rotates
-  through them by day). `force` bypasses the one-article-per-day guard.
-  Background functions answer `202` straight away, so check `/api/articles` or
-  the function log for the result.
+Copy the result. This is not a DeepSeek thing — it is a password that stops
+strangers from triggering your writer and spending your credit.
+
+**3. Add both to Netlify**
+
+In the Netlify dashboard, open the United Road site, then:
+
+**Site configuration → Environment variables → Add a variable → Add a single
+variable.**
+
+Add these one at a time. Leave the scope as **All scopes** and the context as
+**All deploy contexts**.
+
+| Key | Value |
+| --- | --- |
+| `DEEPSEEK_API_KEY` | the key from step 1 |
+| `ARTICLE_WRITER_TOKEN` | the random string from step 2 |
+
+Optionally also add `DEEPSEEK_MODEL` with the value `deepseek-v4-pro` if you
+ever want longer, more considered pieces — it costs roughly 3× more. Leave it
+out to use `deepseek-v4-flash`, which is what the desk is tuned for.
+
+**4. Deploy**
+
+Environment variables only reach the functions on a fresh build, so trigger one:
+**Deploys → Trigger deploy → Clear cache and deploy site.** Wait for it to go
+green.
+
+**5. Check the functions registered**
+
+Go to **Logs → Functions.** You should see `generate-article`,
+`article-desk-background`, `articles`, `rss` and `substack`. If
+`article-desk-background` is missing, the deploy did not pick up the new files —
+re-run step 4.
+
+**6. Write the first articles now, without waiting for the cron**
+
+```bash
+curl -X POST https://unitedroad.uk/.netlify/functions/article-desk-background \
+     -H "Authorization: Bearer YOUR_TOKEN_FROM_STEP_2" \
+     -H "Content-Type: application/json" \
+     -d '{"force":true}'
+```
+
+It answers `202 Accepted` immediately — that means "started", not "finished".
+Background functions always reply straight away. Give it about a minute, then
+open `https://unitedroad.uk/#/articles`. The new pieces will be at the top with
+an **AI Desk** badge.
+
+**7. Check what it did**
+
+**Logs → Functions → article-desk-background.** Each run prints the headlines it
+published and a note for every story it considered and skipped, e.g.:
+
+```
+[article-desk] published 3 article(s) in 59s from 23 available stories:
+  • FIFA to Cover Ugarte's Wages During Injury Recovery (REPORT/neutral, 2 min)
+  • United Announce New Fanzone to Boost Old Trafford Atmosphere (REPORT/positive, 2 min)
+  - 23 uncovered stories available, writing up to 3.
+  - Skipped "Eva Olid: Who is the coach...": reproduced 2 run(s) of source phrasing verbatim.
+```
+
+That is the first place to look if a run produces fewer articles than expected.
+
+**That is it.** From then on it runs by itself at **07:15 UTC every day**.
+
+---
+
+### Options on the manual trigger
+
+```bash
+-d '{"force":true}'      # ignore the "already published today" guard
+-d '{"max":1}'           # write at most one this run
+-d '{"max":3,"force":true}'
+```
+
+### Timing and cost
+
+Each article takes roughly 20–30 seconds end to end, so a three-article run is
+about a minute. Cost is around **$0.002 per article** on `deepseek-v4-flash`, so
+three a day is roughly **$2 a year**.
+
+The work happens in a *background* function because Netlify kills scheduled
+functions at 30 seconds. The daily cron does nothing but hand the job over,
+which is what `ARTICLE_WRITER_TOKEN` authenticates. Without the token the cron
+logs an error and skips rather than paying for a generation that would be cut
+off.
+
+---
+
+### How the desk decides what to write about
+
+1. **Fetch** eleven United feeds — the club, the national press, the fanzones.
+2. **Filter** out anything that is not about United, plus live blogs, quizzes
+   and betting content.
+3. **Cluster** by headline similarity, so one transfer covered by five outlets
+   counts as *one* story and the desk gets all five accounts of it.
+4. **Rank** by corroboration — a story carried by four outlets outranks one
+   carried by a single blog — then by recency.
+5. **Skip** anything it has already published about (it remembers the last 120
+   headlines).
+6. **Write** the top stories, one at a time, telling each one what the others in
+   the run already covered so two articles never overlap.
+
+### Rewriting, not copying
+
+This was the hard part. Left alone, the model follows a source sentence by
+sentence and swaps a few words, which is copying however you dress it up.
+
+Two things stop it. The prompt in `netlify/lib/brain.mts` opens with a worked
+example of the failure — a real source paragraph, the bad near-copy, and the
+good rewrite — and tells the writer to start somewhere other than where the
+source starts. Then every finished draft is checked against its sources for any
+run of **12 identical consecutive words**. If one is found, the draft is
+rejected and re-requested *with the offending phrases quoted back*, which fixes
+it far more often than starting again on a different story. A draft that still
+copies after that retry is thrown away and the story is skipped.
+
+The 12-word window was measured, not guessed: against a genuinely rewritten
+article, a 6-word window flagged 11 phrases and an 8-word window flagged 2 — all
+of them unavoidable factual phrasing like *"on last year's third place finish"*.
+At 10 words and above, nothing. Twelve is where a shared run stops being a
+coincidence.
 
 ### Tuning the voice
 
-The editorial identity lives in `netlify/lib/brain.mts` — voice, the rules about
-what it may and may not assert, the HTML it is allowed to emit, and the four
-rotating angles. That is the file to edit to change how the desk writes.
+`netlify/lib/brain.mts` is the only file that knows anything about how the desk
+writes. It was reverse-engineered from the Substack archive: Title Case
+headlines, a factual opening then named `<h2>` sections, the
+`Latest Developments` → `My View on…` → `What Happens Next?` skeleton for news,
+`we/us/our` for the club, `I` only in the verdict section, short paragraphs and a
+firm closing line.
 
-Two rules in there matter more than the rest, and are deliberately repeated in
-the prompt: **only state what appears in the supplied source material**, and
-**never invent a quote, fee, scoreline or date**. An automated desk that
-hallucinates a transfer is worse than one that publishes nothing, so the
-pipeline also fails closed — if fewer than three uncovered stories are
-available, or the model returns under 180 words, nothing is published.
+It also carries the two rules that matter most, repeated deliberately: **only
+state what appears in the supplied source material**, and **never invent a
+quote, fee, scoreline or date**. The pipeline fails closed to back this up — no
+uncovered stories means no articles, and a draft under 220 words is rejected.
 
-Everything the model returns is sanitised before it is stored
-(`sanitizeHtml` in `netlify/lib/article-writer.mts`): only a small tag
-allowlist survives, all attributes are dropped except plain `http(s)` hrefs,
-and scripts, iframes, inline styles and event handlers are stripped.
+To change how it writes, edit that file. Nothing else needs touching.
+
+Everything the model returns is sanitised before storage (`sanitizeHtml` in
+`netlify/lib/article-writer.mts`): a small tag allowlist, all attributes dropped
+except plain `http(s)` hrefs, and scripts, iframes, inline styles and event
+handlers stripped.
 
 ### Files
 
 | Path | What it does |
 | --- | --- |
-| `netlify/lib/brain.mts` | The editorial identity and the rotating angles. |
-| `netlify/lib/article-writer.mts` | Source gathering, the DeepSeek call, sanitising, storage. |
+| `netlify/lib/brain.mts` | The house voice, the article shapes, the batch size. |
+| `netlify/lib/article-writer.mts` | Feeds, clustering, the DeepSeek call, the copy check, storage. |
 | `netlify/lib/feed.mts` | Dependency-free RSS/Atom parsing. |
-| `netlify/functions/generate-article.mts` | The daily cron. |
+| `netlify/functions/generate-article.mts` | The 07:15 UTC cron. Hands off and returns. |
 | `netlify/functions/article-desk-background.mts` | The worker that does the writing. |
 | `netlify/functions/articles.mts` | `GET /api/articles` — serves the stored pieces to the site. |
+
+### If something goes wrong
+
+| Symptom | Cause |
+| --- | --- |
+| Nothing on `/articles` | Check **Logs → Functions → article-desk-background**. No log line at all means the token in your `curl` did not match `ARTICLE_WRITER_TOKEN`. |
+| `401 Unauthorized` | The token does not match, or the deploy predates you adding it. Re-deploy. |
+| `503` | `ARTICLE_WRITER_TOKEN` is not set on the site. |
+| `"DEEPSEEK_API_KEY is not set"` | The variable is missing, or was added after the last deploy. Re-deploy. |
+| `"nothing-to-write"` | Genuinely no new United stories the desk has not already covered. This is normal on a quiet day. |
+| `DeepSeek responded 402` | Out of credit on the DeepSeek account. |
+
+---
+
 
 ---
 
