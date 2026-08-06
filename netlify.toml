@@ -1,0 +1,23 @@
+# United Road — Netlify configuration.
+#
+# The site is a single static HTML file at the repository root, so there is no
+# build step: Netlify installs the function dependencies from package.json and
+# publishes the repo as-is.
+
+[build]
+  publish = "."
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"
+
+# The scheduled article-desk run and the manual trigger both call DeepSeek,
+# which can take a while on a long piece.
+[functions."generate-article"]
+  included_files = ["netlify/lib/**"]
+
+[functions."article-desk-background"]
+  included_files = ["netlify/lib/**"]
+
+[functions."articles"]
+  included_files = ["netlify/lib/**"]
