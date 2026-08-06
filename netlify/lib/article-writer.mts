@@ -232,7 +232,16 @@ export const callDeepSeek = async (
           { role: 'user', content: userPrompt },
         ],
         temperature: 0.7,
-        max_tokens: 4000,
+        // Reasoning tokens are billed and budgeted as output tokens. DeepSeek
+        // defaults to a high reasoning effort, which on this prompt burns the
+        // entire allowance thinking and returns an empty message — so pin the
+        // effort low and leave plenty of headroom for the article itself.
+        thinking: { type: 'enabled', reasoning_effort: 'low' },
+        // Observed on a real run: ~5.6k reasoning + ~0.9k article = ~6.5k. The
+        // ceiling is headroom for a busy news day, not a target — output is
+        // billed per token used, so a generous limit costs nothing on a normal
+        // run and prevents a truncated, unusable response on a heavy one.
+        max_tokens: 12000,
         response_format: { type: 'json_object' },
       }),
       signal: controller.signal,
@@ -247,8 +256,18 @@ export const callDeepSeek = async (
   }
 
   const payload = await res.json()
-  const raw = payload?.choices?.[0]?.message?.content
-  if (!raw) throw new Error('DeepSeek returned no message content')
+  const choice = payload?.choices?.[0]
+  const raw = choice?.message?.content
+
+  if (!raw) {
+    // The most likely cause is the response being cut off at max_tokens, which
+    // is worth naming explicitly rather than reporting as a generic empty reply.
+    const reason = choice?.finish_reason || 'unknown'
+    const reasoningTokens = payload?.usage?.completion_tokens_details?.reasoning_tokens ?? 0
+    throw new Error(
+      `DeepSeek returned no message content (finish_reason=${reason}, reasoning_tokens=${reasoningTokens})`,
+    )
+  }
 
   // response_format should give us bare JSON, but a stray markdown fence is a
   // cheap thing to survive.

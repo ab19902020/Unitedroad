@@ -62,12 +62,18 @@ The DeepSeek key is only ever read server-side and is never sent to the browser.
 | Variable | Required | Purpose |
 | --- | --- | --- |
 | `DEEPSEEK_API_KEY` | yes | Your DeepSeek API key. |
-| `ARTICLE_WRITER_TOKEN` | strongly recommended | Any long random string. Protects the writer endpoint and lets the daily run use the 15-minute background worker instead of the 30-second scheduled-function slot. |
+| `ARTICLE_WRITER_TOKEN` | yes | Any long random string you invent. Protects the writer endpoint and lets the daily cron reach the background worker. |
 | `DEEPSEEK_MODEL` | no | Defaults to `deepseek-v4-flash`. Set to `deepseek-v4-pro` for longer, more considered pieces at roughly 3× the cost. |
 
-Without `ARTICLE_WRITER_TOKEN` the daily job still runs, but it runs inline and
-a long generation can be cut off by Netlify's 30-second limit on scheduled
-functions. Set it.
+Both are required. A measured end-to-end generation takes **around 53 seconds**
+(most of it DeepSeek reasoning), and Netlify kills scheduled functions at 30,
+so the cron cannot do the work itself — it hands off to a background function,
+and `ARTICLE_WRITER_TOKEN` is how it authenticates that call. Without the token
+the daily job logs an error and skips rather than paying for a generation that
+would be thrown away.
+
+Cost per article is roughly **$0.002** on `deepseek-v4-flash` (~4k prompt
+tokens, most of them cache hits, and ~6.5k output tokens including reasoning).
 
 ### How it runs
 
