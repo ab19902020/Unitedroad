@@ -49,6 +49,10 @@ export default async () => {
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ source: 'cron' }),
     })
+    // A background function answers 202 the moment Netlify accepts the request,
+    // before the worker's own auth check runs — so a 202 here means "handed
+    // over", not "wrote an article". /api/desk-status is what reports the
+    // actual outcome.
     // A background function answers 202 immediately; anything else means the
     // handoff itself failed and no article is being written.
     if (res.status !== 202) {
@@ -63,8 +67,10 @@ export default async () => {
   }
 }
 
-// 07:15 UTC daily — late enough that overnight reporting has landed, early
-// enough to be there for the morning read.
+// Twice a day, 07:15 and 16:15 UTC. The morning run catches the overnight
+// reporting; the afternoon run picks up anything that broke during the day and
+// tops the day up towards the three-article ceiling if the morning was quiet.
+// The per-day cap lives in runDailyBatch, so a second run cannot exceed it.
 export const config: Config = {
-  schedule: '15 7 * * *',
+  schedule: '15 7,16 * * *',
 }

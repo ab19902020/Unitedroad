@@ -21,3 +21,6 @@
 
 [functions."articles"]
   included_files = ["netlify/lib/**"]
+
+[functions."desk-status"]
+  included_files = ["netlify/lib/**"]

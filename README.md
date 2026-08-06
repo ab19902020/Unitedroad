@@ -109,7 +109,19 @@ Go to **Logs → Functions.** You should see `generate-article`,
 `article-desk-background` is missing, the deploy did not pick up the new files —
 re-run step 4.
 
-**6. Write the first articles now, without waiting for the cron**
+**6. Check it is wired up**
+
+Open this in a browser:
+
+```
+https://unitedroad.uk/api/desk-status
+```
+
+The `diagnosis` field at the top tells you in one sentence what is wrong, or
+that it is working. Check this **before** anything else — it is the only place
+that reports the truth (see the warning below).
+
+**7. Write the first articles now, without waiting for the cron**
 
 ```bash
 curl -X POST https://unitedroad.uk/.netlify/functions/article-desk-background \
@@ -118,27 +130,19 @@ curl -X POST https://unitedroad.uk/.netlify/functions/article-desk-background \
      -d '{"force":true}'
 ```
 
-It answers `202 Accepted` immediately — that means "started", not "finished".
-Background functions always reply straight away. Give it about a minute, then
-open `https://unitedroad.uk/#/articles`. The new pieces will be at the top with
-an **AI Desk** badge.
+> **The `202` you get back is meaningless.** Netlify answers `202 Accepted` the
+> instant it accepts the request, *before* your function runs. You get the same
+> `202` whether it wrote three articles, was refused for a wrong token, or
+> crashed on the first line. Never treat it as success. Wait a minute, then
+> reload `/api/desk-status` — that is where the real outcome is recorded.
 
-**7. Check what it did**
+Once it reports articles stored, open `https://unitedroad.uk/#/articles`. The
+new pieces will be at the top with an **AI Desk** badge.
 
-**Logs → Functions → article-desk-background.** Each run prints the headlines it
-published and a note for every story it considered and skipped, e.g.:
-
-```
-[article-desk] published 3 article(s) in 59s from 23 available stories:
-  • FIFA to Cover Ugarte's Wages During Injury Recovery (REPORT/neutral, 2 min)
-  • United Announce New Fanzone to Boost Old Trafford Atmosphere (REPORT/positive, 2 min)
-  - 23 uncovered stories available, writing up to 3.
-  - Skipped "Eva Olid: Who is the coach...": reproduced 2 run(s) of source phrasing verbatim.
-```
-
-That is the first place to look if a run produces fewer articles than expected.
-
-**That is it.** From then on it runs by itself at **07:15 UTC every day**.
+**That is it.** From then on it runs by itself at **07:15 and 16:15 UTC**, every
+day, with no prompting. The morning run catches the overnight reporting; the
+afternoon run picks up whatever broke during the day. The three-a-day ceiling
+applies across both, so the second run tops the day up rather than doubling it.
 
 ---
 
@@ -226,20 +230,28 @@ handlers stripped.
 | `netlify/lib/brain.mts` | The house voice, the article shapes, the batch size. |
 | `netlify/lib/article-writer.mts` | Feeds, clustering, the DeepSeek call, the copy check, storage. |
 | `netlify/lib/feed.mts` | Dependency-free RSS/Atom parsing. |
-| `netlify/functions/generate-article.mts` | The 07:15 UTC cron. Hands off and returns. |
+| `netlify/functions/generate-article.mts` | The 07:15 and 16:15 UTC cron. Hands off and returns. |
 | `netlify/functions/article-desk-background.mts` | The worker that does the writing. |
 | `netlify/functions/articles.mts` | `GET /api/articles` — serves the stored pieces to the site. |
+| `netlify/functions/desk-status.mts` | `GET /api/desk-status` — what the desk last did, and why. |
 
 ### If something goes wrong
 
-| Symptom | Cause |
+**Always start at `https://unitedroad.uk/api/desk-status`.** Its `diagnosis`
+field names the problem directly. The table below is what each answer means.
+
+| `diagnosis` says | What to do |
 | --- | --- |
-| Nothing on `/articles` | Check **Logs → Functions → article-desk-background**. No log line at all means the token in your `curl` did not match `ARTICLE_WRITER_TOKEN`. |
-| `401 Unauthorized` | The token does not match, or the deploy predates you adding it. Re-deploy. |
-| `503` | `ARTICLE_WRITER_TOKEN` is not set on the site. |
-| `"DEEPSEEK_API_KEY is not set"` | The variable is missing, or was added after the last deploy. Re-deploy. |
-| `"nothing-to-write"` | Genuinely no new United stories the desk has not already covered. This is normal on a quiet day. |
-| `DeepSeek responded 402` | Out of credit on the DeepSeek account. |
+| `DEEPSEEK_API_KEY is not set` | Add the variable, then **redeploy**. Variables only reach functions on a fresh build — adding one to an existing deploy does nothing. |
+| `ARTICLE_WRITER_TOKEN is not set` | Same: add it, then redeploy. |
+| `the last call to the worker was rejected` | Your token is set on the site but the one in your `curl` does not match it. Copy it again from Netlify. |
+| `ran ... but published nothing` | Read `lastRun.notes` in the same response. Usually `nothing-to-write`, which is normal on a quiet day. |
+| `has never run on this deploy` | The cron has not come round yet. Trigger one manually, or wait for 07:15 / 16:15 UTC. |
+| `Working.` | It is fine. Articles are on `/#/articles`. |
+
+If `lastRun.error` mentions `DeepSeek responded 402`, the DeepSeek account is
+out of credit. `429` means you have hit a rate limit — the next run will
+recover on its own.
 
 ---
 

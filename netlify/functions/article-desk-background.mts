@@ -24,7 +24,7 @@
 // thing to abuse, the endpoint is closed unless ARTICLE_WRITER_TOKEN is set
 // and the caller presents it.
 
-import { runDailyBatch } from '../lib/article-writer.mts'
+import { runDailyBatch, recordRun, recordRejection } from '../lib/article-writer.mts'
 
 export default async (req: Request) => {
   const expected = process.env.ARTICLE_WRITER_TOKEN
@@ -35,6 +35,11 @@ export default async (req: Request) => {
 
   const presented = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim()
   if (!presented || presented !== expected) {
+    // Netlify already answered 202 before this handler ran, so the caller
+    // cannot see this 401. Record it instead — /api/desk-status surfaces it,
+    // which is the only way a bad token is discoverable without reading logs.
+    console.warn('[article-desk] rejected: bad or missing ARTICLE_WRITER_TOKEN.')
+    await recordRejection()
     return new Response('Unauthorized.', { status: 401 })
   }
 
@@ -65,6 +70,17 @@ export default async (req: Request) => {
     // the first thing worth reading when a run produces less than expected.
     result.notes.forEach((n) => console.log(`  - ${n}`))
 
+    await recordRun({
+      at: Date.now(),
+      trigger: typeof body?.source === 'string' ? body.source : 'manual',
+      status: result.status,
+      publishedCount: result.published.length,
+      titles: result.published.map((a) => a.title),
+      storiesAvailable: result.storiesAvailable,
+      notes: result.notes,
+      durationMs: Date.now() - startedAt,
+    })
+
     // Keep the response light: the articles themselves are already stored.
     return new Response(
       JSON.stringify({
@@ -81,6 +97,17 @@ export default async (req: Request) => {
     // worth retrying; a bad prompt is not, and each retry costs a call — so
     // swallow the error and let tomorrow's run try again.
     console.error('[article-desk] run failed:', (err as Error).message)
+    await recordRun({
+      at: Date.now(),
+      trigger: typeof body?.source === 'string' ? body.source : 'manual',
+      status: 'error',
+      publishedCount: 0,
+      titles: [],
+      storiesAvailable: 0,
+      notes: [],
+      error: (err as Error).message,
+      durationMs: Date.now() - startedAt,
+    })
     return new Response(JSON.stringify({ status: 'error', message: (err as Error).message }), {
       headers: { 'Content-Type': 'application/json' },
     })

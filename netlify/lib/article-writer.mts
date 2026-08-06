@@ -45,10 +45,33 @@ export type StoredArticle = {
   model: string
 }
 
+/**
+ * What happened the last time the desk ran, successfully or not.
+ *
+ * This exists because a background function is invisible from the outside:
+ * Netlify answers 202 the moment it accepts the request, before the handler
+ * runs, so the HTTP response says nothing about whether an article was
+ * written, the token was wrong, or DeepSeek refused. Recording the outcome
+ * here gives /api/desk-status something truthful to report.
+ */
+export type RunRecord = {
+  at: number
+  trigger: string
+  status: string
+  publishedCount: number
+  titles: string[]
+  storiesAvailable: number
+  notes: string[]
+  error?: string
+  durationMs: number
+}
+
 type Index = {
   updatedAt: number
   covered: { title: string; at: number }[]
   articles: StoredArticle[]
+  lastRun?: RunRecord
+  lastRejectedAt?: number
 }
 
 const EMPTY_INDEX: Index = { updatedAt: 0, covered: [], articles: [] }
@@ -401,6 +424,8 @@ export const readIndex = async (): Promise<Index> => {
       updatedAt: data.updatedAt || 0,
       covered: Array.isArray(data.covered) ? data.covered : [],
       articles: Array.isArray(data.articles) ? data.articles : [],
+      lastRun: data.lastRun,
+      lastRejectedAt: data.lastRejectedAt,
     }
   } catch {
     return { ...EMPTY_INDEX }
@@ -409,6 +434,46 @@ export const readIndex = async (): Promise<Index> => {
 
 const writeIndex = async (index: Index): Promise<void> => {
   await store().setJSON(INDEX_KEY, index)
+}
+
+/**
+ * Record the outcome of a run without touching the articles. Called for every
+ * run including failures, so /api/desk-status can always say what happened
+ * last rather than leaving the owner to read function logs.
+ */
+export const recordRun = async (record: RunRecord): Promise<void> => {
+  try {
+    const index = await readIndex()
+    await writeIndex({ ...index, lastRun: record })
+  } catch {
+    // Losing the diagnostic record must never fail the run itself.
+  }
+}
+
+/** Note that someone called the worker with a bad or missing token. */
+export const recordRejection = async (): Promise<void> => {
+  try {
+    const index = await readIndex()
+    await writeIndex({ ...index, lastRejectedAt: Date.now() })
+  } catch {
+    // Best effort only.
+  }
+}
+
+/** Everything /api/desk-status needs, with no secrets in it. */
+export const readStatus = async () => {
+  const index = await readIndex()
+  return {
+    deepseekKeySet: !!process.env.DEEPSEEK_API_KEY,
+    writerTokenSet: !!process.env.ARTICLE_WRITER_TOKEN,
+    model: process.env.DEEPSEEK_MODEL || DEFAULT_MODEL,
+    articleCount: index.articles.length,
+    latestArticle: index.articles[0]
+      ? { title: index.articles[0].title, at: index.articles[0].timestamp }
+      : null,
+    lastRun: index.lastRun || null,
+    lastRejectedAt: index.lastRejectedAt || null,
+  }
 }
 
 // --- Writing one article -------------------------------------------------
