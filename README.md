@@ -35,7 +35,86 @@ has its own deep link at **`#/manager`**, which boots straight into the game.
 
 Other titles: United Rhythm, World Cup Free Kicks and the Ultimate United Quiz.
 
+Each entry in `GAMES_LIBRARY` carries its own `accent`/`glow` colours plus `meta`
+(session length, difficulty, mode) and `highlights`, which is what drives the
+arcade tiles — the whole card is the play button, it tilts toward the cursor,
+and the accent colour makes each title read as its own thing on the shelf.
+
 This is **not** an official Manchester United website.
+
+---
+
+## The AI Article Desk
+
+The site publishes its own articles automatically. Once a day a Netlify
+function reads the same Manchester United feeds the news and transfer pages
+use, hands the day's stories to DeepSeek with the United Road editorial
+"brain", and stores the finished piece in Netlify Blobs. The `/articles` page
+merges those with the Substack posts into one timeline; AI-written pieces carry
+an **AI Desk** badge, a note explaining how they were produced, and a list of
+the reporting they were written from.
+
+### Setup
+
+Set these on the site (**Netlify → Site configuration → Environment variables**).
+The DeepSeek key is only ever read server-side and is never sent to the browser.
+
+| Variable | Required | Purpose |
+| --- | --- | --- |
+| `DEEPSEEK_API_KEY` | yes | Your DeepSeek API key. |
+| `ARTICLE_WRITER_TOKEN` | strongly recommended | Any long random string. Protects the writer endpoint and lets the daily run use the 15-minute background worker instead of the 30-second scheduled-function slot. |
+| `DEEPSEEK_MODEL` | no | Defaults to `deepseek-v4-flash`. Set to `deepseek-v4-pro` for longer, more considered pieces at roughly 3× the cost. |
+
+Without `ARTICLE_WRITER_TOKEN` the daily job still runs, but it runs inline and
+a long generation can be cut off by Netlify's 30-second limit on scheduled
+functions. Set it.
+
+### How it runs
+
+- **Daily** — `netlify/functions/generate-article.mts` fires at 07:15 UTC and
+  hands the job to the background worker.
+- **On demand** — post to the worker yourself:
+
+  ```bash
+  curl -X POST https://unitedroad.uk/.netlify/functions/article-desk-background \
+       -H "Authorization: Bearer $ARTICLE_WRITER_TOKEN" \
+       -H "Content-Type: application/json" \
+       -d '{"angle":"transfer","force":true}'
+  ```
+
+  `angle` is one of `transfer`, `analysis`, `roundup`, `squad` (the cron rotates
+  through them by day). `force` bypasses the one-article-per-day guard.
+  Background functions answer `202` straight away, so check `/api/articles` or
+  the function log for the result.
+
+### Tuning the voice
+
+The editorial identity lives in `netlify/lib/brain.mts` — voice, the rules about
+what it may and may not assert, the HTML it is allowed to emit, and the four
+rotating angles. That is the file to edit to change how the desk writes.
+
+Two rules in there matter more than the rest, and are deliberately repeated in
+the prompt: **only state what appears in the supplied source material**, and
+**never invent a quote, fee, scoreline or date**. An automated desk that
+hallucinates a transfer is worse than one that publishes nothing, so the
+pipeline also fails closed — if fewer than three uncovered stories are
+available, or the model returns under 180 words, nothing is published.
+
+Everything the model returns is sanitised before it is stored
+(`sanitizeHtml` in `netlify/lib/article-writer.mts`): only a small tag
+allowlist survives, all attributes are dropped except plain `http(s)` hrefs,
+and scripts, iframes, inline styles and event handlers are stripped.
+
+### Files
+
+| Path | What it does |
+| --- | --- |
+| `netlify/lib/brain.mts` | The editorial identity and the rotating angles. |
+| `netlify/lib/article-writer.mts` | Source gathering, the DeepSeek call, sanitising, storage. |
+| `netlify/lib/feed.mts` | Dependency-free RSS/Atom parsing. |
+| `netlify/functions/generate-article.mts` | The daily cron. |
+| `netlify/functions/article-desk-background.mts` | The worker that does the writing. |
+| `netlify/functions/articles.mts` | `GET /api/articles` — serves the stored pieces to the site. |
 
 ---
 
@@ -74,6 +153,26 @@ This is a fan-made website created out of love for Manchester United Football Cl
 ## Deployment
 
 This site is automatically deployed from GitHub to Netlify on every push to the main branch.
+
+There is no build step. `netlify.toml` publishes the repository root as-is and
+points Netlify at `netlify/functions`; `package.json` exists only so Netlify
+installs the two packages the functions need (`@netlify/blobs`,
+`@netlify/functions`).
+
+### Images from feeds
+
+Every remote image on the site comes from a source we do not control — YouTube
+`maxresdefault` stills 404 for a large share of older uploads, publisher CDNs
+hotlink-block, creator avatars rot. Rather than leaving broken-image icons
+behind, `SmartImage` walks a chain of candidate URLs (for YouTube: maxres → sd →
+hq → mq), treats YouTube's 120×90 grey filler as a failure, gives each candidate
+a six-second deadline in case the host hangs instead of erroring, and finally
+draws branded cover art as an inline SVG data URI. That last step needs no
+network request, so it can never itself fail. `SmartAvatar` does the same for
+profile pictures, falling back to an initials monogram.
+
+The practical upshot: never add a stock-photo fallback URL to a feed mapper.
+Leave the image empty and let the card generate its own cover.
 
 ---
 
