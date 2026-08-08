@@ -573,11 +573,25 @@ const distinctRuns = (runs: string[], limit = 4): string[] => {
 
 // --- DeepSeek ------------------------------------------------------------
 
+/** Token counts DeepSeek reports back on every response, used to price a call. */
+export type DeepSeekUsage = {
+  prompt_tokens?: number
+  completion_tokens?: number
+  prompt_cache_hit_tokens?: number
+  prompt_cache_miss_tokens?: number
+}
+
 export const callDeepSeek = async (
   apiKey: string,
   model: string,
   systemPrompt: string,
   userPrompt: string,
+  /**
+   * Called with the response's token counts before the content is parsed, so a
+   * caller can meter what it actually spent. It fires even when the reply turns
+   * out to be unusable — those tokens are billed too.
+   */
+  onUsage?: (usage: DeepSeekUsage) => void,
 ): Promise<any> => {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), 180000)
@@ -626,6 +640,9 @@ export const callDeepSeek = async (
   }
 
   const payload = await res.json()
+  if (onUsage) {
+    try { onUsage((payload?.usage || {}) as DeepSeekUsage) } catch { /* metering must never fail the call */ }
+  }
   const choice = payload?.choices?.[0]
   const raw = choice?.message?.content
 

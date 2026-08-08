@@ -123,6 +123,22 @@ Optionally also add `DEEPSEEK_MODEL` with the value `deepseek-v4-pro` if you
 ever want longer, more considered pieces — it costs roughly 3× more. Leave it
 out to use `deepseek-v4-flash`, which is what the desk is tuned for.
 
+**What the Oracle costs you**
+
+The Oracle answers visitors' questions with DeepSeek, so anyone who can reach
+the site can spend your credit. It is capped at **10p a day** across all
+visitors. Past that it falls back to the built-in offline answers, so the
+feature degrades rather than breaking, and the cap resets at midnight UTC.
+
+The cap is metered on the token counts DeepSeek reports, not on a guess at how
+many questions is about right. A measured answer costs around **0.0066p**, so
+10p is roughly **1,500 questions a day** — far more than the site will see.
+Identical questions are cached for a week and cost nothing at all, and one
+visitor is limited to 15 questions an hour so they cannot burn the day alone.
+
+`GET /api/desk-status` reports the day's spend under `oracle`. To change the
+budget, set `ORACLE_DAILY_PENCE` (e.g. `25` for 25p, `2` to keep it tighter).
+
 **4. Deploy**
 
 Environment variables only reach the functions on a fresh build, so trigger one:

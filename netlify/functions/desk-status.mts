@@ -10,7 +10,26 @@
 // It never returns their values.
 
 import type { Config, Context } from '@netlify/functions'
+import { getStore } from '@netlify/blobs'
 import { readStatus } from '../lib/article-writer.mts'
+
+// Today's Oracle spend, read straight from the meter the endpoint writes.
+const oracleSpend = async () => {
+  const budget = Number(process.env.ORACLE_DAILY_PENCE || 10)
+  try {
+    const m = (await getStore({ name: 'united-road-oracle', consistency: 'strong' })
+      .get('meter', { type: 'json' })) as { day: string; calls: number; pence: number } | null
+    const fresh = m && m.day === new Date().toISOString().slice(0, 10)
+    return {
+      budgetPence: budget,
+      spentPence: fresh ? Number((m!.pence ?? 0).toFixed(3)) : 0,
+      answersToday: fresh ? m!.calls ?? 0 : 0,
+      exhausted: fresh ? (m!.pence ?? 0) >= budget : false,
+    }
+  } catch {
+    return { budgetPence: budget, spentPence: 0, answersToday: 0, exhausted: false }
+  }
+}
 
 const ago = (ts: number | null | undefined): string | null => {
   if (!ts) return null
@@ -24,7 +43,7 @@ const ago = (ts: number | null | undefined): string | null => {
 }
 
 export default async (_req: Request, context: Context) => {
-  const s = await readStatus(context?.site?.id)
+  const [s, oracle] = await Promise.all([readStatus(context?.site?.id), oracleSpend()])
 
   // Work out the single most useful sentence to show first, so the answer to
   // "why are there no articles?" is at the top rather than inferred.
@@ -66,6 +85,7 @@ export default async (_req: Request, context: Context) => {
         ? { ...s.lastRun, when: ago(s.lastRun.at), durationSeconds: Math.round(s.lastRun.durationMs / 1000) }
         : null,
       lastRejectedCall: s.lastRejectedAt ? ago(s.lastRejectedAt) : null,
+      oracle,
     },
     { headers: { 'Cache-Control': 'no-store' } },
   )
