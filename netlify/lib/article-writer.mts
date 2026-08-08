@@ -31,6 +31,10 @@ const COVERED_MEMORY = 120
 // produced — these are United Road articles, full stop.
 const AUTHOR_NAME = 'Adam James'
 
+// Bylines used before the change, rewritten to AUTHOR_NAME whenever a stored
+// article is read back.
+const LEGACY_BYLINES = new Set(['United Road AI Desk', 'United Road Editorial'])
+
 export type StoredArticle = {
   id: string
   title: string
@@ -511,7 +515,12 @@ export const readIndex = async (): Promise<Index> => {
     return {
       updatedAt: data.updatedAt || 0,
       covered: Array.isArray(data.covered) ? data.covered : [],
-      articles: Array.isArray(data.articles) ? data.articles : [],
+      // Articles written before the byline change are stored with the old
+      // machine byline. Normalise on read rather than migrating the blob, so
+      // the fix applies immediately and cannot half-succeed.
+      articles: Array.isArray(data.articles)
+        ? data.articles.map((a) => (LEGACY_BYLINES.has(a.author) ? { ...a, author: AUTHOR_NAME } : a))
+        : [],
       lastRun: data.lastRun,
       lastRejectedAt: data.lastRejectedAt,
     }
