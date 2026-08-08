@@ -15,7 +15,7 @@
 
 import { getStore } from '@netlify/blobs'
 import { fetchFeed, stripTags, type FeedItem } from './feed.mts'
-import { UNITED_ROAD_BRAIN, NEWS_MODE_BRIEF, ARTICLE_MODE_BRIEF, ANTI_TEMPLATE, buildVarietyNote, BATCH, RELATED_CONTEXT_COUNT, type ArticleKind } from './brain.mts'
+import { UNITED_ROAD_BRAIN, NEWS_MODE_BRIEF, ARTICLE_MODE_BRIEF, MATCH_MODE_BRIEF, WEEKLY_MODE_BRIEF, ANTI_TEMPLATE, buildVarietyNote, BATCH, RELATED_CONTEXT_COUNT, type ArticleKind } from './brain.mts'
 import { getWorkerAuth } from './worker-auth.mts'
 
 const DEEPSEEK_ENDPOINT = 'https://api.deepseek.com/chat/completions'
@@ -766,7 +766,15 @@ const writeOne = async (
     const parsed = await callDeepSeek(
       apiKey,
       model,
-      [UNITED_ROAD_BRAIN, kind === 'news' ? NEWS_MODE_BRIEF : ARTICLE_MODE_BRIEF, ANTI_TEMPLATE, varietyNote]
+      [
+        UNITED_ROAD_BRAIN,
+        kind === 'news' ? NEWS_MODE_BRIEF
+          : kind === 'match' ? MATCH_MODE_BRIEF
+          : kind === 'weekly' ? WEEKLY_MODE_BRIEF
+          : ARTICLE_MODE_BRIEF,
+        ANTI_TEMPLATE,
+        varietyNote,
+      ]
         .filter(Boolean)
         .join('\n'),
       buildUserPrompt(story, otherStories, alreadyWritten, correction),
@@ -797,7 +805,7 @@ Those are labels, not headings. Name each section for what is actually in it, in
 // A draft this short is not a publishable article, and the model reliably
 // under-runs the brief on a first pass — so shortness is treated as a
 // retry-able fault rather than a reason to abandon the story.
-const MIN_WORDS: Record<ArticleKind, number> = { news: 230, article: 480 }
+const MIN_WORDS: Record<ArticleKind, number> = { news: 230, article: 480, match: 380, weekly: 480 }
 
 type ValidateResult =
   | { ok: true; article: StoredArticle }
@@ -906,7 +914,7 @@ export const runDailyBatch = async (opts: {
 
   const today = new Date().toDateString()
   const publishedToday = index.articles.filter((a) => new Date(a.timestamp).toDateString() === today)
-  const newsToday = publishedToday.filter((a) => a.kind !== 'article').length
+  const newsToday = publishedToday.filter((a) => a.kind !== 'article' && a.kind !== 'weekly').length
   const articlesToday = publishedToday.filter((a) => a.kind === 'article').length
 
   // Headroom per kind. Forcing ignores the daily ceilings but never the
@@ -943,6 +951,15 @@ export const runDailyBatch = async (opts: {
   // matters — not that it is time-critical. Folding corroboration into
   // urgency was a mistake: on a busy day everything looked urgent, every slot
   // went to news, and the three daily long-form articles were never written.
+  // A result reads differently from a rumour: a scoreline in the headline, or
+  // the vocabulary of a finished game. These become match reports.
+  const RESULT_PATTERNS = [
+    /\b\d\s*[-\u2013]\s*\d\b/,
+    /\b(full[- ]time|player ratings|match report|beat|thrash|held to|slump to|edge past|see off|come from behind)\b/i,
+    /\b(win|defeat|draw|loss)\b.*\b(against|vs|over|at)\b/i,
+  ]
+  const isResult = (c: StoryCluster) => RESULT_PATTERNS.some((r) => r.test(c.lead.title))
+
   const isUrgent = (c: StoryCluster) => Date.now() - c.timestamp < BREAKING_WINDOW
   const urgentCount = stories.filter(isUrgent).length
   if (urgentCount) notes.push(`${urgentCount} story/stories broke in the last 30 minutes.`)
@@ -984,7 +1001,10 @@ export const runDailyBatch = async (opts: {
     // when the feeds are busy. Everything else goes out as news.
     const wroteArticleThisRun = published.some((p) => p.kind === 'article')
     let kind: ArticleKind
-    if (articlesLeft > 0 && !wroteArticleThisRun && story.outlets.length >= 2 && !isUrgent(story)) {
+    // A result is always worth its own report, and counts against the news cap.
+    if (isResult(story) && newsLeft > 0) {
+      kind = 'match'
+    } else if (articlesLeft > 0 && !wroteArticleThisRun && story.outlets.length >= 2 && !isUrgent(story)) {
       kind = 'article'
     } else if (newsLeft > 0) {
       kind = 'news'
@@ -1012,8 +1032,8 @@ export const runDailyBatch = async (opts: {
 
       published.push(outcome.article)
       writtenTitles.push(outcome.article.title)
-      if (kind === 'news') newsLeft--
-      else articlesLeft--
+      if (kind === 'article') articlesLeft--
+      else newsLeft--
 
       coveredNow.unshift(
         { title: outcome.article.title, at: Date.now() },
@@ -1040,4 +1060,77 @@ export const runDailyBatch = async (opts: {
   })
 
   return { status: 'published', published, storiesAvailable: stories.length, notes }
+}
+
+
+// --- Weekly round-up -----------------------------------------------------
+
+/**
+ * Write the week in review from what the desk itself published.
+ *
+ * Deliberately not sourced from the feeds: this is a look back at our own
+ * coverage, so the only material it gets is our own headlines and standfirsts.
+ * That also means it cannot introduce a fact the site has not already reported.
+ */
+export const publishRoundup = async (): Promise<{ status: string; title?: string; reason?: string }> => {
+  const apiKey = process.env.DEEPSEEK_API_KEY
+  if (!apiKey) return { status: 'skipped', reason: 'DEEPSEEK_API_KEY is not set.' }
+
+  const model = process.env.DEEPSEEK_MODEL || DEFAULT_MODEL
+  const index = await readIndex()
+  const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000
+
+  const week = index.articles.filter((a) => a.timestamp >= weekAgo && a.kind !== 'weekly')
+  if (week.length < 4) return { status: 'skipped', reason: `Only ${week.length} pieces published this week.` }
+
+  // Already done one this week?
+  if (index.articles.some((a) => a.kind === 'weekly' && a.timestamp >= weekAgo)) {
+    return { status: 'skipped', reason: 'A round-up has already gone out this week.' }
+  }
+
+  const material = week
+    .map((a, i) => `[${i + 1}] ${a.title}\n    ${a.standfirst || a.excerpt || ''}`)
+    .join('\n\n')
+
+  const parsed = await callDeepSeek(
+    apiKey,
+    model,
+    `${UNITED_ROAD_BRAIN}\n${WEEKLY_MODE_BRIEF}\n${ANTI_TEMPLATE}`,
+    `Here is everything United Road published in the last seven days.\n\n${material}\n\nWrite the weekly round-up. Respond with the JSON object only.`,
+  )
+
+  const title = stripTags(parsed?.title || '').slice(0, 160)
+  const bodyHtml = sanitizeHtml(parsed?.bodyHtml || '')
+  const words = wordCount(bodyHtml)
+  if (!title || words < 400) return { status: 'skipped', reason: `Round-up came back too thin (${words} words).` }
+
+  const now = new Date()
+  const article: StoredArticle = {
+    id: `ur-weekly-${now.toISOString().slice(0, 10)}`,
+    title,
+    standfirst: stripTags(parsed?.standfirst || '').slice(0, 260),
+    excerpt: stripTags(parsed?.standfirst || '').slice(0, 200),
+    content: bodyHtml,
+    tags: ['week in review'],
+    category: 'THE WEEK',
+    shape: 'WEEKLY',
+    tone: stripTags(parsed?.tone || '').toLowerCase().slice(0, 12),
+    kind: 'weekly',
+    author: AUTHOR_NAME,
+    isAI: true,
+    image: week.find((a) => a.image)?.image || '',
+    date: now.toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' }),
+    timestamp: now.getTime(),
+    readMinutes: Math.max(1, Math.round(words / 220)),
+    sources: [],
+    model,
+  }
+
+  await writeIndex({
+    ...index,
+    updatedAt: Date.now(),
+    articles: [article, ...index.articles].slice(0, 400),
+  })
+
+  return { status: 'published', title }
 }

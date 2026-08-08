@@ -31,5 +31,11 @@
 [functions."feed"]
   included_files = ["netlify/lib/**"]
 
+[functions."weekly-roundup"]
+  included_files = ["netlify/lib/**"]
+
+[functions."oracle"]
+  included_files = ["netlify/lib/**"]
+
 [functions."desk-status"]
   included_files = ["netlify/lib/**"]

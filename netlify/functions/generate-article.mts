@@ -60,6 +60,17 @@ export default async (_req: Request, context: Context) => {
       return json({ status: 'error', reason: `Worker returned ${res.status}.` }, 502)
     }
     console.log(`[article-desk] cron handed off to the background worker (auth: ${auth.mode}).`)
+
+    // Sunday evening: also kick the weekly round-up. It no-ops if one has
+    // already gone out this week, so firing it on every Sunday run is safe.
+    const now = new Date()
+    if (now.getUTCDay() === 0 && now.getUTCHours() === 18) {
+      fetch(`${siteUrl}/.netlify/functions/weekly-roundup`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${auth.secret}` },
+      }).catch((e) => console.error('[weekly-roundup] handoff failed:', e.message))
+    }
+
     return json({ status: 'dispatched' })
   } catch (err) {
     console.error('[article-desk] handoff failed:', (err as Error).message)

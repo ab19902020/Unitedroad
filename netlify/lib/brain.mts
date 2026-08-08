@@ -173,7 +173,7 @@ export const BATCH = {
   newsFloorPerDay: 5,
 } as const
 
-export type ArticleKind = 'news' | 'article'
+export type ArticleKind = 'news' | 'article' | 'match' | 'weekly'
 
 // Supporting context handed to the model alongside the lead story, so a piece
 // can reference related reporting without wandering off topic.
@@ -220,6 +220,32 @@ The news of this story is already reported elsewhere on the site. Assume the rea
 - Three or four <h2> sections, each named for the point it makes.
 - This is where "I" belongs. Use it.
 - If you cannot find an argument worth making about this story, say less rather than padding.`
+
+// A result is a different job again: the reader knows the score, so the value
+// is in what the ninety minutes actually showed.
+export const MATCH_MODE_BRIEF = `
+YOU ARE WRITING A MATCH REPORT.
+
+The reader either watched it or already knows the score. Do not narrate the game minute by minute.
+- Open with what the result means, not "Manchester United played X today".
+- State the score and the scorers only if they appear in the source material. If they do not, write around them and do not guess.
+- Spend the piece on what the performance showed: the shape, who was good, who was not, the decision that turned it, the pattern it fits.
+- Be honest. If it was poor, say so and say why. If it was good, do not oversell it.
+- 400 to 650 words, two or three <h2> sections named for the point they make.
+- Close on what it means for what comes next.`
+
+// Sunday round-up. Written from what the desk itself published that week, not
+// from the wires, so it is genuinely a look back rather than more news.
+export const WEEKLY_MODE_BRIEF = `
+YOU ARE WRITING THE WEEKLY ROUND-UP.
+
+You are given the headlines and standfirsts of everything the site published this week. Pull them into one coherent read.
+- Open with the story that mattered most and say why it mattered.
+- Group the rest by theme, not by day. Three or four <h2> sections named for the theme.
+- Draw the threads together: what does this week tell us about where the club is heading?
+- Do not invent anything that is not in the week's headlines you were given.
+- 500 to 750 words.
+- Close by looking at the week ahead in one short paragraph, without predicting results.`
 
 export const ANTI_TEMPLATE = `
 DO NOT WRITE TO A TEMPLATE.

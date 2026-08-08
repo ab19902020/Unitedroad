@@ -1771,24 +1771,37 @@
                 try { req?.call(stage); } catch (_) {}
             };
 
-            const handleOracleSubmit = (e, promptOverride = null) => {
+            const handleOracleSubmit = async (e, promptOverride = null) => {
                 e?.preventDefault();
                 const query = promptOverride || oracleInput.trim();
                 if (!query || isOracleThinking) return;
                 setChatHistory(prev => [...prev, { role: 'user', text: query }]);
                 setOracleInput(''); setIsOracleThinking(true);
-                setTimeout(() => {
-                    const response = getLocalOracleResponse(query);
-                    setChatHistory(prev => [...prev, { role: 'oracle', text: response }]);
-                    setIsOracleThinking(false);
-                    if (response.toLowerCase().includes("treble") || response.toLowerCase().includes("glory")) triggerConfetti();
-                }, 1200);
+
+                // Answered properly by /api/oracle. The keyword table is kept as a
+                // fallback so the feature degrades rather than breaking if the
+                // endpoint is unavailable.
+                let response = null;
+                try {
+                    const res = await fetch('/api/oracle', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ question: query }),
+                    });
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data?.answer) response = data.answer;
+                    }
+                } catch (_) { /* fall through to the offline answer */ }
+
+                if (!response) response = getLocalOracleResponse(query);
+                setChatHistory(prev => [...prev, { role: 'oracle', text: response }]);
+                setIsOracleThinking(false);
+                if (response.toLowerCase().includes('treble') || response.toLowerCase().includes('glory')) triggerConfetti();
             };
 
             const handleSuggestedPrompt = (prompt) => {
-                setOracleInput(prompt);
-                const mockEvent = { preventDefault: () => {} };
-                handleOracleSubmit(mockEvent, prompt);
+                handleOracleSubmit({ preventDefault: () => {} }, prompt);
             };
 
             // REUSABLE ARCHIVE HEADER
