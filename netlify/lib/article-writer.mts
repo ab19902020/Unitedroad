@@ -15,7 +15,7 @@
 
 import { getStore } from '@netlify/blobs'
 import { fetchFeed, stripTags, type FeedItem } from './feed.mts'
-import { UNITED_ROAD_BRAIN, NEWS_MODE_BRIEF, ANTI_TEMPLATE, buildVarietyNote, BATCH, RELATED_CONTEXT_COUNT, type ArticleKind } from './brain.mts'
+import { UNITED_ROAD_BRAIN, NEWS_MODE_BRIEF, ARTICLE_MODE_BRIEF, ANTI_TEMPLATE, buildVarietyNote, BATCH, RELATED_CONTEXT_COUNT, type ArticleKind } from './brain.mts'
 import { getWorkerAuth } from './worker-auth.mts'
 
 const DEEPSEEK_ENDPOINT = 'https://api.deepseek.com/chat/completions'
@@ -766,7 +766,7 @@ const writeOne = async (
     const parsed = await callDeepSeek(
       apiKey,
       model,
-      [UNITED_ROAD_BRAIN, kind === 'news' ? NEWS_MODE_BRIEF : '', ANTI_TEMPLATE, varietyNote]
+      [UNITED_ROAD_BRAIN, kind === 'news' ? NEWS_MODE_BRIEF : ARTICLE_MODE_BRIEF, ANTI_TEMPLATE, varietyNote]
         .filter(Boolean)
         .join('\n'),
       buildUserPrompt(story, otherStories, alreadyWritten, correction),
@@ -797,7 +797,7 @@ Those are labels, not headings. Name each section for what is actually in it, in
 // A draft this short is not a publishable article, and the model reliably
 // under-runs the brief on a first pass — so shortness is treated as a
 // retry-able fault rather than a reason to abandon the story.
-const MIN_WORDS: Record<ArticleKind, number> = { news: 230, article: 400 }
+const MIN_WORDS: Record<ArticleKind, number> = { news: 230, article: 480 }
 
 type ValidateResult =
   | { ok: true; article: StoredArticle }
@@ -911,11 +911,14 @@ export const runDailyBatch = async (opts: {
 
   // Headroom per kind. Forcing ignores the daily ceilings but never the
   // per-run one, so a manual trigger cannot run away.
-  const newsRoom = opts.force ? BATCH.newsPerDay : Math.max(0, BATCH.newsPerDay - newsToday)
+  // On a busy day the news ceiling lifts, but only breaking stories unlock it.
+  const BREAKING_WINDOW = 30 * 60 * 1000
+  const newsCeiling = BATCH.newsPerDay
+  const newsRoom = opts.force ? BATCH.newsPerDayBreaking : Math.max(0, newsCeiling - newsToday)
   const articleRoom = opts.force ? BATCH.articlesPerDay : Math.max(0, BATCH.articlesPerDay - articlesToday)
   const perRun = Math.max(1, Math.min(opts.max ?? BATCH.maxPerRun, BATCH.maxPerRun))
 
-  if (newsRoom === 0 && articleRoom === 0) {
+  if (newsRoom === 0 && articleRoom === 0 && !opts.force) {
     return {
       status: 'skipped',
       published: [],
@@ -940,10 +943,16 @@ export const runDailyBatch = async (opts: {
   // matters — not that it is time-critical. Folding corroboration into
   // urgency was a mistake: on a busy day everything looked urgent, every slot
   // went to news, and the three daily long-form articles were never written.
-  const BREAKING_WINDOW = 30 * 60 * 1000
   const isUrgent = (c: StoryCluster) => Date.now() - c.timestamp < BREAKING_WINDOW
   const urgentCount = stories.filter(isUrgent).length
   if (urgentCount) notes.push(`${urgentCount} story/stories broke in the last 30 minutes.`)
+
+  // Breaking activity lifts the day's news ceiling.
+  let newsAllowance = newsRoom
+  if (!opts.force && urgentCount > 0 && newsAllowance === 0 && newsToday < BATCH.newsPerDayBreaking) {
+    newsAllowance = Math.min(urgentCount, BATCH.newsPerDayBreaking - newsToday)
+    notes.push(`Breaking activity lifted the news ceiling to ${BATCH.newsPerDayBreaking} for today.`)
+  }
 
   const published: StoredArticle[] = []
   const writtenTitles = publishedToday.map((a) => a.title)
@@ -957,7 +966,7 @@ export const runDailyBatch = async (opts: {
   )
   const recentOpenings = recent.map((a) => stripTags(a.content).split(/\s+/).slice(0, 7).join(' '))
 
-  let newsLeft = newsRoom
+  let newsLeft = newsAllowance
   let articlesLeft = articleRoom
   const callBudget = perRun * 2 + 2
   let callsUsed = 0

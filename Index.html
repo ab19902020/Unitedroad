@@ -1781,7 +1781,7 @@
                             </div>
                             <h4 className="text-sm font-heading font-bold text-gray-900 group-hover:text-[#DA291C] transition-colors leading-snug line-clamp-3">{n.title}</h4>
                         </div>
-                        <div className="mt-5 h-[2px] w-10 bg-gray-200 group-hover:w-full group-hover:bg-[#DA291C] transition-all duration-500 rounded-full"></div>
+                        <div className="mt-5 h-[2px] w-0 group-hover:w-full bg-[#DA291C] transition-all duration-500 rounded-full"></div>
                     </div>
                 </a>
                 );
@@ -2176,7 +2176,7 @@
                                 <div className="lg:col-span-8">
                                     <div className="relative">
                                         {/* Continuous timeline spine behind the report cards */}
-                                        <div className="hidden sm:block absolute left-[13px] top-3 bottom-3 w-[2px] bg-gradient-to-b from-[#DA291C]/50 via-gray-200 to-transparent"></div>
+                                        <div className="hidden sm:block absolute left-[13px] top-10 bottom-10 w-[2px] bg-gradient-to-b from-transparent via-gray-200 to-transparent"></div>
                                         <div className="space-y-4 md:space-y-5">
                                             {transferItems.map((item, idx) => {
                                                 const textForBadge = (item.title + " " + (item.description || '')).toLowerCase();
@@ -2201,7 +2201,7 @@
                                                                 </div>
                                                                 <h3 className="text-lg md:text-2xl font-heading font-black text-gray-900 mb-2.5 leading-tight group-hover:text-[#DA291C] transition-colors">{item.title}</h3>
                                                                 <p className="text-xs md:text-sm text-gray-600 line-clamp-3 font-medium leading-relaxed">{(item.description || '').replace(/<[^>]+>/g, '')}</p>
-                                                                <div className="mt-4 h-[2px] w-10 bg-gray-200 group-hover:w-24 group-hover:bg-[#DA291C] transition-all duration-500 rounded-full"></div>
+                                                                <div className="mt-4 h-[2px] w-0 group-hover:w-24 bg-[#DA291C] transition-all duration-500 rounded-full"></div>
                                                             </a>
                                                         </div>
                                                     </Reveal>
@@ -3511,10 +3511,14 @@
                                 </button>
                             </div>
 
-                            {/* Reading / scroll progress */}
-                            <div className="absolute bottom-0 left-0 w-full h-[2px] bg-transparent overflow-hidden">
-                                <div className="ur-progress h-full bg-gradient-to-r from-[#DA291C] to-[#FFD700]" style={{ transform: `scaleX(${readProgress})` }}></div>
-                            </div>
+                            {/* Reading progress. Only on article pages: elsewhere a
+                                part-width gradient rule under the nav reads as a rendering
+                                fault rather than as progress through a page. */}
+                            {path.startsWith('/article/') && (
+                                <div className="absolute bottom-0 left-0 w-full h-[3px] bg-gray-200/70 overflow-hidden">
+                                    <div className="ur-progress h-full bg-gradient-to-r from-[#DA291C] to-[#FFD700]" style={{ transform: `scaleX(${readProgress})` }}></div>
+                                </div>
+                            )}
 
                             <AnimatePresence>
                                 {isNavOpen && (

@@ -162,7 +162,13 @@ export const BATCH = {
   maxPerRun: 3,
   /** Daily ceilings, counted separately per kind. */
   newsPerDay: 10,
-  articlesPerDay: 3,
+  articlesPerDay: 5,
+  /**
+   * On a genuinely busy day the news ceiling lifts. A story counts towards this
+   * only if it broke within the last half hour, so an ordinary day cannot creep
+   * past newsPerDay — it takes real breaking activity to unlock the extra room.
+   */
+  newsPerDayBreaking: 18,
   /** Below this many news pieces the day is considered under-served. */
   newsFloorPerDay: 5,
 } as const
@@ -197,6 +203,24 @@ Everything else — the voice, the Title Case headline, the factual rules, RULE 
 // The single clearest tell that a page is machine-written is every piece
 // carrying the same furniture. Real writers name a section for the thing the
 // section is about, and vary how much scaffolding a story needs at all.
+// Appended when writing a long-form ARTICLE. The distinction the site draws is
+// that a news story reports what happened, and an article is the thinking that
+// follows from it a step later — so the article brief tells the writer the news
+// is already covered and its job is the part the news piece could not do.
+export const ARTICLE_MODE_BRIEF = `
+YOU ARE WRITING A LONG-FORM ARTICLE, NOT A NEWS STORY.
+
+The news of this story is already reported elsewhere on the site. Assume the reader knows what happened. Your job is what comes next: the analysis, the argument, the context, the verdict.
+
+- Do not re-report the story at length. One short paragraph of what happened, then move.
+- Spend the piece on the thinking. Why does this matter? What does it change? What does it tell us about how the club is being run, the shape of the squad, the recruitment strategy, the manager's thinking?
+- Take a position and defend it. An article without an argument is just a longer news story.
+- Bring in what a reader cannot get from the headline: the pattern this fits, the previous decision it echoes, the position that has been unresolved for seasons.
+- 550 to 800 words.
+- Three or four <h2> sections, each named for the point it makes.
+- This is where "I" belongs. Use it.
+- If you cannot find an argument worth making about this story, say less rather than padding.`
+
 export const ANTI_TEMPLATE = `
 DO NOT WRITE TO A TEMPLATE.
 Your headings must come from THIS story. Name them for what is actually in them.

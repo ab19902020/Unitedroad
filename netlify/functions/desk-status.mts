@@ -40,7 +40,7 @@ export default async (_req: Request, context: Context) => {
   } else if (s.lastRejectedAt) {
     diagnosis = `Configured correctly, but the last call to the worker was rejected ${ago(s.lastRejectedAt)} because the secret did not match. Check the token in your request against ARTICLE_WRITER_TOKEN.`
   } else {
-    diagnosis = 'Configured correctly, but the desk has never run on this deploy. Either wait for the next scheduled run (07:15 or 16:15 UTC), or trigger one manually (see README).'
+    diagnosis = 'Configured correctly, but the desk has never run on this deploy. Either wait for the next scheduled run (every 5 minutes), or trigger one manually (see README).'
   }
 
   return Response.json(
@@ -54,7 +54,7 @@ export default async (_req: Request, context: Context) => {
         authMode: s.authMode,
         writerTokenSet: s.writerTokenSet,
         model: s.model,
-        schedule: '07:15 and 16:15 UTC daily',
+        schedule: 'every 5 minutes',
       },
       articles: {
         stored: s.articleCount,
