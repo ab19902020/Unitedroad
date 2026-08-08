@@ -1406,7 +1406,7 @@
                         const SOURCES = [
                             ['https://ir.manutd.com/rss/news-releases.aspx', 'Official MUFC', 'CLUB'],
                             ['http://feeds.bbci.co.uk/sport/football/teams/manchester-united/rss.xml', 'BBC Sport', 'PRESS'],
-                            ['https://www.skysports.com/rss/11065', 'Sky Sports', 'PRESS'],
+                            ['https://www.skysports.com/rss/11065', 'Sky Sports', 'PRESS'], // general PL feed — keyword filter does the work
                             ['https://www.manchestereveningnews.co.uk/sport/football/manchester-united-fc/?service=rss', 'MEN', 'PRESS'],
                             ['https://www.manchestereveningnews.co.uk/sport/football/transfer-news/?service=rss', 'MEN Transfers', 'PRESS'],
                             ['https://www.theguardian.com/football/manchester-united/rss', 'The Guardian', 'PRESS'],
@@ -1439,7 +1439,22 @@
                             // Club feed and dedicated MUFC fan sites are 100% United content already
                             if (item.category === 'CLUB' || item.category === 'FANZONE') return true;
                             const t = ((item.title || '') + " " + (item.description || '')).toLowerCase();
-                            return ['manchester united','man utd','mufc','united','old trafford','red devils','carrington','bruno','mainoo','garnacho','hojlund','onana','martinez','manager','premier league','transfer'].some(kw => t.includes(kw));
+                            // A bare 'united' matches Newcastle/Leeds/West Ham United, and
+                            // 'premier league' / 'manager' / 'transfer' match essentially every
+                            // football article — which is how Liverpool stories reached the
+                            // page. Only unambiguous United terms count, and a headline that
+                            // names a rival without naming United is rejected outright.
+                            const UNITED_KW = ['manchester united','man utd','man united','manchester utd','mufc','old trafford','red devils','carrington','stretford end'];
+                            const RIVALS = ['liverpool','arsenal','chelsea','tottenham','spurs','manchester city','man city','newcastle','everton','aston villa','west ham','leeds','real madrid','barcelona','bayern','psg','juventus'];
+                            const ttl = (item.title || '').toLowerCase();
+                            if (!UNITED_KW.some(kw => t.includes(kw))) return false;
+                            // Dedicated United feeds may rely on the body; general feeds
+                            // (Sky's PL wire, 90min) must name United in the headline, or a
+                            // Roy Keane punditry clip qualifies as United news.
+                            const dedicated = ['Peoples Person','Stretty News','United In Focus','Utd District','The Busby Babe','Official MUFC','MEN','MEN Transfers'].includes(item.sourceName);
+                            if (!dedicated && !UNITED_KW.some(kw => ttl.includes(kw))) return false;
+                            if (RIVALS.some(c => ttl.includes(c)) && !UNITED_KW.some(kw => ttl.includes(kw))) return false;
+                            return true;
                         });
 
                         if (combined.length > 0) {
@@ -2506,7 +2521,7 @@
                         <PageHero
                             eyebrow="Real-Time Auto Updating" live icon={Newspaper}
                             title="Latest" accent="Updates"
-                            blurb="Twelve trusted feeds — the club, the national press and the best fanzones — merged, de-duplicated and sorted by the minute.">
+                            blurb="United Road\u2019s own coverage first, then twenty trusted feeds — the club, the national press and the best fanzones — merged, de-duplicated and sorted by the minute.">
                             <ViewToggle value={newsView} onChange={setNewsView} options={[
                                 { id: 'recent', label: 'Recent', icon: ClockIcon },
                                 { id: 'archive', label: 'Archive', icon: ArchiveIcon },

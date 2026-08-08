@@ -30,13 +30,22 @@ const attrMatch = (block: string, tag: string, attr: string): string => {
   return m ? m[1] : ''
 }
 
+const NAMED_ENTITIES: Record<string, string> = {
+  lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ',
+  amp: '&', ldquo: '\u201c', rdquo: '\u201d', lsquo: '\u2018', rsquo: '\u2019',
+  hellip: '\u2026', mdash: '\u2014', ndash: '\u2013', pound: '\u00a3', euro: '\u20ac',
+}
+
+// Publishers escape curly quotes, dashes and ellipses as *numeric* references
+// far more often than named ones. Handling only the named set left headlines
+// rendering as "Gary Neville&#8217;s &#8216;not a clever move&#8217;" on the
+// page. Numeric references are decoded first, then named ones, and &amp; is
+// resolved last so an escaped "&amp;#8217;" cannot turn into a live entity.
 const decodeEntities = (s: string): string =>
-  s
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#0?39;/g, "'")
+  String(s)
+    .replace(/&#x([0-9a-f]+);/gi, (_m, hex) => String.fromCodePoint(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_m, dec) => String.fromCodePoint(parseInt(dec, 10)))
+    .replace(/&([a-z]+);/gi, (m, name) => NAMED_ENTITIES[String(name).toLowerCase()] ?? m)
 
 // Atom <link> is usually a self-closing tag with an href attribute
 // (<link href="..."/> or <link rel="alternate" href="..."/>), unlike RSS

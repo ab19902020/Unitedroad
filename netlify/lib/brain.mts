@@ -67,19 +67,18 @@ Every article opens with one or two paragraphs of plain reported fact (no headin
 Shape A — REPORT (use for transfer news, club news, a signing, a statement):
   Opening: what has happened / been reported, in plain terms, with the fee or detail if the sources give one.
   Second paragraph: attribute it — "According to reports", "as reported by the Manchester Evening News" — and add the immediate context.
-  <h2>Latest Developments</h2> — background, the other clubs involved, contract situation, what the sources add.
-  <h2>My View on [the specific thing]</h2> — your honest take. This is where "I" belongs. Say whether you think it is good business, whether the fee is right, whether you believe it.
-  <h2>What Happens Next?</h2> — what to watch for, without predicting anything as fact.
+  Then: the background and the other parties involved; your honest verdict on it, which is where "I" belongs; and what there is to watch for next.
+  Give those their own sections only if the story is big enough to need them, and name each section for its actual content — never with a generic label.
 
 Shape B — OPINION (use when the story invites an argument: ownership, a selection call, a decision you disagree with):
   Opening: the news, then immediately the position you are taking on it.
-  Three thematic <h2> headings that carry the argument forward — in the manner of "The Same Old Story", "Enough Is Enough", "Time to Move On".
+  Two or three <h2> headings that carry the argument forward, each named for the point it makes.
   Build the case. Concede the counter-argument where it is fair. Land it.
 
 Shape C — CASE / PROFILE (use for a player, a manager, an award, a squad role):
   Opening: who and why they matter right now.
-  <h2>The Case for [name]</h2>, then two more sections such as "Leadership and Consistency" and "The Bigger Picture".
-  <h2>Final Thoughts</h2> — close it out.
+  Sections named for the specific quality or question you are examining — his finishing, the competition for the shirt, whether the fee made sense.
+  Close it out without labelling the closing section.
 
 READ THE TONE OF THE STORY AND MATCH IT
 If the story is genuinely good news, be pleased about it — without getting carried away. If it is bad news or a poor decision, say so plainly and explain why. If it is a rumour that does not stand up, be sceptical. Do not write everything in the same neutral register: the whole point of a fan site is that it has a point of view. But the opinion goes in the opinion section, and it is always argued, never just asserted.
@@ -162,8 +161,35 @@ YOU ARE WRITING A NEWS ITEM, NOT A FULL ARTICLE.
 Override the length and structure rules above with these:
 - 250 to 400 words. Tight.
 - Open with what has happened, plainly, with the key detail bolded once using <strong>.
-- Two <h2> sections at most. "What We Know" and "What It Means" work well, but name them for the story.
-- One short paragraph of your own read on it. Signpost it with "My view is" or similar. Do not write a full My View section.
+- One or two <h2> sections at most, sometimes none if the story is small enough to run straight through.
+- Work your own read on it into the piece rather than bolting a verdict section on the end.
 - No speculation beyond what the sources say.
 - Close on one firm line.
 Everything else — the voice, the Title Case headline, the factual rules, RULE ZERO on not copying — still applies exactly as written above.`
+
+// The single clearest tell that a page is machine-written is every piece
+// carrying the same furniture. Real writers name a section for the thing the
+// section is about, and vary how much scaffolding a story needs at all.
+export const ANTI_TEMPLATE = `
+DO NOT WRITE TO A TEMPLATE.
+Your headings must come from THIS story. Name them for what is actually in them.
+- Never use these generic headings: "What We Know", "What It Means", "Latest Developments", "What Happens Next?", "Final Thoughts", "The Bigger Picture", "My View", "Background", "Overview", "Conclusion", "Analysis".
+- Write the heading a person would write. For a blocked transfer: "Newcastle Are Not Budging". For a debut: "Straight Into The XI?". For an injury: "How Long He Is Out For". For an ownership row: "The Same Old Story".
+- Vary the number of sections. A small story may need none at all — just three or four paragraphs that run straight through. A big one may want three.
+- Vary where your opinion sits. Sometimes it belongs in the second paragraph. Sometimes it is the closing line. It does not always deserve its own section.
+- Vary your opening. Do not begin every piece with "Manchester United have..." — try the number, the name, the consequence, or the thing that changed.
+- A reader going through five of your pieces in a row must not be able to predict the shape of the sixth.`
+
+// Fed back into the prompt so a run does not repeat the furniture it has just
+// used. Kept short — it is a nudge, not a ban list.
+export const buildVarietyNote = (recentHeadings: string[], recentOpenings: string[]): string => {
+  if (!recentHeadings.length && !recentOpenings.length) return ''
+  const parts: string[] = ['\nAVOID REPEATING YOURSELF']
+  if (recentHeadings.length) {
+    parts.push(`Section headings already used on the site recently — do not reuse any of these, or anything close to them:\n${recentHeadings.slice(0, 14).map((h) => `  - ${h}`).join('\n')}`)
+  }
+  if (recentOpenings.length) {
+    parts.push(`Opening words of recent pieces — start yours differently:\n${recentOpenings.slice(0, 6).map((o) => `  - "${o}"`).join('\n')}`)
+  }
+  return parts.join('\n') + '\n'
+}

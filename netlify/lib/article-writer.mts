@@ -15,7 +15,7 @@
 
 import { getStore } from '@netlify/blobs'
 import { fetchFeed, stripTags, type FeedItem } from './feed.mts'
-import { UNITED_ROAD_BRAIN, NEWS_MODE_BRIEF, BATCH, RELATED_CONTEXT_COUNT, type ArticleKind } from './brain.mts'
+import { UNITED_ROAD_BRAIN, NEWS_MODE_BRIEF, ANTI_TEMPLATE, buildVarietyNote, BATCH, RELATED_CONTEXT_COUNT, type ArticleKind } from './brain.mts'
 import { getWorkerAuth } from './worker-auth.mts'
 
 const DEEPSEEK_ENDPOINT = 'https://api.deepseek.com/chat/completions'
@@ -159,9 +159,23 @@ const FEEDS: FeedDef[] = [
   { url: googleNews('Manchester United Old Trafford Ineos Ratcliffe'), source: 'Google News', discovery: true },
 ]
 
+// Terms that identify a story as being about *this* club.
+//
+// A bare "united" is deliberately absent: it matches Newcastle United, Leeds
+// United, West Ham United and a dozen others, which is how stories about other
+// clubs ended up on the site. Every term here is unambiguous.
 const UNITED_TERMS = [
-  'manchester united', 'man utd', 'man united', 'mufc', 'old trafford',
-  'red devils', 'carrington', 'stretford', 'united',
+  'manchester united', 'man utd', 'man united', 'manchester utd', 'mufc',
+  'old trafford', 'red devils', 'carrington', 'stretford end',
+  'united\u2019s squad', 'the theatre of dreams',
+]
+
+// Rival clubs. A story is rejected outright if it names one of these and never
+// names United, even if some other keyword matched.
+const RIVAL_CLUBS = [
+  'liverpool', 'arsenal', 'chelsea', 'tottenham', 'spurs', 'manchester city',
+  'man city', 'newcastle united', 'everton', 'aston villa', 'west ham',
+  'leeds united', 'real madrid', 'barcelona', 'bayern', 'psg', 'juventus',
 ]
 
 // Headlines that are never worth an article, however recent.
@@ -175,9 +189,30 @@ const JUNK_PATTERNS = [
 const FOUR_DAYS = 4 * 24 * 60 * 60 * 1000
 
 const isAboutUnited = (item: FeedItem, trusted: boolean): boolean => {
-  if (trusted) return true
+  const title = (item.title || '').toLowerCase()
   const text = `${item.title} ${item.description}`.toLowerCase()
-  return UNITED_TERMS.some((t) => text.includes(t))
+  const namesUnited = UNITED_TERMS.some((t) => text.includes(t))
+  const titleNamesUnited = UNITED_TERMS.some((t) => title.includes(t))
+
+  if (!namesUnited) return false
+
+  // Dedicated United feeds are allowed to rely on the body: their headlines
+  // often say "the Reds" or just a player's name.
+  if (trusted) return true
+
+  // General feeds (Sky's Premier League wire, 90min, GiveMeSport) must name
+  // United in the HEADLINE. A passing mention in the body is how a Roy Keane
+  // punditry package or an Alisson interview ends up on a United site.
+  if (!titleNamesUnited) return false
+
+  // And even then, not if the headline leads with a rival.
+  if (RIVAL_CLUBS.some((c) => title.includes(c)) && title.indexOf(UNITED_TERMS.find((t) => title.includes(t)) || '') > 0) {
+    const firstUnited = Math.min(...UNITED_TERMS.filter((t) => title.includes(t)).map((t) => title.indexOf(t)))
+    const firstRival = Math.min(...RIVAL_CLUBS.filter((c) => title.includes(c)).map((c) => title.indexOf(c)))
+    if (firstRival < firstUnited) return false
+  }
+
+  return true
 }
 
 // Trim a headline to a comparable core, so "United close on X" and "Man Utd
@@ -607,6 +642,7 @@ const writeOne = async (
   otherStories: StoryCluster[],
   alreadyWritten: string[],
   kind: ArticleKind,
+  varietyNote: string,
 ): Promise<WriteOutcome> => {
   let correction = ''
   let calls = 0
@@ -617,7 +653,9 @@ const writeOne = async (
     const parsed = await callDeepSeek(
       apiKey,
       model,
-      kind === 'news' ? `${UNITED_ROAD_BRAIN}\n${NEWS_MODE_BRIEF}` : UNITED_ROAD_BRAIN,
+      [UNITED_ROAD_BRAIN, kind === 'news' ? NEWS_MODE_BRIEF : '', ANTI_TEMPLATE, varietyNote]
+        .filter(Boolean)
+        .join('\n'),
       buildUserPrompt(story, otherStories, alreadyWritten, correction),
     )
 
@@ -629,6 +667,12 @@ const writeOne = async (
       correction = buildCorrection(result.copiedPhrases)
     } else if (result.shortBy) {
       correction = buildLengthCorrection(result.shortBy)
+    } else if (result.genericHeadings?.length) {
+      correction = `
+YOUR PREVIOUS ATTEMPT WAS REJECTED FOR TEMPLATE HEADINGS.
+You used: ${result.genericHeadings.map((h) => `"${h}"`).join(', ')}.
+Those are labels, not headings. Name each section for what is actually in it, in the words a person would use about this specific story. If a section does not need a heading, run the piece straight through instead.
+`
     } else {
       break
     }
@@ -644,7 +688,14 @@ const MIN_WORDS: Record<ArticleKind, number> = { news: 230, article: 400 }
 
 type ValidateResult =
   | { ok: true; article: StoredArticle }
-  | { ok: false; reason: string; copiedPhrases?: string[]; shortBy?: number }
+  | { ok: false; reason: string; copiedPhrases?: string[]; shortBy?: number; genericHeadings?: string[] }
+
+// Headings that mark a piece as written to a template rather than about a story.
+const BANNED_HEADINGS = [
+  'what we know', 'what it means', 'latest developments', 'what happens next',
+  'final thoughts', 'the bigger picture', 'my view', 'background', 'overview',
+  'conclusion', 'analysis', 'introduction', 'the story so far',
+]
 
 const validate = (parsed: any, story: StoryCluster, model: string, kind: ArticleKind): ValidateResult => {
   const title = stripTags(parsed?.title || '').slice(0, 160)
@@ -667,6 +718,15 @@ const validate = (parsed: any, story: StoryCluster, model: string, kind: Article
       reason: `reproduced ${runs.length} run(s) of source phrasing verbatim`,
       copiedPhrases: distinctRuns(runs),
     }
+  }
+
+  // Generic furniture is the clearest sign of template writing, and the model
+  // reaches for it unless stopped. Caught here rather than trusted to the
+  // prompt alone.
+  const headings = [...bodyHtml.matchAll(/<h2>(.*?)<\/h2>/gi)].map((m) => stripTags(m[1]).toLowerCase().trim())
+  const banned = headings.filter((h) => BANNED_HEADINGS.some((b) => h === b || h === `${b}?`))
+  if (banned.length) {
+    return { ok: false, reason: `generic section heading(s): ${banned.join(', ')}`, genericHeadings: banned }
   }
 
   const standfirst = stripTags(parsed?.standfirst || '').slice(0, 260)
@@ -776,6 +836,14 @@ export const runDailyBatch = async (opts: {
   const writtenTitles = publishedToday.map((a) => a.title)
   const coveredNow = [...index.covered]
 
+  // Show the writer the furniture it has used recently so consecutive pieces do
+  // not all carry the same headings and the same opening construction.
+  const recent = index.articles.slice(0, 12)
+  const recentHeadings = recent.flatMap((a) =>
+    [...a.content.matchAll(/<h2>(.*?)<\/h2>/gi)].map((m) => stripTags(m[1])),
+  )
+  const recentOpenings = recent.map((a) => stripTags(a.content).split(/\s+/).slice(0, 7).join(' '))
+
   let newsLeft = newsRoom
   let articlesLeft = articleRoom
   const callBudget = perRun * 2 + 2
@@ -805,7 +873,11 @@ export const runDailyBatch = async (opts: {
     const others = stories.filter((_, n) => n !== i)
 
     try {
-      const outcome = await writeOne(apiKey, model, story, others, writtenTitles, kind)
+      const varietyNote = buildVarietyNote(
+        [...recentHeadings, ...published.flatMap((p) => [...p.content.matchAll(/<h2>(.*?)<\/h2>/gi)].map((m) => stripTags(m[1])))],
+        [...recentOpenings, ...published.map((p) => stripTags(p.content).split(/\s+/).slice(0, 7).join(' '))],
+      )
+      const outcome = await writeOne(apiKey, model, story, others, writtenTitles, kind, varietyNote)
       callsUsed += outcome.calls
       if (!outcome.ok) {
         notes.push(`Skipped "${story.lead.title.slice(0, 60)}": ${outcome.reason}.`)
