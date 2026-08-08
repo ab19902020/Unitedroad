@@ -1,0 +1,201 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2400" height="1350" viewBox="0 0 2400 1350" role="img" aria-label="Old Trafford under floodlights on a matchday night">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#05060F"/>
+      <stop offset="45%" stop-color="#0B1024"/>
+      <stop offset="100%" stop-color="#1A0A10"/>
+    </linearGradient>
+
+    <radialGradient id="skyGlow" cx="50%" cy="72%" r="60%">
+      <stop offset="0%" stop-color="#DA291C" stop-opacity="0.30"/>
+      <stop offset="55%" stop-color="#DA291C" stop-opacity="0.07"/>
+      <stop offset="100%" stop-color="#DA291C" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Soft cone thrown by each floodlight pylon -->
+    <linearGradient id="beam" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFF6D8" stop-opacity="0.30"/>
+      <stop offset="60%" stop-color="#FFF6D8" stop-opacity="0.07"/>
+      <stop offset="100%" stop-color="#FFF6D8" stop-opacity="0"/>
+    </linearGradient>
+
+    <radialGradient id="lampGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFFBEA" stop-opacity="0.95"/>
+      <stop offset="35%" stop-color="#FFE9A8" stop-opacity="0.45"/>
+      <stop offset="100%" stop-color="#FFE9A8" stop-opacity="0"/>
+    </radialGradient>
+
+    <linearGradient id="standFar" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#141A31"/>
+      <stop offset="100%" stop-color="#090C1A"/>
+    </linearGradient>
+
+    <linearGradient id="standSide" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0F1428"/>
+      <stop offset="100%" stop-color="#06080F"/>
+    </linearGradient>
+
+    <linearGradient id="roof" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#232B4A"/>
+      <stop offset="100%" stop-color="#10142A"/>
+    </linearGradient>
+
+    <!-- Turf, lit brighter at the centre where the lights converge -->
+    <radialGradient id="turf" cx="50%" cy="28%" r="78%">
+      <stop offset="0%" stop-color="#2F7A44"/>
+      <stop offset="55%" stop-color="#1F5B32"/>
+      <stop offset="100%" stop-color="#10331D"/>
+    </radialGradient>
+
+    <linearGradient id="vignette" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#05060F" stop-opacity="0"/>
+      <stop offset="72%" stop-color="#05060F" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#05060F" stop-opacity="0.92"/>
+    </linearGradient>
+
+    <linearGradient id="sideVig" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#05060F" stop-opacity="0.85"/>
+      <stop offset="18%" stop-color="#05060F" stop-opacity="0"/>
+      <stop offset="82%" stop-color="#05060F" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#05060F" stop-opacity="0.85"/>
+    </linearGradient>
+
+    <!-- Crowd: thousands of tiny flecks, cheap to render as a tiled pattern -->
+    <pattern id="crowd" width="18" height="14" patternUnits="userSpaceOnUse">
+      <rect width="18" height="14" fill="#0D1224"/>
+      <circle cx="3"  cy="3"  r="1.7" fill="#E8E3D6" opacity="0.30"/>
+      <circle cx="12" cy="4"  r="1.5" fill="#DA291C" opacity="0.34"/>
+      <circle cx="7"  cy="9"  r="1.6" fill="#F2EDE0" opacity="0.22"/>
+      <circle cx="16" cy="11" r="1.4" fill="#FFD700" opacity="0.20"/>
+      <circle cx="1"  cy="11" r="1.3" fill="#C9C3B4" opacity="0.18"/>
+    </pattern>
+
+    <pattern id="crowdFar" width="12" height="10" patternUnits="userSpaceOnUse">
+      <rect width="12" height="10" fill="#0A0E1E"/>
+      <circle cx="2" cy="2" r="1.1" fill="#E8E3D6" opacity="0.20"/>
+      <circle cx="8" cy="3" r="1.0" fill="#DA291C" opacity="0.24"/>
+      <circle cx="5" cy="7" r="1.0" fill="#F2EDE0" opacity="0.15"/>
+      <circle cx="11" cy="8" r="0.9" fill="#FFD700" opacity="0.14"/>
+    </pattern>
+
+    <clipPath id="pitchClip">
+      <polygon points="300,1350 2100,1350 1710,690 690,690"/>
+    </clipPath>
+  </defs>
+
+  <!-- ============ SKY ============ -->
+  <rect width="2400" height="1350" fill="url(#sky)"/>
+  <rect width="2400" height="1350" fill="url(#skyGlow)"/>
+
+  <!-- ============ FLOODLIGHT BEAMS ============ -->
+  <g>
+    <polygon points="250,250 470,250 900,900 20,900" fill="url(#beam)"/>
+    <polygon points="1930,250 2150,250 2380,900 1500,900" fill="url(#beam)"/>
+    <polygon points="820,190 1000,190 1180,780 560,780" fill="url(#beam)" opacity="0.75"/>
+    <polygon points="1400,190 1580,190 1840,780 1220,780" fill="url(#beam)" opacity="0.75"/>
+  </g>
+
+  <!-- ============ FAR STAND ============ -->
+  <!-- Upper tier roof -->
+  <path d="M560,300 L1840,300 L1880,392 L520,392 Z" fill="url(#roof)"/>
+  <rect x="520" y="386" width="1360" height="10" fill="#DA291C" opacity="0.55"/>
+
+  <!-- Upper tier seating -->
+  <path d="M540,396 L1860,396 L1830,556 L570,556 Z" fill="url(#crowdFar)"/>
+  <path d="M540,396 L1860,396 L1830,556 L570,556 Z" fill="#0A0E1E" opacity="0.25"/>
+
+  <!-- Tier divide / hospitality band -->
+  <path d="M570,556 L1830,556 L1822,594 L578,594 Z" fill="#161C33"/>
+  <path d="M600,566 L1800,566 L1795,584 L605,584 Z" fill="#DA291C" opacity="0.28"/>
+
+  <!-- Lower tier seating -->
+  <path d="M578,594 L1822,594 L1790,690 L610,690 Z" fill="url(#crowd)"/>
+  <path d="M578,594 L1822,594 L1790,690 L610,690 Z" fill="#080B16" opacity="0.18"/>
+
+  <!-- ============ SIDE STANDS (angled toward the viewer) ============ -->
+  <path d="M520,392 L610,690 L300,1350 L0,1350 L0,470 Z" fill="url(#standSide)"/>
+  <path d="M1880,392 L1790,690 L2100,1350 L2400,1350 L2400,470 Z" fill="url(#standSide)"/>
+
+  <path d="M470,470 L600,690 L360,1220 L120,1220 L120,520 Z" fill="url(#crowd)" opacity="0.75"/>
+  <path d="M1930,470 L1800,690 L2040,1220 L2280,1220 L2280,520 Z" fill="url(#crowd)" opacity="0.75"/>
+
+  <!-- Side roofs -->
+  <path d="M0,470 L520,392 L500,330 L0,400 Z" fill="url(#roof)"/>
+  <path d="M2400,470 L1880,392 L1900,330 L2400,400 Z" fill="url(#roof)"/>
+
+  <!-- ============ FLOODLIGHT PYLONS ============ -->
+  <g>
+    <!-- left -->
+    <rect x="352" y="250" width="14" height="150" fill="#1B2138"/>
+    <rect x="250" y="196" width="220" height="66" rx="8" fill="#141A2C"/>
+    <circle cx="360" cy="229" r="130" fill="url(#lampGlow)"/>
+    <g fill="#FFF4D2">
+      <circle cx="292" cy="216" r="7"/><circle cx="326" cy="216" r="7"/><circle cx="360" cy="216" r="7"/>
+      <circle cx="394" cy="216" r="7"/><circle cx="428" cy="216" r="7"/>
+      <circle cx="292" cy="243" r="7"/><circle cx="326" cy="243" r="7"/><circle cx="360" cy="243" r="7"/>
+      <circle cx="394" cy="243" r="7"/><circle cx="428" cy="243" r="7"/>
+    </g>
+    <!-- right -->
+    <rect x="2034" y="250" width="14" height="150" fill="#1B2138"/>
+    <rect x="1930" y="196" width="220" height="66" rx="8" fill="#141A2C"/>
+    <circle cx="2040" cy="229" r="130" fill="url(#lampGlow)"/>
+    <g fill="#FFF4D2">
+      <circle cx="1972" cy="216" r="7"/><circle cx="2006" cy="216" r="7"/><circle cx="2040" cy="216" r="7"/>
+      <circle cx="2074" cy="216" r="7"/><circle cx="2108" cy="216" r="7"/>
+      <circle cx="1972" cy="243" r="7"/><circle cx="2006" cy="243" r="7"/><circle cx="2040" cy="243" r="7"/>
+      <circle cx="2074" cy="243" r="7"/><circle cx="2108" cy="243" r="7"/>
+    </g>
+    <!-- inner pair, smaller and further back -->
+    <circle cx="910" cy="176" r="88" fill="url(#lampGlow)" opacity="0.8"/>
+    <rect x="836" y="152" width="150" height="48" rx="6" fill="#141A2C"/>
+    <g fill="#FFF4D2" opacity="0.95">
+      <circle cx="866" cy="166" r="5"/><circle cx="896" cy="166" r="5"/><circle cx="926" cy="166" r="5"/><circle cx="956" cy="166" r="5"/>
+      <circle cx="866" cy="186" r="5"/><circle cx="896" cy="186" r="5"/><circle cx="926" cy="186" r="5"/><circle cx="956" cy="186" r="5"/>
+    </g>
+    <circle cx="1490" cy="176" r="88" fill="url(#lampGlow)" opacity="0.8"/>
+    <rect x="1416" y="152" width="150" height="48" rx="6" fill="#141A2C"/>
+    <g fill="#FFF4D2" opacity="0.95">
+      <circle cx="1446" cy="166" r="5"/><circle cx="1476" cy="166" r="5"/><circle cx="1506" cy="166" r="5"/><circle cx="1536" cy="166" r="5"/>
+      <circle cx="1446" cy="186" r="5"/><circle cx="1476" cy="186" r="5"/><circle cx="1506" cy="186" r="5"/><circle cx="1536" cy="186" r="5"/>
+    </g>
+  </g>
+
+  <!-- ============ PITCH ============ -->
+  <polygon points="300,1350 2100,1350 1710,690 690,690" fill="url(#turf)"/>
+
+  <g clip-path="url(#pitchClip)">
+    <!-- Mowing stripes, widening toward the camera -->
+    <g fill="#FFFFFF" opacity="0.045">
+      <polygon points="690,690 786,690 660,1350 300,1350"/>
+      <polygon points="882,690 978,690 1020,1350 660,1350"/>
+      <polygon points="1074,690 1170,690 1380,1350 1020,1350"/>
+      <polygon points="1266,690 1362,690 1740,1350 1380,1350"/>
+      <polygon points="1458,690 1554,690 2100,1350 1740,1350"/>
+    </g>
+
+    <!-- Markings -->
+    <g stroke="#FFFFFF" stroke-opacity="0.55" fill="none">
+      <!-- touchlines and halfway -->
+      <polygon points="330,1330 2070,1330 1700,700 700,700" stroke-width="5"/>
+      <line x1="612" y1="1010" x2="1788" y2="1010" stroke-width="5"/>
+      <!-- centre circle, squashed for perspective -->
+      <ellipse cx="1200" cy="1010" rx="190" ry="66" stroke-width="5"/>
+      <circle cx="1200" cy="1010" r="7" fill="#FFFFFF" fill-opacity="0.55" stroke="none"/>
+      <!-- far penalty area -->
+      <polygon points="965,700 1435,700 1408,790 992,790" stroke-width="4"/>
+      <polygon points="1078,700 1322,700 1312,742 1088,742" stroke-width="4"/>
+      <!-- near penalty area -->
+      <polygon points="700,1330 1700,1330 1560,1150 840,1150" stroke-width="4"/>
+    </g>
+
+    <!-- Far goal -->
+    <g stroke="#F2F4F8" stroke-opacity="0.85" fill="none" stroke-width="6">
+      <rect x="1128" y="654" width="144" height="46"/>
+    </g>
+    <rect x="1128" y="654" width="144" height="46" fill="#FFFFFF" opacity="0.07"/>
+  </g>
+
+  <!-- ============ ATMOSPHERE ============ -->
+  <rect width="2400" height="1350" fill="url(#vignette)"/>
+  <rect width="2400" height="1350" fill="url(#sideVig)"/>
+</svg>

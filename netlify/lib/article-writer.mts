@@ -26,6 +26,11 @@ const INDEX_KEY = 'index.json'
 // How many past headlines we keep purely to avoid re-writing the same story.
 const COVERED_MEMORY = 120
 
+// Everything the desk publishes goes out under the site owner's byline. There
+// is no separate machine byline and nothing on the page says how a piece was
+// produced — these are United Road articles, full stop.
+const AUTHOR_NAME = 'Adam James'
+
 export type StoredArticle = {
   id: string
   title: string
@@ -79,8 +84,26 @@ const EMPTY_INDEX: Index = { updatedAt: 0, covered: [], articles: [] }
 
 // --- Sources -------------------------------------------------------------
 
-// The same publishers the site's news and transfer pages already trust.
-const FEEDS: { url: string; source: string; trusted?: boolean }[] = [
+// Google News search feeds. These are discovery only: their <description> is a
+// bare anchor tag with no summary, and their links are google redirects, so
+// they cannot be written from. What they are superb at is telling us WHICH
+// stories the UK press is running — including everything the reliable transfer
+// reporters break — which is exactly the corroboration signal the ranking needs.
+const googleNews = (query: string) =>
+  `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-GB&gl=GB&ceid=GB:en`
+
+type FeedDef = {
+  url: string
+  source: string
+  /** Skip the "is this about United?" keyword filter — the whole feed is United. */
+  trusted?: boolean
+  /** Headlines only: may corroborate a story, may never be the sole basis for one. */
+  discovery?: boolean
+}
+
+// Publishers we can quote and write from, because their feeds carry real
+// article summaries.
+const FEEDS: FeedDef[] = [
   { url: 'https://www.manchestereveningnews.co.uk/sport/football/manchester-united-fc/?service=rss', source: 'Manchester Evening News', trusted: true },
   { url: 'https://www.manchestereveningnews.co.uk/sport/football/transfer-news/?service=rss', source: 'Manchester Evening News' },
   { url: 'http://feeds.bbci.co.uk/sport/football/teams/manchester-united/rss.xml', source: 'BBC Sport', trusted: true },
@@ -88,10 +111,33 @@ const FEEDS: { url: string; source: string; trusted?: boolean }[] = [
   { url: 'https://www.theguardian.com/football/manchester-united/rss', source: 'The Guardian', trusted: true },
   { url: 'https://www.independent.co.uk/sport/football/teams/manchester-united/rss', source: 'The Independent', trusted: true },
   { url: 'https://talksport.com/football/team/manchester-united/feed/', source: 'talkSPORT', trusted: true },
+  { url: 'https://www.dailymail.co.uk/sport/teampages/manchester-united.rss', source: 'Daily Mail', trusted: true },
+  { url: 'https://www.mirror.co.uk/all-about/manchester-united?service=rss', source: 'The Mirror', trusted: true },
+  { url: 'https://www.express.co.uk/posts/rss/istory/manchester-united', source: 'Daily Express', trusted: true },
+  { url: 'https://metro.co.uk/tag/manchester-united/feed/', source: 'Metro', trusted: true },
+  { url: 'https://ir.manutd.com/rss/news-releases.aspx', source: 'Manchester United (official)', trusted: true },
+
+  // Dedicated United sites — verified live and consistently the fastest movers.
   { url: 'https://thepeoplesperson.com/feed/', source: 'The Peoples Person', trusted: true },
   { url: 'https://strettynews.com/feed/', source: 'Stretty News', trusted: true },
+  { url: 'https://unitedinfocus.com/feed/', source: 'United In Focus', trusted: true },
+  { url: 'https://utddistrict.co.uk/feed/', source: 'Utd District', trusted: true },
   { url: 'https://thebusbybabe.sbnation.com/rss/index.xml', source: 'The Busby Babe', trusted: true },
-  { url: 'https://ir.manutd.com/rss/news-releases.aspx', source: 'Manchester United (official)', trusted: true },
+
+  // General football sites — keyword filtered, since most of their output is
+  // about other clubs.
+  { url: 'https://www.caughtoffside.com/tag/manchester-united/feed/', source: 'CaughtOffside' },
+  { url: 'https://www.teamtalk.com/manchester-united/feed', source: 'TEAMtalk' },
+  { url: 'https://www.footballinsider247.com/manchester-united/feed/', source: 'Football Insider' },
+  { url: 'https://www.90min.com/posts.rss', source: '90min' },
+
+  // Discovery: what the whole UK press is running right now, including the
+  // reporters worth trusting on transfers.
+  { url: googleNews('Manchester United'), source: 'Google News', discovery: true },
+  { url: googleNews('Manchester United transfer'), source: 'Google News', discovery: true },
+  { url: googleNews('Fabrizio Romano Manchester United'), source: 'Google News', discovery: true },
+  { url: googleNews('David Ornstein Manchester United'), source: 'Google News', discovery: true },
+  { url: googleNews('Manchester United injury team news'), source: 'Google News', discovery: true },
 ]
 
 const UNITED_TERMS = [
@@ -134,12 +180,30 @@ const overlapRatio = (a: string, b: string): number => {
   return shared / Math.min(wa.size, wb.size)
 }
 
+/** A feed item plus where it came from. */
+type SourceItem = FeedItem & { discovery?: boolean }
+
 /** One real-world story, as reported by one or more outlets. */
 export type StoryCluster = {
-  lead: FeedItem
-  members: FeedItem[]
+  lead: SourceItem
+  /** Only items with real summaries — these are what the article is written from. */
+  members: SourceItem[]
+  /** Every outlet running this story, including discovery-only sightings. */
   outlets: string[]
   timestamp: number
+}
+
+// Google News titles arrive as "Headline text - Outlet Name". Splitting the
+// outlet off gives both a clean headline for clustering and the name of the
+// publication actually running the story, which is a better corroboration
+// signal than counting "Google News" five times.
+const splitGoogleTitle = (title: string): { title: string; outlet: string | null } => {
+  const idx = title.lastIndexOf(' - ')
+  if (idx < 20) return { title, outlet: null }
+  const outlet = title.slice(idx + 3).trim()
+  // A real outlet name is short; anything long is part of the headline.
+  if (!outlet || outlet.length > 40 || outlet.includes(' - ')) return { title, outlet: null }
+  return { title: title.slice(0, idx).trim(), outlet }
 }
 
 // Fetch everything, throw away what is not about United, then group what is
@@ -151,20 +215,29 @@ export const gatherStories = async (covered: Index['covered']): Promise<StoryClu
       const items = await fetchFeed(f.url, f.source)
       return items
         .filter((i) => i.title && i.link)
+        .map((i): SourceItem => {
+          if (!f.discovery) return { ...i, source: f.source }
+          const { title, outlet } = splitGoogleTitle(i.title)
+          return { ...i, title, source: outlet || f.source, description: '', discovery: true }
+        })
         .filter((i) => !JUNK_PATTERNS.some((p) => p.test(i.title)))
-        .filter((i) => isAboutUnited(i, !!f.trusted))
-        .map((i) => ({ ...i, source: f.source }))
+        // Discovery queries are already United-scoped, so trust them.
+        .filter((i) => isAboutUnited(i, !!f.trusted || !!f.discovery))
     }),
   )
 
   const cutoff = Date.now() - FOUR_DAYS
-  const byLink = new Map<string, FeedItem>()
+  const byLink = new Map<string, SourceItem>()
   results
     .flat()
     .filter((i) => !i.timestamp || i.timestamp >= cutoff)
     .forEach((i) => { if (!byLink.has(i.link)) byLink.set(i.link, i) })
 
-  const items = [...byLink.values()].sort((a, b) => b.timestamp - a.timestamp)
+  // Writable items first, so a cluster's lead is always something we can
+  // actually write from rather than a headline-only sighting.
+  const items = [...byLink.values()].sort(
+    (a, b) => Number(!!a.discovery) - Number(!!b.discovery) || b.timestamp - a.timestamp,
+  )
 
   // Cluster by headline similarity.
   const clusters: StoryCluster[] = []
@@ -172,18 +245,26 @@ export const gatherStories = async (covered: Index['covered']): Promise<StoryClu
     const key = normaliseTitle(item.title)
     const existing = clusters.find((c) => overlapRatio(normaliseTitle(c.lead.title), key) > 0.6)
     if (existing) {
-      existing.members.push(item)
+      // Discovery items count toward corroboration but are never written from.
+      if (!item.discovery) existing.members.push(item)
       if (!existing.outlets.includes(item.source)) existing.outlets.push(item.source)
       existing.timestamp = Math.max(existing.timestamp, item.timestamp)
     } else {
-      clusters.push({ lead: item, members: [item], outlets: [item.source], timestamp: item.timestamp })
+      clusters.push({
+        lead: item,
+        members: item.discovery ? [] : [item],
+        outlets: [item.source],
+        timestamp: item.timestamp,
+      })
     }
   }
 
-  // Drop stories the desk has already published about.
-  const fresh = clusters.filter(
-    (c) => !covered.some((prev) => overlapRatio(normaliseTitle(prev.title), normaliseTitle(c.lead.title)) > 0.55),
-  )
+  // Drop stories the desk has already published about, and any cluster that
+  // exists only as headlines — there is nothing to write from, and inventing
+  // the body is exactly what the factual rules forbid.
+  const fresh = clusters
+    .filter((c) => c.members.length > 0)
+    .filter((c) => !covered.some((prev) => overlapRatio(normaliseTitle(prev.title), normaliseTitle(c.lead.title)) > 0.55))
 
   // Significance: corroboration first (more outlets carrying it means it
   // matters more), then how much has been written, then recency.
@@ -571,7 +652,7 @@ const validate = (parsed: any, story: StoryCluster, model: string): ValidateResu
       category: stripTags(parsed?.category || 'NEWS').toUpperCase().slice(0, 24),
       shape: stripTags(parsed?.shape || '').toUpperCase().slice(0, 12),
       tone: stripTags(parsed?.tone || '').toLowerCase().slice(0, 12),
-      author: 'United Road AI Desk',
+      author: AUTHOR_NAME,
       isAI: true,
       image: story.members.find((m) => m.thumbnail)?.thumbnail || '',
       date: now.toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' }),
