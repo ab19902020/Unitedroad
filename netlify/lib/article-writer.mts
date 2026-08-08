@@ -225,6 +225,108 @@ const normaliseTitle = (title: string): string =>
     .replace(/\s+/g, ' ')
     .trim()
 
+// Words that name this club, or are too common in football headlines to say
+// anything about which story we are looking at.
+const GENERIC_ENTITIES = new Set([
+  'man', 'manchester', 'united', 'utd', 'mufc', 'reds', 'devils', 'old', 'trafford',
+  'carrington', 'premier', 'league', 'the', 'and', 'for', 'with', 'from', 'his', 'her',
+  'why', 'how', 'what', 'who', 'when', 'new', 'set', 'transfer', 'news', 'club', 'boss',
+  'star', 'ace', 'deal', 'move', 'report', 'reports', 'exclusive', 'official', 'live',
+  // Calendar and stock headline furniture — these repeat constantly and say
+  // nothing about which story we are looking at.
+  'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday',
+  'january', 'february', 'march', 'april', 'june', 'july', 'august', 'september',
+  'october', 'november', 'december', 'today', 'tonight', 'season', 'pre', 'watch',
+  'details', 'update', 'updates', 'latest', 'expect', 'explained', 'fans', 'squad',
+  'first', 'next', 'back', 'out', 'top', 'best', 'full', 'here', 'still', 'could',
+  'will', 'would', 'says', 'said', 'after', 'before', 'over', 'into', 'more',
+  // Competition and match furniture. "World" and "Cup" in particular appear in
+  // dozens of unrelated headlines during a tournament year, and merging on them
+  // fused four separate stories into one. A competition with a distinctive name
+  // still clusters on that name — Snapdragon, Carabao, Champions.
+  'world', 'cup', 'final', 'semi', 'friendly', 'debut', 'clash', 'tie', 'game',
+  'match', 'win', 'beat', 'loss', 'draw', 'goal', 'goals', 'team', 'side', 'xi',
+])
+
+// Clubs and competitions the press names two ways. Without this, "Man United
+// vs Paris Saint-Germain" and "How to Watch PSG vs Man United" look like
+// different fixtures.
+const ENTITY_ALIASES: Record<string, string> = {
+  paris: 'psg', germain: 'psg', 'saint-germain': 'psg', psg: 'psg',
+  spurs: 'tottenham', tottenham: 'tottenham',
+  city: 'mancity', 'man-city': 'mancity',
+  wolves: 'wolverhampton', wolverhampton: 'wolverhampton',
+  atleti: 'atletico', atletico: 'atletico',
+  inter: 'internazionale', internazionale: 'internazionale',
+  ucl: 'championsleague', champions: 'championsleague',
+  epl: 'premierleague',
+  utd: 'united',
+}
+
+const canonicalEntity = (w: string): string => ENTITY_ALIASES[w] || w
+
+// Proper nouns and other distinctive tokens in a headline: the player, the
+// selling club, the competition, the ground. These are what actually identify a
+// story, which headline word-overlap does not — "How to Watch PSG vs Man United"
+// and "Tielemans Set for Debut in PSG Friendly" share no long words at all, yet
+// both are about the same fixture.
+const entitiesOf = (title: string): Set<string> => {
+  const out = new Set<string>()
+  const words = String(title || '').split(/[^A-Za-z0-9'\u2019-]+/).filter(Boolean)
+  words.forEach((raw, i) => {
+    const w = raw.replace(/['\u2019].*$/, '')
+    if (w.length < 3) return
+    const lower = w.toLowerCase()
+    if (GENERIC_ENTITIES.has(lower)) return
+    // Capitalised (but not merely sentence-initial), or an all-caps acronym.
+    const isCaps = /^[A-Z]/.test(w)
+    const isAcronym = /^[A-Z0-9]{2,}$/.test(w)
+    if (isAcronym || (isCaps && i > 0)) out.add(canonicalEntity(lower))
+  })
+  return out
+}
+
+/**
+ * Build a "are these the same story?" predicate for a given day's headlines.
+ *
+ * Word overlap alone is not enough. "How to Watch PSG vs Man United" and
+ * "Tielemans Set for Debut in PSG Friendly" share no word longer than three
+ * characters once the club name is stripped, yet both are about one fixture —
+ * which is how a single friendly produced three separate pieces.
+ *
+ * So entities decide it. Document frequency is computed across the corpus: an
+ * entity carried by only a handful of headlines is distinctive enough that two
+ * sharing it are almost certainly about the same thing, while one carried by
+ * dozens (a player simply in the news a lot) is not, and needs broad agreement
+ * across the rest of the entities before the two are merged.
+ *
+ * Exported so the behaviour can be tested against real headlines.
+ */
+export const makeSameStory = (corpus: string[]) => {
+  const cache = new Map<string, Set<string>>()
+  const entitiesFor = (title: string) => {
+    let e = cache.get(title)
+    if (!e) { e = entitiesOf(title); cache.set(title, e) }
+    return e
+  }
+
+  return (a: string, b: string): boolean => {
+    if (overlapRatio(normaliseTitle(a), normaliseTitle(b)) > 0.6) return true
+    const ea = entitiesFor(a)
+    const eb = entitiesFor(b)
+    if (!ea.size || !eb.size) return false
+    // One shared proper noun is enough. Generic football and calendar words are
+    // already excluded, so what remains is a player, a club, a competition or a
+    // venue — and two United headlines on the same day naming the same one are
+    // almost always the same story from two angles.
+    //
+    // Merging too eagerly is the safer error here: an over-merge costs one
+    // alternative angle, while an under-merge puts three pieces about one
+    // friendly on the front page, which is what happened.
+    return [...ea].some((e) => eb.has(e))
+  }
+}
+
 const overlapRatio = (a: string, b: string): number => {
   const wa = new Set(a.split(' ').filter((w) => w.length > 3))
   const wb = new Set(b.split(' ').filter((w) => w.length > 3))
@@ -293,11 +395,12 @@ export const gatherStories = async (covered: Index['covered']): Promise<StoryClu
     (a, b) => Number(!!a.discovery) - Number(!!b.discovery) || b.timestamp - a.timestamp,
   )
 
-  // Cluster by headline similarity.
+  const sameStory = makeSameStory(items.map((i) => i.title))
+
+  // Cluster by headline similarity and shared entities.
   const clusters: StoryCluster[] = []
   for (const item of items) {
-    const key = normaliseTitle(item.title)
-    const existing = clusters.find((c) => overlapRatio(normaliseTitle(c.lead.title), key) > 0.6)
+    const existing = clusters.find((c) => sameStory(c.lead.title, item.title))
     if (existing) {
       // Discovery items count toward corroboration but are never written from.
       if (!item.discovery) existing.members.push(item)
@@ -313,12 +416,14 @@ export const gatherStories = async (covered: Index['covered']): Promise<StoryClu
     }
   }
 
+  // Same test against what has already been published, so a follow-up angle on
+  // a story we covered this morning is recognised as the same story.
   // Drop stories the desk has already published about, and any cluster that
   // exists only as headlines — there is nothing to write from, and inventing
   // the body is exactly what the factual rules forbid.
   const fresh = clusters
     .filter((c) => c.members.length > 0)
-    .filter((c) => !covered.some((prev) => overlapRatio(normaliseTitle(prev.title), normaliseTitle(c.lead.title)) > 0.55))
+    .filter((c) => !covered.some((prev) => sameStory(prev.title, c.lead.title)))
 
   // Significance: corroboration first (more outlets carrying it means it
   // matters more), then how much has been written, then recency.
