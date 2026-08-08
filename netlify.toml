@@ -11,6 +11,84 @@
 [functions]
   node_bundler = "esbuild"
 
+# Every section has a real URL rather than a fragment, so it can be indexed,
+# linked to and shared. The app is a single HTML file, so each of those paths
+# has to serve it — a 200 rewrite, not a redirect, or the address bar would snap
+# back to "/" and the URL would be pointless.
+#
+# These are listed one by one on purpose. A blanket /* catch-all would sit in
+# front of the function routes (/api/*, /article/:id) and of any real file added
+# later, and would answer 200 for every typo instead of 404 — which tells Google
+# the site has infinite pages. An unknown path should still be a 404.
+[[redirects]]
+  from = "/news"
+  to = "/index.html"
+  status = 200
+[[redirects]]
+  from = "/articles"
+  to = "/index.html"
+  status = 200
+[[redirects]]
+  from = "/transfers"
+  to = "/index.html"
+  status = 200
+[[redirects]]
+  from = "/academy"
+  to = "/index.html"
+  status = 200
+[[redirects]]
+  from = "/matchday"
+  to = "/index.html"
+  status = 200
+[[redirects]]
+  from = "/hub"
+  to = "/index.html"
+  status = 200
+[[redirects]]
+  from = "/vault"
+  to = "/index.html"
+  status = 200
+[[redirects]]
+  from = "/videos"
+  to = "/index.html"
+  status = 200
+[[redirects]]
+  from = "/oracle"
+  to = "/index.html"
+  status = 200
+[[redirects]]
+  from = "/games"
+  to = "/index.html"
+  status = 200
+[[redirects]]
+  from = "/manager"
+  to = "/index.html"
+  status = 200
+[[redirects]]
+  from = "/about"
+  to = "/index.html"
+  status = 200
+[[redirects]]
+  from = "/author"
+  to = "/index.html"
+  status = 200
+[[redirects]]
+  from = "/standards"
+  to = "/index.html"
+  status = 200
+[[redirects]]
+  from = "/contact"
+  to = "/index.html"
+  status = 200
+[[redirects]]
+  from = "/privacy"
+  to = "/index.html"
+  status = 200
+[[redirects]]
+  from = "/terms"
+  to = "/index.html"
+  status = 200
+
 # The scheduled article-desk run and the manual trigger both call DeepSeek,
 # which can take a while on a long piece.
 [functions."generate-article"]

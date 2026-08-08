@@ -22,13 +22,13 @@ United Road is a passionate, independent fan project created for the Manchester 
 
 ## Games
 
-The web arcade lives at `#/games`, driven by the `GAMES_LIBRARY` array in `Index.html`.
+The web arcade lives at `/games`, driven by the `GAMES_LIBRARY` array in `Index.html`.
 
 ### Red Devil Manager 26/27 — featured
 
 The Manchester United football manager game for the 2026/27 season: name your XI, drill the
 tactics, work the transfer window and chase the title. It is the headline title on the site and
-has its own deep link at **`#/manager`**, which boots straight into the game.
+has its own deep link at **`/manager`**, which boots straight into the game.
 
 - Game source: [ab19902020/Manchester-United-manager-](https://github.com/ab19902020/Manchester-United-manager-)
 - Cover art: `assets/games/manager-thumb.svg`
@@ -52,14 +52,23 @@ and asks DeepSeek to write them up in the United Road house voice.
 
 Two kinds of piece, with separate daily ceilings:
 
-| Kind | Length | Per day | When |
-| --- | --- | --- | --- |
-| **News** | 250–400 words, two sections | up to 10 | As stories break |
-| **Article** | 500–750 words, full house voice with a verdict | up to 3 | One per run at most, from the best-corroborated story |
+| Kind | Length | Per day | Hard ceiling | When |
+| --- | --- | --- | --- | --- |
+| **News** | 250–400 words, two sections | 5 | 12 | As stories break |
+| **Article** | 500–750 words, full house voice with a verdict | 2 | 4 | One per run at most, from the best-corroborated story |
 
 Anything reported in the last 30 minutes is treated as urgent and goes out as a
 news item straight away, so breaking stories appear within minutes rather than
 waiting for a daily slot.
+
+**The hard ceiling is for the story that cannot wait.** Five and two is what an
+ordinary day gets — a handful of good pieces beats a dozen thin ones. But a news
+site cannot sit out a completed signing because it already filed five squad-number
+stories that morning, so a story that clears a significance bar publishes anyway,
+up to the hard ceiling. Two things clear that bar: four or more outlets filing on
+the same story within the hour, or a confirmed club event (a signing, a sacking, a
+departure, a ruled-out injury) corroborated by at least two. Those stories are
+written first. Set the numbers in `BATCH` in `netlify/lib/brain.mts`.
 
 The five-minute schedule is a **poll, not a write cycle**. Almost every run
 fetches the feeds, finds nothing uncovered, and returns without calling DeepSeek
@@ -179,7 +188,7 @@ curl -X POST https://unitedroad.uk/.netlify/functions/article-desk-background \
 > crashed on the first line. Never treat it as success. Wait a minute, then
 > reload `/api/desk-status` — that is where the real outcome is recorded.
 
-Once it reports articles stored, open `https://unitedroad.uk/#/articles`.
+Once it reports articles stored, open `https://unitedroad.uk/articles`.
 
 If you did not set `ARTICLE_WRITER_TOKEN`, use your **Site ID** as the bearer
 value instead — Netlify dashboard → **Site configuration → General → Site
@@ -302,7 +311,7 @@ field names the problem directly. The table below is what each answer means.
 | `the last call to the worker was rejected` | Your token is set on the site but the one in your `curl` does not match it. Copy it again from Netlify. |
 | `ran ... but published nothing` | Read `lastRun.notes` in the same response. Usually `nothing-to-write`, which is normal on a quiet day. |
 | `has never run on this deploy` | The cron has not come round yet. Trigger one manually, or wait for 07:15 / 16:15 UTC. |
-| `Working.` | It is fine. Articles are on `/#/articles`. |
+| `Working.` | It is fine. Articles are on `/articles`. |
 
 If `lastRun.error` mentions `DeepSeek responded 402`, the DeepSeek account is
 out of credit. `429` means you have hit a rate limit — the next run will

@@ -454,6 +454,7 @@
         const Pause = (props) => <LucideIcon d={<><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></>} {...props} />;
         const Square = (props) => <LucideIcon d={<><rect x="4" y="4" width="16" height="16" rx="2" ry="2"/></>} {...props} />;
         const ChevronRight = (props) => <LucideIcon d={<path d="m9 18 6-6-6-6"/>} {...props} />;
+        const ChevronDown = (props) => <LucideIcon d={<path d="m6 9 6 6 6-6"/>} {...props} />;
         const Shield = (props) => <LucideIcon d={<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/>} {...props} />;
         const Send = (props) => <LucideIcon d={<><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></>} {...props} />;
         const Trophy = (props) => <LucideIcon d={<><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></>} {...props} />;
@@ -487,6 +488,56 @@
         const InstagramIcon = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>;
         const TwitterIcon = () => <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.005 4.15H5.059z"/></svg>;
         const RedditIcon = () => <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5"><path d="M12 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 0 1-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 0 1 .042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 0 1 4.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 0 1 .14-.197.35.35 0 0 1 .238-.042l2.906.617a1.214 1.214 0 0 1 1.108-.701zM9.25 12C8.561 12 8 12.562 8 13.25c0 .687.561 1.248 1.25 1.248.687 0 1.248-.561 1.248-1.249 0-.688-.561-1.249-1.249-1.249zm5.5 0c-.687 0-1.248.561-1.248 1.25 0 .687.561 1.248 1.249 1.248.688 0 1.249-.561 1.249-1.249 0-.687-.562-1.249-1.25-1.249zm-5.466 3.99a.327.327 0 0 0-.231.094.33.33 0 0 0 0 .463c.842.842 2.484.913 2.961.913.477 0 2.105-.056 2.961-.913a.361.361 0 0 0 .029-.463.33.33 0 0 0-.464 0c-.547.533-1.684.73-2.512.73-.828 0-1.979-.196-2.512-.73a.326.326 0 0 0-.232-.095z"/></svg>;
+
+        // ==========================================================
+        // NAVIGATION MODEL
+        // ==========================================================
+        //
+        // Eleven top-level links was a list, not a navigation. Nothing was
+        // ranked, "Vault" and "Oracle" meant nothing until you clicked them, and
+        // on a laptop the row ran to the edge of the bar.
+        //
+        // These are five, grouped by what a reader is actually doing: catching
+        // up, following a match, mucking about with other fans, playing
+        // something. Each child carries a line of explanation, because a label on
+        // its own is only obvious to someone who already knows the site.
+        const NAV_GROUPS = [
+            { label: 'HOME', path: '/' },
+            {
+                label: 'NEWS', items: [
+                    { path: '/news', label: 'Latest News', blurb: 'What has actually happened', icon: Newspaper },
+                    { path: '/articles', label: 'Articles & Analysis', blurb: 'The longer read', icon: PenTool },
+                    { path: '/transfers', label: 'Transfers', blurb: 'The window, tracked live', icon: TrendingUp, live: true },
+                    { path: '/academy', label: 'Academy', blurb: 'The next ones through', icon: Sparkles },
+                ],
+            },
+            {
+                label: 'MATCHDAY', items: [
+                    { path: '/matchday', label: 'Live Match', blurb: 'Fixtures, results & table', icon: Activity },
+                    { path: '/videos', label: 'Videos & Movies', blurb: 'The film archive', icon: Film },
+                ],
+            },
+            {
+                label: 'FANZONE', items: [
+                    { path: '/hub', label: 'Social Hub', blurb: 'Stretford Paddock & the rest', icon: Users },
+                    { path: '/vault', label: 'Chants & Vault', blurb: 'Every word of every song', icon: Volume2 },
+                    { path: '/oracle', label: 'The Oracle', blurb: 'Ask about our history', icon: Zap },
+                ],
+            },
+            {
+                label: 'PLAY', items: [
+                    { path: '/games', label: 'Arcade Games', blurb: 'Play in your browser', icon: Gamepad },
+                    { path: '/manager', label: 'Manager 26/27', blurb: 'Take charge yourself', icon: Clipboard },
+                ],
+            },
+        ];
+
+        // Which group to light up for the page you are on.
+        const groupForPath = (p) => {
+            if (p.startsWith('/article/')) return 'NEWS';
+            const g = NAV_GROUPS.find((x) => x.items?.some((i) => i.path === p));
+            return g ? g.label : p === '/' ? 'HOME' : null;
+        };
 
         // ==========================================================
         // SHARED UI PRIMITIVES
@@ -1108,21 +1159,38 @@
         // ==========================================
         // CUSTOM ROUTER
         // ==========================================
-        // Articles live on real paths (/article/:id), everything else on hashes.
+        // Every page has a real URL.
         //
-        // A fragment is never sent to a server, so "#/article/abc" and
-        // "#/article/xyz" are one URL to Google and carry the homepage's title
-        // and share image to every social crawler. Article pages therefore use
-        // real paths, which a Netlify function serves with their own <head>
-        // (see netlify/functions/article-page.mts). The rest of the site keeps
-        // its hash routes, which cost nothing to leave alone.
-        const useHashRouter = () => {
+        // A fragment is never sent to a server, so under the old hash routing
+        // "#/news" and "#/transfers" were a single URL as far as Google was
+        // concerned — one page, carrying the homepage's title and share image to
+        // every crawler that looked. Sections could not be indexed, linked to a
+        // specific page, or shared with the right preview.
+        //
+        // So the router is now path-based throughout. Netlify serves the app
+        // shell for each section path (see the redirects in netlify.toml), and
+        // article pages are served by a function that injects their own <head>
+        // (netlify/functions/article-page.mts). Navigation still never touches
+        // the network — pushState keeps it instant.
+        const useAppRouter = () => {
             const readLocation = () => {
-                const p = window.location.pathname;
-                if (p.startsWith('/article/')) return p;
-                return window.location.hash.replace('#', '') || '/';
+                // Links shared before the move still arrive as "/#/vault".
+                const legacy = window.location.hash.replace('#', '');
+                if (legacy.startsWith('/')) return legacy;
+                // Trailing slashes are the same page, not a different one.
+                return window.location.pathname.replace(/\/+$/, '') || '/';
             };
             const [path, setPath] = useState(readLocation);
+
+            useEffect(() => {
+                // Rewrite a legacy hash URL to its real path, so the address bar
+                // and anything copied out of it are the canonical form.
+                const legacy = window.location.hash.replace('#', '');
+                if (legacy.startsWith('/')) {
+                    window.history.replaceState({}, '', legacy);
+                    setPath(legacy);
+                }
+            }, []);
 
             useEffect(() => {
                 const onChange = () => setPath(readLocation());
@@ -1135,24 +1203,10 @@
             }, []);
 
             const navigate = (newPath) => {
-                if (newPath.startsWith('/article/')) {
-                    // pushState keeps the SPA instant while leaving a crawlable,
-                    // shareable URL in the address bar.
-                    if (window.location.pathname !== newPath) {
-                        window.history.pushState({}, '', newPath);
-                    }
-                    setPath(newPath);
-                } else {
-                    // Leaving an article path: clear it, or the pathname wins.
-                    if (window.location.pathname.startsWith('/article/')) {
-                        window.history.pushState({}, '', '/' + (newPath === '/' ? '' : '#' + newPath));
-                        setPath(newPath);
-                    } else if (window.location.hash !== '#' + newPath) {
-                        window.location.hash = newPath;
-                    } else {
-                        setPath(newPath);
-                    }
+                if (window.location.pathname !== newPath || window.location.hash) {
+                    window.history.pushState({}, '', newPath);
                 }
+                setPath(newPath);
                 window.scrollTo(0, 0);
             };
             return { path, navigate };
@@ -1163,11 +1217,15 @@
         // ==========================================
         function UnitedRoadAnointed() {
             // Router
-            const { path, navigate } = useHashRouter();
+            const { path, navigate } = useAppRouter();
             
             // UI States
             const [hasEntered, setHasEntered] = useState(true);
             const [isNavOpen, setIsNavOpen] = useState(false);
+            const [openGroup, setOpenGroup] = useState(null);     // desktop nav dropdown
+            const [mobileGroup, setMobileGroup] = useState('NEWS'); // mobile accordion
+            const [searchOpen, setSearchOpen] = useState(false);
+            const [searchQuery, setSearchQuery] = useState('');
             const [showConfetti, setShowConfetti] = useState(false);
             const [copied, setCopied] = useState(false);
             const [activeGame, setActiveGame] = useState(null);
@@ -1269,33 +1327,86 @@
                 setShowCookieBanner(false);
             };
 
-            // Update document title based on route for SEO
+            // Per-page title, description and canonical URL.
+            //
+            // Now that each section has a real URL, it needs its own metadata to
+            // go with it — otherwise every page would be indexed under the
+            // homepage's description and would compete with the homepage instead
+            // of ranking for what it is actually about.
             useEffect(() => {
-                const titles = {
-                    '/': 'United Road | Manchester United Fan Hub, Chants & News',
-                    '/news': 'Latest Man Utd News & Transfer Updates | United Road',
-                    '/hub': 'Manchester United Social Hub & Fan Channels | United Road',
-                    '/vault': 'Take Me Home United Road Lyrics & Chants | United Road',
-                    '/videos': 'Videos & Movies | United Road',
-                    '/games': 'Man Utd Arcade & Web Games | United Road',
-                    '/manager': 'Red Devil Manager 26/27 | Man Utd Football Manager Game | United Road',
-                    '/articles': 'Original Manchester United Blog & Articles | United Road',
-                    '/transfers': 'LIVE: Transfer Strategy | United Road',
-                    '/academy': 'Academy Watch & Next Gen | United Road',
-                    '/privacy': 'Privacy Policy | United Road',
-                    '/terms': 'Terms of Service | United Road',
-                    '/about': 'About United Road | Fan Hub',
-                    '/contact': 'Contact Us | United Road',
-                    '/author': 'Adam James — Founder & Editor | United Road',
-                    '/standards': 'Editorial Standards | United Road'
+                const meta = {
+                    '/': ['United Road | Manchester United Fan Hub, Chants & News',
+                        'Independent Manchester United coverage: our own news and analysis, transfer intel, chants, fan videos and games. Written by supporters, for supporters.'],
+                    '/news': ['Latest Man Utd News & Transfer Updates | United Road',
+                        'The latest Manchester United news, written in-house. Squad, injuries, ownership and the stories that matter, updated through the day.'],
+                    '/matchday': ['Man Utd Fixtures, Results & Table | United Road',
+                        'Manchester United fixtures, results and the current Premier League table, plus the build-up and reaction to every match.'],
+                    '/oracle': ['The United Oracle — Ask About Man Utd History | United Road',
+                        'Ask anything about Manchester United history: Busby, Munich, the treble, Ferguson, the Class of ’92. The Oracle answers.'],
+                    '/hub': ['Manchester United Social Hub & Fan Channels | United Road',
+                        'The best Manchester United fan channels in one place, including Stretford Paddock and Stephen Howson. Latest uploads and reaction.'],
+                    '/vault': ['Take Me Home United Road Lyrics & Chants | United Road',
+                        'Every Manchester United chant with full lyrics, from Take Me Home United Road to the terrace classics. Learn them before the next away day.'],
+                    '/videos': ['Videos & Movies | United Road',
+                        'Manchester United video archive: classic matches, documentaries, goals and fan films, gathered in one place.'],
+                    '/games': ['Man Utd Arcade & Web Games | United Road',
+                        'Free Manchester United games to play in your browser. Arcade football, quizzes and the Red Devil Manager save.'],
+                    '/manager': ['Red Devil Manager 26/27 | Man Utd Football Manager Game | United Road',
+                        'Take charge of Manchester United for the 26/27 season. Pick the team, work the transfer market and see if you can do better.'],
+                    '/articles': ['Original Manchester United Blog & Articles | United Road',
+                        'Long-form Manchester United analysis and opinion, written for United Road. The argument behind the headline.'],
+                    '/transfers': ['LIVE: Transfer Strategy | United Road',
+                        'Live Manchester United transfer news and rumours, tracked as they break, with our read on what is real and what is noise.'],
+                    '/academy': ['Academy Watch & Next Gen | United Road',
+                        'Manchester United academy news: the next generation coming through Carrington, and who is close to the first team.'],
+                    '/privacy': ['Privacy Policy | United Road', 'How United Road handles your data.'],
+                    '/terms': ['Terms of Service | United Road', 'The terms covering use of United Road.'],
+                    '/about': ['About United Road | Fan Hub',
+                        'United Road is an independent Manchester United site, not affiliated with the club. Here is what we do and why.'],
+                    '/contact': ['Contact Us | United Road',
+                        'Get in touch with United Road about the site, advertising, a correction, or to submit a chant.'],
+                    '/author': ['Adam James — Founder & Editor | United Road',
+                        'Adam James founded and edits United Road. Read about who writes the site and get in touch.'],
+                    '/standards': ['Editorial Standards | United Road',
+                        'How United Road separates fact from speculation, handles opinion, and corrects mistakes.']
                 };
+
+                const setTag = (selector, attr, value) => {
+                    let el = document.head.querySelector(selector);
+                    if (!el) {
+                        el = document.createElement(selector.startsWith('link') ? 'link' : 'meta');
+                        if (selector.startsWith('link')) el.setAttribute('rel', 'canonical');
+                        else if (selector.includes('property=')) el.setAttribute('property', selector.match(/"([^"]+)"/)[1]);
+                        else el.setAttribute('name', selector.match(/"([^"]+)"/)[1]);
+                        document.head.appendChild(el);
+                    }
+                    el.setAttribute(attr, value);
+                };
+
                 if (path.startsWith('/article/')) {
-                    // The server already set the real title for the initial load;
-                    // this keeps it correct after client-side navigation.
+                    // The server already set the real head for the initial load
+                    // (article-page.mts); this keeps it correct after a
+                    // client-side navigation, which the server never sees.
                     const post = blogPosts.find(p => p.id === path.split('/article/')[1]);
                     document.title = post ? `${post.title} | United Road` : 'Manchester United News | United Road';
+                    if (post) {
+                        setTag('meta[name="description"]', 'content', (post.excerpt || post.title).slice(0, 300));
+                        setTag('meta[property="og:title"]', 'content', post.title);
+                    }
+                    setTag('link[rel="canonical"]', 'href', `https://unitedroad.uk${path}`);
+                    return;
                 }
-                else document.title = titles[path] || titles['/'];
+
+                const [title, description] = meta[path] || meta['/'];
+                document.title = title;
+                setTag('meta[name="description"]', 'content', description);
+                setTag('meta[property="og:title"]', 'content', title);
+                setTag('meta[property="og:description"]', 'content', description);
+                // og:url and canonical must agree, or they are two claims about
+                // which URL this page really is.
+                const self = `https://unitedroad.uk${path === '/' ? '/' : path}`;
+                setTag('meta[property="og:url"]', 'content', self);
+                setTag('link[rel="canonical"]', 'href', self);
             }, [path, blogPosts]);
 
             // --- ARTICLE SYNC ---
@@ -1748,10 +1859,51 @@
                 } catch (_) {}
             };
 
-            const doNavigate = (p) => { 
-                navigate(p); 
-                setIsNavOpen(false); 
-                setActiveGame(null); 
+            // --- SITE SEARCH ---
+            //
+            // Searches the sections as well as the writing, because half of what
+            // someone is looking for is a page, not an article — "chants" should
+            // land on the Vault rather than on a piece that happens to mention
+            // singing. Everything the desk has written is already in memory, so
+            // this costs nothing and needs no server.
+            const searchResults = useMemo(() => {
+                const q = searchQuery.trim().toLowerCase();
+                if (q.length < 2) return { pages: [], stories: [] };
+                const terms = q.split(/\s+/);
+                const matches = (hay) => terms.every(t => hay.includes(t));
+
+                const pages = NAV_GROUPS
+                    .flatMap(g => g.items || [{ path: g.path, label: 'Home', blurb: 'The front page', icon: Shield }])
+                    .filter(p => matches(`${p.label} ${p.blurb} ${p.path}`.toLowerCase()))
+                    .slice(0, 4);
+
+                const stories = blogPosts
+                    .filter(p => matches(`${p.title} ${p.excerpt} ${p.category} ${(p.tags || []).join(' ')}`.toLowerCase()))
+                    .slice(0, 8);
+
+                return { pages, stories };
+            }, [searchQuery, blogPosts]);
+
+            const hasResults = searchResults.pages.length > 0 || searchResults.stories.length > 0;
+
+            // Escape closes whatever is open; ctrl/cmd-K opens search from anywhere.
+            useEffect(() => {
+                const onKey = (e) => {
+                    if (e.key === 'Escape') { setSearchOpen(false); setOpenGroup(null); }
+                    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); setSearchOpen(true); }
+                };
+                window.addEventListener('keydown', onKey);
+                return () => window.removeEventListener('keydown', onKey);
+            }, []);
+
+            useEffect(() => { if (!searchOpen) setSearchQuery(''); }, [searchOpen]);
+
+            const doNavigate = (p) => {
+                navigate(p);
+                setIsNavOpen(false);
+                setOpenGroup(null);
+                setSearchOpen(false);
+                setActiveGame(null);
                 setActiveArchiveVideo(null); // Close archive player when navigating
                 if (p === '/articles') {
                     setBlogLoading(true);
@@ -3650,22 +3802,83 @@
                                     </div>
                                 </div>
 
-                                <div className="hidden lg:flex items-center gap-3 xl:gap-5 text-[10px] xl:text-[11px] font-heading font-black tracking-[1.5px]">
-                                    {[{id:'/',label:'HOME'}, {id:'/transfers',label:'TRANSFERS'}, {id:'/academy',label:'ACADEMY'}, {id:'/matchday',label:'LIVE MATCH'}, {id:'/news',label:'NEWS'}, {id:'/hub',label:'SOCIAL HUB'}, {id:'/articles',label:'ARTICLES'}, {id:'/vault',label:'VAULT'}, {id:'/videos',label:'VIDEOS / MOVIES'}, {id:'/oracle',label:'ORACLE'}, {id:'/games',label:'GAMES'}].map(item => (
-                                        <button key={item.id} onClick={() => doNavigate(item.id)} className={`hover:text-[#DA291C] transition-colors uppercase flex items-center gap-1.5 ${(path === item.id || (item.id === '/articles' && path.startsWith('/article/'))) ? 'nav-active text-[#DA291C]' : 'text-gray-600'}`}>
-                                            {item.id === '/transfers' && <span className="ur-live !w-1.5 !h-1.5"></span>}
-                                            {item.label}
-                                        </button>
-                                    ))}
+                                {/* The dropdowns open on hover and on click, and the
+                                    whole row shares one mouse-leave so moving between
+                                    groups does not flicker the panel shut. */}
+                                <div className="hidden lg:flex items-center gap-1 xl:gap-2 text-[11px] font-heading font-black tracking-[1.5px]"
+                                    onMouseLeave={() => setOpenGroup(null)}>
+                                    {NAV_GROUPS.map(group => {
+                                        const isCurrent = groupForPath(path) === group.label;
+                                        if (!group.items) {
+                                            return (
+                                                <button key={group.label} onClick={() => doNavigate(group.path)}
+                                                    className={`px-3 py-2 rounded-lg uppercase transition-colors hover:text-[#DA291C] ${isCurrent ? 'nav-active text-[#DA291C]' : 'text-gray-600'}`}>
+                                                    {group.label}
+                                                </button>
+                                            );
+                                        }
+                                        const isOpen = openGroup === group.label;
+                                        return (
+                                            <div key={group.label} className="relative" onMouseEnter={() => setOpenGroup(group.label)}>
+                                                <button onClick={() => setOpenGroup(isOpen ? null : group.label)}
+                                                    aria-expanded={isOpen} aria-haspopup="true"
+                                                    className={`px-3 py-2 rounded-lg uppercase transition-colors hover:text-[#DA291C] flex items-center gap-1.5 ${isCurrent ? 'nav-active text-[#DA291C]' : 'text-gray-600'}`}>
+                                                    {group.items.some(i => i.live) && <span className="ur-live !w-1.5 !h-1.5"></span>}
+                                                    {group.label}
+                                                    <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+                                                </button>
+                                                <AnimatePresence>
+                                                    {isOpen && (
+                                                        <MotionDiv initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 6 }} transition={{ duration: 0.15 }}
+                                                            className="absolute left-0 top-full pt-3 w-[300px] z-50">
+                                                            <div className="bg-white rounded-2xl border border-gray-200 shadow-[0_20px_50px_-12px_rgba(11,19,43,0.28)] p-2 overflow-hidden">
+                                                                {group.items.map(item => {
+                                                                    const Icon = item.icon;
+                                                                    const active = path === item.path;
+                                                                    return (
+                                                                        <button key={item.path} onClick={() => item.path === '/manager' ? playFeaturedGame() : doNavigate(item.path)}
+                                                                            className={`w-full text-left flex items-start gap-3 p-3 rounded-xl transition-colors group/item ${active ? 'bg-[#DA291C]/8' : 'hover:bg-gray-50'}`}>
+                                                                            <span className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors ${active ? 'bg-[#DA291C] text-white' : 'bg-gray-100 text-gray-500 group-hover/item:bg-[#DA291C] group-hover/item:text-white'}`}>
+                                                                                <Icon className="w-4 h-4" />
+                                                                            </span>
+                                                                            <span className="min-w-0">
+                                                                                <span className={`block font-heading font-black text-[12px] tracking-[0.5px] leading-tight ${active ? 'text-[#DA291C]' : 'text-gray-900'}`}>
+                                                                                    {item.label}
+                                                                                    {item.live && <span className="ur-live !w-1.5 !h-1.5 ml-2 inline-block align-middle"></span>}
+                                                                                </span>
+                                                                                <span className="block font-body text-[11px] text-gray-500 tracking-normal mt-0.5 leading-snug">{item.blurb}</span>
+                                                                            </span>
+                                                                        </button>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        </MotionDiv>
+                                                    )}
+                                                </AnimatePresence>
+                                            </div>
+                                        );
+                                    })}
+
+                                    <button onClick={() => setSearchOpen(true)} aria-label="Search the site"
+                                        className="ml-2 flex items-center gap-2 px-3.5 py-2 rounded-lg border border-gray-200 bg-white/70 text-gray-500 hover:text-[#DA291C] hover:border-[#DA291C]/40 transition-colors">
+                                        <SearchIcon className="w-3.5 h-3.5" />
+                                        <span className="text-[10px] tracking-[1px] uppercase hidden xl:inline">Search</span>
+                                    </button>
                                     <button onClick={playFeaturedGame} className={`ur-btn ur-sheen uppercase flex items-center gap-1.5 px-4 py-2.5 !tracking-[1.5px] text-[10px] whitespace-nowrap ${path === '/manager' ? 'ur-btn-red' : 'bg-[#DA291C]/10 text-[#DA291C] border border-[#DA291C]/40 hover:bg-[#DA291C] hover:text-white'}`}>
                                         <Clipboard className="w-3.5 h-3.5" /> MANAGER<span className="hidden xl:inline">&nbsp;26/27</span>
                                     </button>
                                 </div>
 
-                                <button aria-label={isNavOpen ? 'Close menu' : 'Open menu'} aria-expanded={isNavOpen} onClick={() => setIsNavOpen(!isNavOpen)}
-                                    className="lg:hidden w-11 h-11 flex items-center justify-center bg-white border border-gray-200 rounded-xl text-gray-900 shadow-sm active:scale-95 transition-transform">
-                                    {isNavOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-                                </button>
+                                <div className="lg:hidden flex items-center gap-2">
+                                    <button onClick={() => setSearchOpen(true)} aria-label="Search the site"
+                                        className="w-11 h-11 flex items-center justify-center bg-white border border-gray-200 rounded-xl text-gray-600 shadow-sm active:scale-95 transition-transform">
+                                        <SearchIcon className="w-5 h-5" />
+                                    </button>
+                                    <button aria-label={isNavOpen ? 'Close menu' : 'Open menu'} aria-expanded={isNavOpen} onClick={() => setIsNavOpen(!isNavOpen)}
+                                        className="w-11 h-11 flex items-center justify-center bg-white border border-gray-200 rounded-xl text-gray-900 shadow-sm active:scale-95 transition-transform">
+                                        {isNavOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+                                    </button>
+                                </div>
                             </div>
 
                             {/* Reading progress. Only on article pages: elsewhere a
@@ -3684,17 +3897,137 @@
                                             <span className="flex items-center gap-2"><Clipboard className="w-4 h-4 text-[#FFD700]" /> MANAGER 26/27</span>
                                             <span className="text-[9px] bg-white/25 px-2.5 py-1 rounded-full">NEW</span>
                                         </button>
-                                        {[{id:'/',label:'HOME'}, {id:'/transfers',label:'TRANSFERS'}, {id:'/academy',label:'ACADEMY'}, {id:'/matchday',label:'LIVE MATCH'}, {id:'/news',label:'NEWS'}, {id:'/hub',label:'SOCIAL HUB'}, {id:'/articles',label:'ARTICLES'}, {id:'/vault',label:'CHANTS & VAULT'}, {id:'/videos',label:'VIDEOS / MOVIES'}, {id:'/oracle',label:'ORACLE'}, {id:'/games',label:'GAMES'}].map(item => (
-                                            <button key={item.id} onClick={() => doNavigate(item.id)} className={`text-left py-4 px-5 mb-2 rounded-2xl font-heading font-black tracking-widest uppercase text-xs border transition-colors flex items-center justify-between ${(path === item.id || (item.id === '/articles' && path.startsWith('/article/'))) ? 'bg-[#DA291C] text-white border-[#DA291C]' : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border-gray-100'}`}>
-                                                {item.label}
-                                                {item.id === '/transfers' && <span className="ur-live !w-2 !h-2"></span>}
-                                            </button>
-                                        ))}
+                                        {/* Same five groups as the desktop bar, as an
+                                            accordion — one section open at a time keeps
+                                            the whole menu on screen without scrolling. */}
+                                        {NAV_GROUPS.map(group => {
+                                            if (!group.items) {
+                                                return (
+                                                    <button key={group.label} onClick={() => doNavigate(group.path)}
+                                                        className={`text-left py-4 px-5 mb-2 rounded-2xl font-heading font-black tracking-widest uppercase text-xs border transition-colors ${path === group.path ? 'bg-[#DA291C] text-white border-[#DA291C]' : 'bg-gray-50 text-gray-700 border-gray-100'}`}>
+                                                        {group.label}
+                                                    </button>
+                                                );
+                                            }
+                                            const isOpen = mobileGroup === group.label;
+                                            return (
+                                                <div key={group.label} className="mb-2">
+                                                    <button onClick={() => setMobileGroup(isOpen ? null : group.label)} aria-expanded={isOpen}
+                                                        className={`w-full text-left py-4 px-5 rounded-2xl font-heading font-black tracking-widest uppercase text-xs border transition-colors flex items-center justify-between ${groupForPath(path) === group.label ? 'bg-[#0B132B] text-white border-[#0B132B]' : 'bg-gray-50 text-gray-700 border-gray-100'}`}>
+                                                        <span className="flex items-center gap-2">
+                                                            {group.items.some(i => i.live) && <span className="ur-live !w-2 !h-2"></span>}
+                                                            {group.label}
+                                                        </span>
+                                                        <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+                                                    </button>
+                                                    {isOpen && (
+                                                        <div className="mt-2 ml-3 pl-3 border-l-2 border-gray-100 space-y-1.5">
+                                                            {group.items.map(item => {
+                                                                const Icon = item.icon;
+                                                                const active = path === item.path;
+                                                                return (
+                                                                    <button key={item.path} onClick={() => item.path === '/manager' ? playFeaturedGame() : doNavigate(item.path)}
+                                                                        className={`w-full text-left py-3 px-4 rounded-xl flex items-center gap-3 transition-colors ${active ? 'bg-[#DA291C] text-white' : 'bg-white text-gray-700 active:bg-gray-100'}`}>
+                                                                        <Icon className={`w-4 h-4 flex-shrink-0 ${active ? 'text-white' : 'text-gray-400'}`} />
+                                                                        <span className="min-w-0">
+                                                                            <span className="block font-heading font-black text-[12px] tracking-[0.5px] leading-tight">{item.label}</span>
+                                                                            <span className={`block font-body text-[11px] mt-0.5 leading-snug ${active ? 'text-white/75' : 'text-gray-500'}`}>{item.blurb}</span>
+                                                                        </span>
+                                                                    </button>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
                                     </MotionDiv>
                                 )}
                             </AnimatePresence>
                         </nav>
                     )}
+
+                    <AnimatePresence>
+                        {searchOpen && (
+                            <MotionDiv initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}
+                                className="fixed inset-0 z-[500] bg-[#0B132B]/70 backdrop-blur-sm flex items-start justify-center p-4 pt-[12vh]"
+                                onClick={() => setSearchOpen(false)}>
+                                <MotionDiv initial={{ opacity: 0, y: -16, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -16, scale: 0.98 }} transition={{ duration: 0.18 }}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="w-full max-w-[620px] bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-200">
+                                    <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
+                                        <SearchIcon className="w-5 h-5 text-gray-400 flex-shrink-0" />
+                                        <input autoFocus type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+                                            placeholder="Search news, articles and pages…"
+                                            aria-label="Search United Road"
+                                            autoComplete="off" autoCorrect="off" spellCheck="false"
+                                            className="flex-1 bg-transparent outline-none font-body text-gray-900 placeholder-gray-400 text-[15px]" />
+                                        <button onClick={() => setSearchOpen(false)} aria-label="Close search"
+                                            className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition-colors flex-shrink-0">
+                                            <X className="w-4 h-4" />
+                                        </button>
+                                    </div>
+
+                                    <div className="max-h-[55vh] overflow-y-auto p-2">
+                                        {searchQuery.trim().length < 2 ? (
+                                            <div className="p-5">
+                                                <div className="text-[10px] font-heading font-black text-gray-400 uppercase tracking-widest mb-3">Try</div>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {['transfers', 'academy', 'chants', 'Old Trafford', 'takeover'].map(s => (
+                                                        <button key={s} onClick={() => setSearchQuery(s)}
+                                                            className="px-3.5 py-2 rounded-full bg-gray-100 hover:bg-[#DA291C] hover:text-white text-gray-600 font-heading font-bold text-[11px] tracking-wide transition-colors">
+                                                            {s}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ) : !hasResults ? (
+                                            <div className="p-8 text-center">
+                                                <div className="font-heading font-black text-gray-900 mb-1">Nothing for “{searchQuery.trim()}”</div>
+                                                <div className="font-body text-sm text-gray-500">Try a player, a club or a section name.</div>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                {searchResults.pages.length > 0 && (
+                                                    <>
+                                                        <div className="px-4 pt-3 pb-2 text-[10px] font-heading font-black text-gray-400 uppercase tracking-widest">Pages</div>
+                                                        {searchResults.pages.map(p => {
+                                                            const Icon = p.icon;
+                                                            return (
+                                                                <button key={p.path} onClick={() => p.path === '/manager' ? playFeaturedGame() : doNavigate(p.path)}
+                                                                    className="w-full text-left flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors">
+                                                                    <span className="w-9 h-9 rounded-lg bg-gray-100 text-gray-500 flex items-center justify-center flex-shrink-0"><Icon className="w-4 h-4" /></span>
+                                                                    <span className="min-w-0">
+                                                                        <span className="block font-heading font-black text-[13px] text-gray-900 leading-tight">{p.label}</span>
+                                                                        <span className="block font-body text-[11px] text-gray-500 mt-0.5">{p.blurb}</span>
+                                                                    </span>
+                                                                </button>
+                                                            );
+                                                        })}
+                                                    </>
+                                                )}
+                                                {searchResults.stories.length > 0 && (
+                                                    <>
+                                                        <div className="px-4 pt-3 pb-2 text-[10px] font-heading font-black text-gray-400 uppercase tracking-widest">Stories</div>
+                                                        {searchResults.stories.map(s => (
+                                                            <button key={s.id} onClick={() => doNavigate(`/article/${s.id}`)}
+                                                                className="w-full text-left flex items-start gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors">
+                                                                <span className="ur-chip ur-chip-red flex-shrink-0 mt-0.5">{s.category || 'NEWS'}</span>
+                                                                <span className="min-w-0">
+                                                                    <span className="block font-heading font-bold text-[13px] text-gray-900 leading-snug">{s.title}</span>
+                                                                    <span className="block font-body text-[11px] text-gray-400 mt-0.5">{s.date}</span>
+                                                                </span>
+                                                            </button>
+                                                        ))}
+                                                    </>
+                                                )}
+                                            </>
+                                        )}
+                                    </div>
+                                </MotionDiv>
+                            </MotionDiv>
+                        )}
+                    </AnimatePresence>
 
                     {hasEntered && (
                         <main className="flex-1">
@@ -3762,7 +4095,20 @@
                                 <div className="md:col-span-2 text-center md:text-left">
                                     <div className="uppercase font-heading text-[10px] tracking-[3px] text-white/40 mb-6 font-black drop-shadow-sm">EXPLORE</div>
                                     <div className="space-y-4 text-[11px] tracking-widest font-heading font-bold">
-                                        {['HOME','NEWS','SOCIAL HUB','ARTICLES','CHANTS & VAULT', 'VIDEOS / MOVIES', 'GAMES'].map((l,i) => <button key={i} onClick={() => doNavigate(l==='HOME'?'/':l.includes('CHANTS')?'/vault':l.includes('VIDEOS')?'/videos':`/${l.toLowerCase().split(' ')[0]}`)} className="block text-white/80 hover:text-[#DA291C] mx-auto md:mx-0 transition-colors uppercase">{l}</button>)}
+                                        {/* Explicit paths. These were derived from the labels,
+                                            which sent "SOCIAL HUB" to /social — a route that does
+                                            not exist. It used to fall through to the homepage
+                                            quietly; now that sections have real URLs it would be a
+                                            shareable link that 404s. */}
+                                        {[
+                                            ['/', 'HOME'], ['/news', 'NEWS'], ['/articles', 'ARTICLES'],
+                                            ['/transfers', 'TRANSFERS'], ['/academy', 'ACADEMY'],
+                                            ['/matchday', 'LIVE MATCH'], ['/hub', 'SOCIAL HUB'],
+                                            ['/vault', 'CHANTS & VAULT'], ['/videos', 'VIDEOS / MOVIES'],
+                                            ['/oracle', 'THE ORACLE'], ['/games', 'GAMES'],
+                                        ].map(([to, label]) => (
+                                            <button key={to} onClick={() => doNavigate(to)} className="block text-white/80 hover:text-[#DA291C] mx-auto md:mx-0 transition-colors uppercase">{label}</button>
+                                        ))}
                                         <button onClick={playFeaturedGame} className="flex items-center gap-2 text-[#FFD700] hover:text-[#DA291C] mx-auto md:mx-0 transition-colors uppercase"><Clipboard className="w-3.5 h-3.5"/> MANAGER 26/27</button>
                                     </div>
                                 </div>
