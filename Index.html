@@ -1134,6 +1134,20 @@
             return <span ref={ref} className="tabular-nums font-heading font-black">{count}{suffix}</span>;
         };
 
+        // The Oracle's rules, for when a question is answered through the
+        // reader's own Puter account instead of our endpoint. A condensed copy of
+        // ORACLE_BRAIN in netlify/functions/oracle.mts — keep the two in step, and
+        // note that this one is public, so it must never carry anything secret.
+        const ORACLE_CLIENT_BRAIN = `You are The United Oracle on unitedroad.uk — a Manchester United historian answering a supporter's question.
+
+VOICE: British English, warm, direct, knowledgeable. Two to four short paragraphs at most. You are talking to someone who already supports United, so do not over-explain. No emoji, no exclamation marks, no "great question".
+
+YOU KNOW: the club's history in depth — Newton Heath and 1878, the Busby Babes and Munich in 1958, the 1968 European Cup, Ferguson from 1986 to 2013, the 1999 treble, Moscow 2008, the Class of '92, Old Trafford and the Stretford End, the club's records and its great players, and the ownership history including the Glazers' 2005 leveraged buyout and the INEOS stake.
+
+YOU MUST NOT: invent a current fact. If asked about today's squad, this season's results, a live transfer, current injuries or the present league position, say plainly that you cover history and point them at the news and transfer pages of this site. Never invent a statistic, fee, date or quote. Never claim to have live data. If a question is not about Manchester United, say so briefly and steer back.
+
+FORMAT: plain text. No markdown, no headings, no bullet lists.`;
+
         const getLocalOracleResponse = (input) => {
             const query = input.toLowerCase();
             if (query.includes("manager game") || query.includes("red devil manager") || query.includes("football manager") || query.includes("management sim") || query.includes("manage united") || query.includes("26/27") || query.includes("2026/27")) return "That'll be Red Devil Manager 26/27 \u2014 our full Manchester United football manager game. Take charge at Old Trafford for the whole 2026/27 season: name your XI, drill the tactics, work the transfer window and chase the title. Hit 'MANAGER 26/27' in the menu to kick off.";
@@ -1276,6 +1290,9 @@
             // Oracle States
             const [oracleInput, setOracleInput] = useState('');
             const [isOracleThinking, setIsOracleThinking] = useState(false);
+            const [oracleCapped, setOracleCapped] = useState(false); // today's 10p is spent
+            const [puterReady, setPuterReady] = useState(false);
+            const [puterBusy, setPuterBusy] = useState(false);
             const [chatHistory, setChatHistory] = useState([{ role: 'oracle', text: "I am The United Oracle. I know our deep history, from 1878 to 2026. Ask me about Michael Carrick, our legends, or the 1999 Treble." }]);
 
             // Refs
@@ -1935,6 +1952,69 @@
                 try { req?.call(stage); } catch (_) {}
             };
 
+            // --- PUTER: KEEPING THE ORACLE OPEN AFTER THE DAILY BUDGET IS SPENT ---
+            //
+            // /api/oracle stops at 10p of DeepSeek credit a day and serves the
+            // offline answers after that. Puter is a way to carry on for free:
+            // it bills the *visitor's* own Puter account rather than ours.
+            //
+            // It is offered rather than switched on automatically, and that is a
+            // deliberate call. Puter needs the reader to have an account, and
+            // js.puter.com opens a popup to create or sign into one — measured,
+            // not assumed: api.puter.com answers 401 to an anonymous call, and
+            // the bundle's own sign-in path carries attempt_temp_user_creation.
+            // Springing a third-party account popup on someone who asked who
+            // scored in 1999 is worse than answering from the archive, the popup
+            // needs a real click or the browser blocks it anyway, and loading a
+            // third-party script on every page view would put a tracker on the
+            // whole site for a feature almost nobody reaches.
+            //
+            // So: the script is only fetched once a reader has chosen this, and
+            // the offer only appears once the day's budget is actually gone.
+            const loadPuter = () => new Promise((resolve, reject) => {
+                if (window.puter) return resolve(window.puter);
+                const s = document.createElement('script');
+                s.src = 'https://js.puter.com/v2/';
+                s.async = true;
+                s.onload = () => window.puter ? resolve(window.puter) : reject(new Error('puter unavailable'));
+                s.onerror = () => reject(new Error('puter failed to load'));
+                document.head.appendChild(s);
+            });
+
+            const connectPuter = async () => {
+                setPuterBusy(true);
+                try {
+                    const puter = await loadPuter();
+                    // Must run inside this click, or the popup is blocked.
+                    if (!(await puter.auth.isSignedIn())) await puter.auth.signIn();
+                    setPuterReady(true);
+                    localStorage.setItem('ur-oracle-puter', '1');
+                    setChatHistory(prev => [...prev, { role: 'oracle', text: 'Connected. Ask away — these answers run on your own free allowance, not ours.' }]);
+                } catch (_) {
+                    setChatHistory(prev => [...prev, { role: 'oracle', text: 'That did not connect — the popup may have been blocked. No matter: ask again and I will answer from the archive.' }]);
+                } finally {
+                    setPuterBusy(false);
+                }
+            };
+
+            // Reconnect silently on a later visit if they have already opted in.
+            useEffect(() => {
+                if (localStorage.getItem('ur-oracle-puter') !== '1') return;
+                loadPuter()
+                    .then(p => p.auth.isSignedIn())
+                    .then(ok => { if (ok) setPuterReady(true); })
+                    .catch(() => {});
+            }, []);
+
+            const askPuter = async (query) => {
+                const puter = await loadPuter();
+                const r = await puter.ai.chat(
+                    [{ role: 'system', content: ORACLE_CLIENT_BRAIN }, { role: 'user', content: query }],
+                    { model: 'gpt-5.4-nano' },
+                );
+                return String(r?.message?.content ?? r?.text ?? r ?? '').trim();
+            };
+
             const handleOracleSubmit = async (e, promptOverride = null) => {
                 e?.preventDefault();
                 const query = promptOverride || oracleInput.trim();
@@ -1942,10 +2022,10 @@
                 setChatHistory(prev => [...prev, { role: 'user', text: query }]);
                 setOracleInput(''); setIsOracleThinking(true);
 
-                // Answered properly by /api/oracle. The keyword table is kept as a
-                // fallback so the feature degrades rather than breaking if the
-                // endpoint is unavailable.
+                // Our own endpoint first: it has the full brain, the cache and the
+                // house voice. 429 means the day's 10p is spent.
                 let response = null;
+                let outOfBudget = false;
                 try {
                     const res = await fetch('/api/oracle', {
                         method: 'POST',
@@ -1955,11 +2035,19 @@
                     if (res.ok) {
                         const data = await res.json();
                         if (data?.answer) response = data.answer;
+                    } else if (res.status === 429) {
+                        outOfBudget = true;
                     }
-                } catch (_) { /* fall through to the offline answer */ }
+                } catch (_) { /* fall through */ }
+
+                // Budget gone and the reader has opted in: their allowance, not ours.
+                if (!response && puterReady) {
+                    try { response = await askPuter(query); } catch (_) { /* fall through */ }
+                }
 
                 if (!response) response = getLocalOracleResponse(query);
                 setChatHistory(prev => [...prev, { role: 'oracle', text: response }]);
+                if (outOfBudget && !puterReady) setOracleCapped(true);
                 setIsOracleThinking(false);
                 if (response.toLowerCase().includes('treble') || response.toLowerCase().includes('glory')) triggerConfetti();
             };
@@ -3204,6 +3292,41 @@
                                         </div>
                                     </div>
                                 )}
+                                {/* Only once the day's budget is actually gone, and
+                                    only until they take it up. Nothing from
+                                    js.puter.com is loaded before this is clicked. */}
+                                {oracleCapped && !puterReady && (
+                                    <div className="bg-white border border-[#DA291C]/25 rounded-2xl p-5 shadow-sm">
+                                        <div className="font-heading font-black text-[13px] text-gray-900 mb-1.5 flex items-center gap-2">
+                                            <Zap className="w-4 h-4 text-[#DA291C]" /> That was today's last live answer
+                                        </div>
+                                        <p className="font-body text-[13px] text-gray-600 leading-relaxed mb-3">
+                                            The Oracle answers from its archive for the rest of the day. Want to keep asking properly? Connect a free Puter account and the answers run on your own allowance — it opens a popup, and you can disconnect whenever you like.
+                                        </p>
+                                        <div className="flex flex-wrap items-center gap-3">
+                                            <button onClick={connectPuter} disabled={puterBusy}
+                                                className="ur-btn ur-btn-red px-6 py-3 text-[11px] disabled:opacity-60">
+                                                {puterBusy ? 'Connecting…' : 'Connect & Keep Asking'}
+                                            </button>
+                                            <button onClick={() => setOracleCapped(false)}
+                                                className="font-heading font-bold text-[11px] tracking-wide text-gray-400 hover:text-gray-700 uppercase transition-colors">
+                                                No thanks
+                                            </button>
+                                        </div>
+                                        <p className="font-body text-[11px] text-gray-400 mt-3 leading-snug">
+                                            Puter is a third party. Connecting loads their script and shares your question with them — see our <button onClick={() => doNavigate('/privacy')} className="underline hover:text-[#DA291C]">privacy policy</button>.
+                                        </p>
+                                    </div>
+                                )}
+                                {puterReady && (
+                                    <div className="text-center">
+                                        <span className="inline-flex items-center gap-2 text-[10px] font-heading font-bold tracking-widest uppercase text-gray-400">
+                                            <span className="ur-live !w-1.5 !h-1.5"></span> Running on your Puter allowance
+                                            <button onClick={() => { setPuterReady(false); localStorage.removeItem('ur-oracle-puter'); }}
+                                                className="underline hover:text-[#DA291C] normal-case tracking-normal">disconnect</button>
+                                        </span>
+                                    </div>
+                                )}
                                 <div ref={chatEndRef}/>
                             </div>
                             <div className="px-5 pt-4 pb-2 flex overflow-x-auto gap-2 border-t border-gray-100 bg-gray-50/50 scrollbar-hide snap-x relative z-10">
@@ -3754,6 +3877,9 @@
                             <h3>Advertising Partners Privacy Policies</h3>
                             <p>Third-party ad servers or ad networks uses technologies like cookies, JavaScript, or Web Beacons that are used in their respective advertisements and links that appear on United Road, which are sent directly to users' browser. They automatically receive your IP address when this occurs. These technologies are used to measure the effectiveness of their advertising campaigns and/or to personalize the advertising content that you see on websites that you visit.</p>
                             <p>Note that United Road has no access to or control over these cookies that are used by third-party advertisers.</p>
+                            <h3>The United Oracle</h3>
+                            <p>Questions you ask the Oracle are sent to our server and answered by an AI service. We do not store your IP address alongside your question; the counter that limits how many questions the site answers each day stores a one-way hash of your address, not the address itself. Answers are cached for a week so that a question already asked can be answered without another call.</p>
+                            <p>If the day's limit is reached, we offer to continue using <a href="https://puter.com" target="_blank" rel="noopener">Puter</a>, a third-party service. <strong>Nothing is loaded from Puter unless you choose it.</strong> If you do, their script is loaded into the page, you sign into an account with them, and your questions are sent to them under their own privacy policy rather than ours. You can disconnect at any time from the Oracle page, which stops it being used again.</p>
                             <h3>Consent</h3>
                             <p>By using our website, you hereby consent to our Privacy Policy and agree to its Terms and Conditions.</p>
                         </>
