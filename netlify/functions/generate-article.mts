@@ -67,10 +67,14 @@ export default async (_req: Request, context: Context) => {
   }
 }
 
-// Twice a day, 07:15 and 16:15 UTC. The morning run catches the overnight
-// reporting; the afternoon run picks up anything that broke during the day and
-// tops the day up towards the three-article ceiling if the morning was quiet.
-// The per-day cap lives in runDailyBatch, so a second run cannot exceed it.
+// Every five minutes, so a story that breaks is published within minutes
+// rather than waiting for a daily slot.
+//
+// This is a poll, not a write cycle. The overwhelming majority of runs fetch
+// the feeds, find nothing that has not already been covered, and return without
+// calling DeepSeek at all — cost tracks stories that actually broke, not clock
+// ticks. The daily ceilings in runDailyBatch (10 news, 3 articles) are what
+// bound the output.
 export const config: Config = {
-  schedule: '15 7,16 * * *',
+  schedule: '*/5 * * * *',
 }

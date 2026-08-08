@@ -15,7 +15,7 @@
 
 import { getStore } from '@netlify/blobs'
 import { fetchFeed, stripTags, type FeedItem } from './feed.mts'
-import { UNITED_ROAD_BRAIN, BATCH, RELATED_CONTEXT_COUNT } from './brain.mts'
+import { UNITED_ROAD_BRAIN, NEWS_MODE_BRIEF, BATCH, RELATED_CONTEXT_COUNT, type ArticleKind } from './brain.mts'
 import { getWorkerAuth } from './worker-auth.mts'
 
 const DEEPSEEK_ENDPOINT = 'https://api.deepseek.com/chat/completions'
@@ -45,6 +45,7 @@ export type StoredArticle = {
   category: string
   shape: string
   tone: string
+  kind: ArticleKind
   author: string
   isAI: true
   image: string
@@ -134,6 +135,16 @@ const FEEDS: FeedDef[] = [
   { url: 'https://www.teamtalk.com/manchester-united/feed', source: 'TEAMtalk' },
   { url: 'https://www.footballinsider247.com/manchester-united/feed/', source: 'Football Insider' },
   { url: 'https://www.90min.com/posts.rss', source: '90min' },
+  { url: 'https://www.football.london/all-about/manchester-united?service=rss', source: 'football.london' },
+  { url: 'https://www.givemesport.com/feed/', source: 'GiveMeSport' },
+  { url: 'https://www.footballfancast.com/feed', source: 'Football FanCast' },
+  { url: 'https://theathletic.com/rss/team/manchester-united/', source: 'The Athletic' },
+  { url: 'https://www.tribalfootball.com/rss/manchester-united', source: 'Tribal Football' },
+  { url: 'https://www.sportsmole.co.uk/football/man-utd/rss.xml', source: 'Sports Mole' },
+  { url: 'https://www.hitc.com/en-gb/category/football/feed/', source: 'HITC' },
+  { url: 'https://readmanutd.com/feed/', source: 'Read Man Utd' },
+  { url: 'https://www.manchestereveningnews.co.uk/sport/football/?service=rss', source: 'MEN Football' },
+  { url: 'https://www.reddit.com/r/reddevils/hot.rss', source: 'r/reddevils' },
 
   // Discovery: what the whole UK press is running right now, including the
   // reporters worth trusting on transfers.
@@ -142,6 +153,10 @@ const FEEDS: FeedDef[] = [
   { url: googleNews('Fabrizio Romano Manchester United'), source: 'Google News', discovery: true },
   { url: googleNews('David Ornstein Manchester United'), source: 'Google News', discovery: true },
   { url: googleNews('Manchester United injury team news'), source: 'Google News', discovery: true },
+  { url: googleNews('Manchester United Carrick'), source: 'Google News', discovery: true },
+  { url: googleNews('Manchester United signing agreement medical'), source: 'Google News', discovery: true },
+  { url: googleNews('"Man Utd" OR "Manchester United" academy youth'), source: 'Google News', discovery: true },
+  { url: googleNews('Manchester United Old Trafford Ineos Ratcliffe'), source: 'Google News', discovery: true },
 ]
 
 const UNITED_TERMS = [
@@ -591,6 +606,7 @@ const writeOne = async (
   story: StoryCluster,
   otherStories: StoryCluster[],
   alreadyWritten: string[],
+  kind: ArticleKind,
 ): Promise<WriteOutcome> => {
   let correction = ''
   let calls = 0
@@ -601,11 +617,11 @@ const writeOne = async (
     const parsed = await callDeepSeek(
       apiKey,
       model,
-      UNITED_ROAD_BRAIN,
+      kind === 'news' ? `${UNITED_ROAD_BRAIN}\n${NEWS_MODE_BRIEF}` : UNITED_ROAD_BRAIN,
       buildUserPrompt(story, otherStories, alreadyWritten, correction),
     )
 
-    const result = validate(parsed, story, model)
+    const result = validate(parsed, story, model, kind)
     if (result.ok) return { ...result, calls }
 
     lastReason = result.reason
@@ -624,21 +640,22 @@ const writeOne = async (
 // A draft this short is not a publishable article, and the model reliably
 // under-runs the brief on a first pass — so shortness is treated as a
 // retry-able fault rather than a reason to abandon the story.
-const MIN_WORDS = 400
+const MIN_WORDS: Record<ArticleKind, number> = { news: 230, article: 400 }
 
 type ValidateResult =
   | { ok: true; article: StoredArticle }
   | { ok: false; reason: string; copiedPhrases?: string[]; shortBy?: number }
 
-const validate = (parsed: any, story: StoryCluster, model: string): ValidateResult => {
+const validate = (parsed: any, story: StoryCluster, model: string, kind: ArticleKind): ValidateResult => {
   const title = stripTags(parsed?.title || '').slice(0, 160)
   const bodyHtml = sanitizeHtml(parsed?.bodyHtml || '')
 
   if (!title) return { ok: false, reason: 'no usable title' }
 
   const words = wordCount(bodyHtml)
-  if (words < MIN_WORDS) {
-    return { ok: false, reason: `only ${words} words of body copy`, shortBy: MIN_WORDS - words }
+  const floor = MIN_WORDS[kind]
+  if (words < floor) {
+    return { ok: false, reason: `only ${words} words of body copy`, shortBy: floor - words }
   }
 
   // Refuse anything that has lifted whole sentences from a source.
@@ -678,6 +695,7 @@ const validate = (parsed: any, story: StoryCluster, model: string): ValidateResu
       tags,
       category: stripTags(parsed?.category || 'NEWS').toUpperCase().slice(0, 24),
       shape: stripTags(parsed?.shape || '').toUpperCase().slice(0, 12),
+      kind,
       tone: stripTags(parsed?.tone || '').toLowerCase().slice(0, 12),
       author: AUTHOR_NAME,
       isAI: true,
@@ -715,57 +733,84 @@ export const runDailyBatch = async (opts: {
 
   const today = new Date().toDateString()
   const publishedToday = index.articles.filter((a) => new Date(a.timestamp).toDateString() === today)
+  const newsToday = publishedToday.filter((a) => a.kind !== 'article').length
+  const articlesToday = publishedToday.filter((a) => a.kind === 'article').length
 
-  const ceiling = Math.max(1, Math.min(opts.max ?? BATCH.maxArticles, BATCH.maxArticles))
-  // The per-run ceiling and the per-day cap are separate: a run may write ten,
-  // but the day stops at maxPerDay however many runs fire.
-  const dayHeadroom = Math.max(0, BATCH.maxPerDay - publishedToday.length)
-  const remaining = opts.force ? ceiling : Math.min(ceiling, dayHeadroom)
+  // Headroom per kind. Forcing ignores the daily ceilings but never the
+  // per-run one, so a manual trigger cannot run away.
+  const newsRoom = opts.force ? BATCH.newsPerDay : Math.max(0, BATCH.newsPerDay - newsToday)
+  const articleRoom = opts.force ? BATCH.articlesPerDay : Math.max(0, BATCH.articlesPerDay - articlesToday)
+  const perRun = Math.max(1, Math.min(opts.max ?? BATCH.maxPerRun, BATCH.maxPerRun))
 
-  if (remaining === 0) {
+  if (newsRoom === 0 && articleRoom === 0) {
     return {
       status: 'skipped',
       published: [],
       storiesAvailable: 0,
-      notes: [`Already published ${publishedToday.length} article(s) today (cap ${BATCH.maxPerDay}).`],
+      notes: [`Daily ceilings reached: ${newsToday}/${BATCH.newsPerDay} news, ${articlesToday}/${BATCH.articlesPerDay} articles.`],
     }
   }
 
   const stories = await gatherStories(index.covered)
-
   if (stories.length === 0) {
+    // The common case on a five-minute poll: nothing new since last time.
+    // Costs one round of feed fetches and no DeepSeek call at all.
     return { status: 'nothing-to-write', published: [], storiesAvailable: 0, notes: ['No uncovered United stories in the feeds.'] }
   }
 
-  // Scale the run to the day. A quiet day gets one piece, or none — the desk
-  // is not obliged to fill a quota.
-  const target = Math.min(remaining, Math.max(1, Math.floor(stories.length / BATCH.storiesPerArticle)))
-  notes.push(`${stories.length} uncovered stories available, writing up to ${target}.`)
+  // Two different signals, deliberately kept apart.
+  //
+  // "Urgent" means it landed in the last half hour, and is the only thing that
+  // should force a story out as a short news item so it goes live fast.
+  //
+  // "Corroborated" means several outlets are running it, which says the story
+  // matters — not that it is time-critical. Folding corroboration into
+  // urgency was a mistake: on a busy day everything looked urgent, every slot
+  // went to news, and the three daily long-form articles were never written.
+  const BREAKING_WINDOW = 30 * 60 * 1000
+  const isUrgent = (c: StoryCluster) => Date.now() - c.timestamp < BREAKING_WINDOW
+  const urgentCount = stories.filter(isUrgent).length
+  if (urgentCount) notes.push(`${urgentCount} story/stories broke in the last 30 minutes.`)
 
   const published: StoredArticle[] = []
   const writtenTitles = publishedToday.map((a) => a.title)
   const coveredNow = [...index.covered]
 
-  // Every generation is a paid API call, so a run that keeps rejecting output
-  // must not walk the whole story list. Budget in calls rather than stories,
-  // since one story can cost two calls when the first draft is caught copying.
-  // The worker also has a 15 minute ceiling to stay under.
-  const callBudget = target * 2 + 2
+  let newsLeft = newsRoom
+  let articlesLeft = articleRoom
+  const callBudget = perRun * 2 + 2
   let callsUsed = 0
 
-  for (let i = 0; i < stories.length && published.length < target && callsUsed < callBudget; i++) {
+  notes.push(
+    `${stories.length} uncovered stories; room for ${newsRoom} news and ${articleRoom} article(s) today, up to ${perRun} this run.`,
+  )
+
+  for (let i = 0; i < stories.length && published.length < perRun && callsUsed < callBudget; i++) {
     const story = stories[i]
+    if (newsLeft === 0 && articlesLeft === 0) break
+
+    // One long-form piece per run at most, taken from the best-corroborated
+    // story available, so the daily article quota actually gets filled even
+    // when the feeds are busy. Everything else goes out as news.
+    const wroteArticleThisRun = published.some((p) => p.kind === 'article')
+    let kind: ArticleKind
+    if (articlesLeft > 0 && !wroteArticleThisRun && story.outlets.length >= 2 && !isUrgent(story)) {
+      kind = 'article'
+    } else if (newsLeft > 0) {
+      kind = 'news'
+    } else {
+      kind = 'article'
+    }
+
     const others = stories.filter((_, n) => n !== i)
 
     try {
-      const outcome = await writeOne(apiKey, model, story, others, writtenTitles)
+      const outcome = await writeOne(apiKey, model, story, others, writtenTitles, kind)
       callsUsed += outcome.calls
       if (!outcome.ok) {
         notes.push(`Skipped "${story.lead.title.slice(0, 60)}": ${outcome.reason}.`)
         continue
       }
-      // A repeat headline within the same run means the model drifted onto a
-      // story it has already done; drop it rather than publish a near-duplicate.
       if (published.some((p) => overlapRatio(normaliseTitle(p.title), normaliseTitle(outcome.article.title)) > 0.6)) {
         notes.push(`Skipped "${outcome.article.title.slice(0, 60)}": duplicates an article from this run.`)
         continue
@@ -773,19 +818,17 @@ export const runDailyBatch = async (opts: {
 
       published.push(outcome.article)
       writtenTitles.push(outcome.article.title)
+      if (kind === 'news') newsLeft--
+      else articlesLeft--
+
       coveredNow.unshift(
         { title: outcome.article.title, at: Date.now() },
         ...story.members.map((m) => ({ title: m.title, at: Date.now() })),
       )
     } catch (err) {
-      // One bad generation must not take the rest of the batch down.
       callsUsed++
       notes.push(`Failed on "${story.lead.title.slice(0, 60)}": ${(err as Error).message}`)
     }
-  }
-
-  if (callsUsed >= callBudget && published.length < target) {
-    notes.push(`Stopped after ${callsUsed} API calls to protect the budget.`)
   }
 
   if (published.length === 0) {
@@ -793,12 +836,13 @@ export const runDailyBatch = async (opts: {
   }
 
   await writeIndex({
+    ...index,
     updatedAt: Date.now(),
     covered: coveredNow.slice(0, COVERED_MEMORY),
     articles: [
       ...published,
       ...index.articles.filter((a) => !published.some((p) => p.id === a.id)),
-    ].slice(0, 200),
+    ].slice(0, 400),
   })
 
   return { status: 'published', published, storiesAvailable: stories.length, notes }

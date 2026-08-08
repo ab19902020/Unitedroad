@@ -129,29 +129,41 @@ Respond with a single JSON object and nothing else. No markdown fence, no commen
   "sourceLinks": ["the URLs from the source material you actually drew on"]
 }`
 
-// How many pieces the desk aims for in one run.
+// The desk publishes two different things, and they are not the same job.
 //
-// The site no longer republishes other outlets' headlines — the desk rewrites
-// the day's reporting into United Road articles instead, so the run has to
-// produce enough to actually fill the news page rather than a token two or
-// three. Two scheduled runs a day at this size comfortably clears the daily
-// cap on a normal news day.
+//   NEWS    — short, fast, factual. Goes up as stories break. Several a day.
+//   ARTICLE — the long house-voice piece with a verdict in it. A few a day.
 //
-// Sizing is bounded by the background function's 15 minute ceiling. At roughly
-// 10-20 seconds per article, ten per run leaves a wide margin even when several
-// need a corrective retry.
+// The poll runs every five minutes, but almost every run does nothing: it
+// fetches the feeds, finds no uncovered story, and exits without calling
+// DeepSeek at all. Cost tracks stories that actually broke, not clock ticks.
 export const BATCH = {
-  /** Most articles a single run will write. */
-  maxArticles: 10,
-  /** Most articles published in one calendar day, across all runs. */
-  maxPerDay: 20,
-  // A story needs this many uncovered candidates left in the pool before the
-  // desk will start another article on top of the ones it has already written.
-  // Lower than it was: with the wider source list there is far more genuine
-  // news per run, and the ranking already puts the weakest stories last.
-  storiesPerArticle: 1.5,
+  /** Most pieces of either kind a single five-minute run will write. */
+  maxPerRun: 3,
+  /** Daily ceilings, counted separately per kind. */
+  newsPerDay: 10,
+  articlesPerDay: 3,
+  /** Below this many news pieces the day is considered under-served. */
+  newsFloorPerDay: 5,
 } as const
+
+export type ArticleKind = 'news' | 'article'
 
 // Supporting context handed to the model alongside the lead story, so a piece
 // can reference related reporting without wandering off topic.
 export const RELATED_CONTEXT_COUNT = 5
+
+// Appended to the house prompt when writing a NEWS item rather than a full
+// article. Short, factual, fast — but still in the site's voice, and still
+// carrying a line of genuine opinion, because a wire copy with no point of
+// view is exactly what a fan site should not be publishing.
+export const NEWS_MODE_BRIEF = `
+YOU ARE WRITING A NEWS ITEM, NOT A FULL ARTICLE.
+Override the length and structure rules above with these:
+- 250 to 400 words. Tight.
+- Open with what has happened, plainly, with the key detail bolded once using <strong>.
+- Two <h2> sections at most. "What We Know" and "What It Means" work well, but name them for the story.
+- One short paragraph of your own read on it. Signpost it with "My view is" or similar. Do not write a full My View section.
+- No speculation beyond what the sources say.
+- Close on one firm line.
+Everything else — the voice, the Title Case headline, the factual rules, RULE ZERO on not copying — still applies exactly as written above.`

@@ -1188,58 +1188,19 @@
             }, [path]);
 
             // --- ARTICLE SYNC ---
-            // Two sources, one timeline: the hand-written Substack posts and the
-            // pieces written by the editorial desk (netlify/functions/
-            // generate-article.mts). Either can be unavailable without taking the
-            // other down.
+            // Everything on the site is now written in-house by the editorial desk
+            // (netlify/functions/article-desk-background.mts). The Substack feed is
+            // no longer pulled in; /api/substack still exists but nothing reads it.
             const fetchArticles = async () => {
-                const readSubstack = async () => {
-                    try {
-                        const res = await fetch(`/api/substack?_cb=${Date.now()}`, { cache: 'no-store' });
-                        if (!res.ok) return [];
-                        const data = await res.json();
-                        if (data?.status !== 'ok' || !data.items) return [];
-                        return data.items.map(item => {
-                            const linkStr = item.link || '';
-                            const titleStr = item.title || 'United Article';
-                            const safeId = linkStr.split('/').pop() || titleStr.toLowerCase().replace(/[^a-z0-9]+/g, '-') || 'post-' + Math.random();
+                try {
+                    const res = await fetch(`/api/articles?limit=120&_cb=${Date.now()}`, { cache: 'no-store' });
+                    if (!res.ok) return;
+                    const data = await res.json();
+                    if (data?.status !== 'ok' || !Array.isArray(data.items)) return;
 
-                            const contentStr = item.content || item.description || '';
-                            let img = item.thumbnail || item.enclosure?.link;
-                            if (!img) {
-                                const imgMatch = typeof contentStr === 'string' ? contentStr.match(/<img[^>]+src="([^">]+)"/) : null;
-                                if (imgMatch) img = imgMatch[1];
-                            }
-                            const plain = typeof contentStr === 'string' ? contentStr.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() : '';
-                            const pubD = new Date(item.pubDate || 0);
-
-                            return {
-                                id: safeId, title: titleStr, date: safeDateParse(item.pubDate),
-                                timestamp: !isNaN(pubD.getTime()) ? pubD.getTime() : Date.now(),
-                                author: item.author || 'United Road Editorial',
-                                excerpt: plain.slice(0, 180) + (plain.length > 180 ? '…' : ''),
-                                // No hard-coded stock photo here any more: an empty image
-                                // lets SmartImage draw branded cover art instead of every
-                                // imageless post sharing one Unsplash stadium shot.
-                                image: img || '',
-                                content: contentStr, link: linkStr,
-                                readMinutes: Math.max(1, Math.round(plain.split(' ').filter(Boolean).length / 220)),
-                                isAI: false, tags: [], // internal only — never surfaced to readers
-                            };
-                        });
-                    } catch (e) {
-                        console.error('Substack sync failed', e);
-                        return [];
-                    }
-                };
-
-                const readAiDesk = async () => {
-                    try {
-                        const res = await fetch('/api/articles?limit=60');
-                        if (!res.ok) return [];
-                        const data = await res.json();
-                        if (data?.status !== 'ok' || !Array.isArray(data.items)) return [];
-                        return data.items.map(item => ({
+                    const posts = data.items
+                        .filter(item => item && item.id && item.title)
+                        .map(item => ({
                             id: item.id,
                             title: item.title,
                             date: item.date || safeDateParse(new Date(item.timestamp).toISOString()),
@@ -1252,22 +1213,14 @@
                             readMinutes: item.readMinutes || 3,
                             tags: Array.isArray(item.tags) ? item.tags : [],
                             sources: Array.isArray(item.sources) ? item.sources : [],
-                            isAI: true,
-                        }));
-                    } catch (e) {
-                        // The endpoint only exists once the site has deployed the
-                        // function; a 404 here is not worth surfacing.
-                        return [];
-                    }
-                };
-
-                try {
-                    const [substackPosts, aiPosts] = await Promise.all([readSubstack(), readAiDesk()]);
-                    const merged = [...aiPosts, ...substackPosts]
-                        .filter(p => p && p.id && p.title)
+                            category: item.category || 'NEWS',
+                            kind: item.kind || 'article',
+                        }))
                         .sort((a, b) => b.timestamp - a.timestamp);
-                    const deduped = Array.from(new Map(merged.map(p => [p.id, p])).values());
-                    if (deduped.length > 0) setBlogPosts(deduped);
+
+                    if (posts.length > 0) setBlogPosts(posts);
+                } catch (e) {
+                    console.error('Article sync failed', e);
                 } finally {
                     setBlogLoading(false);
                 }
@@ -1275,7 +1228,7 @@
 
             useEffect(() => {
                 fetchArticles();
-                const interval = setInterval(fetchArticles, 300000); // refresh every 5 minutes
+                const interval = setInterval(fetchArticles, 120000); // the desk polls every 5 min; check often enough to catch it
 
                 const handleVisibilityChange = () => {
                     if (document.visibilityState === 'visible') {
@@ -3096,7 +3049,10 @@
                     </div>
                 );
 
-                const [lead, ...rest] = recentArticles;
+                // /articles is the long-form shelf; the shorter news items live on
+                // /news, so filter them out here rather than mixing the two.
+                const longForm = recentArticles.filter(p => p.kind !== 'news');
+                const [lead, ...rest] = longForm;
 
                 return (
                     <div className="pt-20 bg-[#F9FAFB] min-h-screen pb-32">
@@ -3119,7 +3075,7 @@
                                     <SkeletonGrid count={3} />
                                 </div>
                             ) : articleView === 'recent' ? (
-                                recentArticles.length === 0 ? (
+                                longForm.length === 0 ? (
                                     <EmptyState icon={PenTool} title="No Recent Articles" body="Nothing published in the last 30 days. The Archive tab holds everything older." />
                                 ) : (
                                     <div className="space-y-8">

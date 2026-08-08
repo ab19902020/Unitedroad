@@ -46,10 +46,26 @@ This is **not** an official Manchester United website.
 
 ## The AI Article Desk
 
-The site writes its own articles. Twice a day a Netlify function reads the same
-Manchester United feeds the news and transfer pages use, works out which stories
-actually happened, and asks DeepSeek to write **up to ten per run, twenty a
-day**, in the United Road house voice.
+The site writes everything it publishes. **Every five minutes** a Netlify
+function reads the Manchester United feeds, works out which stories are new,
+and asks DeepSeek to write them up in the United Road house voice.
+
+Two kinds of piece, with separate daily ceilings:
+
+| Kind | Length | Per day | When |
+| --- | --- | --- | --- |
+| **News** | 250–400 words, two sections | up to 10 | As stories break |
+| **Article** | 500–750 words, full house voice with a verdict | up to 3 | One per run at most, from the best-corroborated story |
+
+Anything reported in the last 30 minutes is treated as urgent and goes out as a
+news item straight away, so breaking stories appear within minutes rather than
+waiting for a daily slot.
+
+The five-minute schedule is a **poll, not a write cycle**. Almost every run
+fetches the feeds, finds nothing uncovered, and returns without calling DeepSeek
+at all — cost tracks stories that actually broke, not clock ticks.
+
+Substack is no longer used. `/api/substack` still exists but nothing reads it.
 
 The news and transfer pages lead with this coverage rather than republishing
 other outlets' headlines. External items only backfill underneath, and any that
@@ -59,7 +75,7 @@ entirely once the archive is deep enough to stand alone.
 
 A measured full run writes ten articles in about three minutes. Finished pieces
 are stored in Netlify Blobs and appear on `/articles`, `/news` and `/transfers`
-alongside the Substack posts, under the byline **Adam James**, with the
+under the byline **Adam James**, with the
 reporting they were written from listed at the bottom.
 
 Nothing on the site states how an article was produced.
