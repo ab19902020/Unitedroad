@@ -476,6 +476,54 @@ export const sanitizeHtml = (input: string): string => {
   return html.trim()
 }
 
+// Pull the best available picture for a story.
+//
+// Feed <enclosure>/<media:thumbnail> tags are the cheap path, but plenty of
+// publishers omit them, which is why so many stories fell back to generated
+// crest art. When none of the reports carry one, fetch the lead article and
+// read its og:image — that is the picture the publisher chose for social
+// sharing, so it is always the right one for the story.
+const BAD_IMAGE = /(logo|placeholder|default|blank|1x1|spacer|avatar|sprite)/i
+
+const usableImage = (url: string | undefined): boolean =>
+  !!url && /^https?:\/\//i.test(url) && !BAD_IMAGE.test(url)
+
+const scrapeOgImage = async (pageUrl: string): Promise<string> => {
+  try {
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 6000)
+    const res = await fetch(pageUrl, {
+      headers: { 'User-Agent': 'UnitedRoadFeedBot/1.0 (+https://unitedroad.uk)' },
+      signal: controller.signal,
+    }).finally(() => clearTimeout(timer))
+    if (!res.ok) return ''
+    // The head is all we need; no point pulling a whole article down.
+    const html = (await res.text()).slice(0, 60000)
+    for (const re of [
+      /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i,
+      /<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i,
+      /<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i,
+    ]) {
+      const m = html.match(re)
+      if (m && usableImage(m[1])) return m[1]
+    }
+  } catch { /* an image is a nice-to-have, never a failure */ }
+  return ''
+}
+
+const pickStoryImage = async (story: StoryCluster): Promise<string> => {
+  const fromFeed = story.members.map((m) => m.thumbnail).find(usableImage)
+  if (fromFeed) return fromFeed
+
+  // Try the best-corroborated reports first; stop at the first hit.
+  for (const m of story.members.slice(0, 3)) {
+    if (!m.link || m.link.includes('news.google.com')) continue
+    const og = await scrapeOgImage(m.link)
+    if (og) return og
+  }
+  return ''
+}
+
 const wordCount = (html: string): number => stripTags(html).split(/\s+/).filter(Boolean).length
 
 const slugify = (s: string): string =>
@@ -761,6 +809,9 @@ const writeOne = async (
   let calls = 0
   let lastReason = 'unknown'
 
+  // Resolved once, before any generation, so a retry does not re-scrape.
+  const image = await pickStoryImage(story)
+
   for (let attempt = 0; attempt < 2; attempt++) {
     calls++
     const parsed = await callDeepSeek(
@@ -780,7 +831,7 @@ const writeOne = async (
       buildUserPrompt(story, otherStories, alreadyWritten, correction),
     )
 
-    const result = validate(parsed, story, model, kind)
+    const result = validate(parsed, story, model, kind, image)
     if (result.ok) return { ...result, calls }
 
     lastReason = result.reason
@@ -818,7 +869,7 @@ const BANNED_HEADINGS = [
   'conclusion', 'analysis', 'introduction', 'the story so far',
 ]
 
-const validate = (parsed: any, story: StoryCluster, model: string, kind: ArticleKind): ValidateResult => {
+const validate = (parsed: any, story: StoryCluster, model: string, kind: ArticleKind, image: string): ValidateResult => {
   const title = stripTags(parsed?.title || '').slice(0, 160)
   const bodyHtml = sanitizeHtml(parsed?.bodyHtml || '')
 
@@ -880,7 +931,7 @@ const validate = (parsed: any, story: StoryCluster, model: string, kind: Article
       tone: stripTags(parsed?.tone || '').toLowerCase().slice(0, 12),
       author: AUTHOR_NAME,
       isAI: true,
-      image: story.members.find((m) => m.thumbnail)?.thumbnail || '',
+      image,
       date: now.toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' }),
       timestamp: now.getTime(),
       readMinutes: Math.max(1, Math.round(words / 220)),
