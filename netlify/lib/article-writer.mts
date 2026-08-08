@@ -717,14 +717,17 @@ export const runDailyBatch = async (opts: {
   const publishedToday = index.articles.filter((a) => new Date(a.timestamp).toDateString() === today)
 
   const ceiling = Math.max(1, Math.min(opts.max ?? BATCH.maxArticles, BATCH.maxArticles))
-  const remaining = opts.force ? ceiling : Math.max(0, ceiling - publishedToday.length)
+  // The per-run ceiling and the per-day cap are separate: a run may write ten,
+  // but the day stops at maxPerDay however many runs fire.
+  const dayHeadroom = Math.max(0, BATCH.maxPerDay - publishedToday.length)
+  const remaining = opts.force ? ceiling : Math.min(ceiling, dayHeadroom)
 
   if (remaining === 0) {
     return {
       status: 'skipped',
       published: [],
       storiesAvailable: 0,
-      notes: [`Already published ${publishedToday.length} article(s) today.`],
+      notes: [`Already published ${publishedToday.length} article(s) today (cap ${BATCH.maxPerDay}).`],
     }
   }
 

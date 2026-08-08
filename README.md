@@ -46,10 +46,18 @@ This is **not** an official Manchester United website.
 
 ## The AI Article Desk
 
-The site writes its own articles. Once a day a Netlify function reads the same
+The site writes its own articles. Twice a day a Netlify function reads the same
 Manchester United feeds the news and transfer pages use, works out which stories
-actually happened, and asks DeepSeek to write **up to three** of them up in the
-United Road house voice. Finished pieces are stored in Netlify Blobs and appear
+actually happened, and asks DeepSeek to write **up to ten per run, twenty a
+day**, in the United Road house voice.
+
+The news and transfer pages lead with this coverage rather than republishing
+other outlets' headlines. External items only backfill underneath, and any that
+the desk has already written up are filtered out so a story never appears twice.
+Set `BACKFILL_WITH_FEEDS` to `false` in `Index.html` to drop the external items
+entirely once the archive is deep enough to stand alone.
+
+A measured full run writes ten articles in about three minutes. Finished pieces are stored in Netlify Blobs and appear
 on `/articles` alongside the Substack posts, badged **AI Desk**, with the
 reporting they were written from listed at the bottom.
 
@@ -157,8 +165,15 @@ applies across both, so the second run tops the day up rather than doubling it.
 ### Timing and cost
 
 Each article takes roughly 20–30 seconds end to end, so a three-article run is
-about a minute. Cost is around **$0.002 per article** on `deepseek-v4-flash`, so
-three a day is roughly **$2 a year**.
+about a minute. Cost is around **$0.002 per article** on `deepseek-v4-flash`. At the twenty-a-day
+ceiling that is roughly **$25 a year**; a normal day costs less, because the desk
+only writes what there is genuine news for.
+
+**No RSS API key is needed.** Feeds are fetched by the site's own Netlify proxy
+(`netlify/functions/rss.mts`), so there is no third-party quota to exhaust. An
+rss2json key was removed earlier precisely because it had to sit in the page
+source, where every visitor could read it and the free tier was burned in
+minutes by the site's own polling.
 
 The work happens in a *background* function because Netlify kills scheduled
 functions at 30 seconds. The daily cron does nothing but hand the job over,

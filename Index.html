@@ -1733,8 +1733,14 @@
             );
 
             // REUSABLE NEWS CARD
-            const NewsCard = ({ n }) => (
-                <a href={n.link} target="_blank" rel="nofollow" className="ur-card ur-edge h-full overflow-hidden group flex flex-col">
+            const NewsCard = ({ n }) => {
+                // Our own pieces route through the hash router; only external
+                // items open in a new tab and carry nofollow.
+                const linkProps = n.internal
+                    ? { href: n.link, onClick: (e) => { e.preventDefault(); doNavigate(n.link.replace('#', '')); } }
+                    : { href: n.link, target: '_blank', rel: 'nofollow' };
+                return (
+                <a {...linkProps} className="ur-card ur-edge h-full overflow-hidden group flex flex-col">
                     <div className="relative">
                         <SmartImage src={n.img} alt={n.title} seed={n.link || n.title} label={n.source}
                             wrapperClassName="aspect-[2/1]" className="w-full h-full object-cover" dim />
@@ -1751,7 +1757,8 @@
                         <div className="mt-5 h-[2px] w-10 bg-gray-200 group-hover:w-full group-hover:bg-[#DA291C] transition-all duration-500 rounded-full"></div>
                     </div>
                 </a>
-            );
+                );
+            };
 
             // ==========================================
             // RENDER FUNCTIONS
@@ -2066,7 +2073,14 @@
             );
 
             // 🌟 REDESIGNED TRANSFER STRATEGY PAGE
-            const renderTransferPage = () => (
+            const renderTransferPage = () => {
+                // Transfer coverage the desk has written, newest first. These lead the
+                // page; the raw feed sits underneath as corroboration.
+                const ownTransfers = blogPosts
+                    .filter(p => (p.category || '').includes('TRANSFER') || (p.tags || []).some(t => t.includes('transfer')))
+                    .slice(0, 12);
+
+                return (
                 <div className="pt-20 bg-[#F9FAFB] min-h-screen pb-32 relative overflow-hidden text-gray-900 font-body">
                     <PageHero
                         eyebrow="Live: High-Tier Intel" live icon={Crosshair}
@@ -2086,6 +2100,38 @@
                     </PageHero>
 
                     <div className="max-w-[1400px] mx-auto px-5 md:px-10 relative z-10">
+                        {ownTransfers.length > 0 && (
+                            <Reveal>
+                                <div className="mb-12">
+                                    <div className="flex items-center gap-3 mb-6">
+                                        <span className="ur-eyebrow text-[#DA291C]">United Road On The Window</span>
+                                        <div className="flex-1 h-[1px] bg-gradient-to-r from-gray-200 to-transparent"></div>
+                                    </div>
+                                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+                                        {ownTransfers.slice(0, 6).map((post, i) => (
+                                            <Reveal key={post.id} delay={(i % 3) * 60}>
+                                                <div onClick={() => doNavigate(`/article/${post.id}`)} role="button" tabIndex={0}
+                                                    onKeyDown={(e) => { if (e.key === 'Enter') doNavigate(`/article/${post.id}`); }}
+                                                    className="ur-card ur-edge h-full overflow-hidden cursor-pointer group flex flex-col">
+                                                    <SmartImage src={post.image} alt={post.title} seed={post.id} label="Transfers"
+                                                        wrapperClassName="aspect-[2/1]" className="w-full h-full object-cover" />
+                                                    <div className="p-6 flex-1 flex flex-col justify-between">
+                                                        <div>
+                                                            <div className="text-[10px] font-heading font-bold text-gray-400 uppercase tracking-widest mb-2">{post.date}</div>
+                                                            <h3 className="font-heading font-black text-gray-900 group-hover:text-[#DA291C] transition-colors leading-snug line-clamp-3">{post.title}</h3>
+                                                        </div>
+                                                        <div className="mt-4 font-heading font-bold text-[10px] text-[#DA291C] uppercase tracking-widest flex items-center gap-1.5">
+                                                            Read <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </Reveal>
+                                        ))}
+                                    </div>
+                                </div>
+                            </Reveal>
+                        )}
+
                         {transferLoading ? (
                             <div className="grid lg:grid-cols-12 gap-6 lg:gap-8">
                                 <div className="lg:col-span-8 space-y-5">
@@ -2168,7 +2214,8 @@
                         )}
                     </div>
                 </div>
-            );
+                );
+            };
 
             // 🌟 ACADEMY WATCH 
             const renderAcademyPage = () => (
@@ -2452,9 +2499,48 @@
             );
 
             // UPGRADED NEWS SECTION
+            // The news page leads with United Road's own coverage — the desk rewrites
+            // the day's reporting rather than the site republishing other outlets'
+            // headlines. External items only backfill beneath, so the page is never
+            // thin while the archive builds; set BACKFILL_WITH_FEEDS to false once
+            // there is enough of our own writing to stand alone.
+            const BACKFILL_WITH_FEEDS = true;
+
+            // Map a desk article into the shape the news cards already expect.
+            const articleAsNewsItem = (post) => ({
+                title: post.title,
+                desc: (post.excerpt || '').replace(/<[^>]+>/g, ''),
+                source: 'United Road',
+                category: (post.category || '').includes('TRANSFER') ? 'TRANSFERS' : 'UNITED ROAD',
+                date: timeAgo(new Date(post.timestamp).toUTCString()),
+                timestamp: post.timestamp,
+                link: `#/article/${post.id}`,
+                internal: true,
+                img: post.image || '',
+            });
+
             const renderNewsPage = () => {
                 const now = Date.now();
-                const filtered = newsFilter === 'ALL' ? newsItems : newsItems.filter(n => n.category === newsFilter);
+
+                const ownCoverage = blogPosts.map(articleAsNewsItem);
+                // Drop any external item the desk has already written up, so the same
+                // story does not appear twice under two different bylines.
+                const ownKeys = ownCoverage.map(o => o.title.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim());
+                const externals = BACKFILL_WITH_FEEDS
+                    ? newsItems.filter(n => {
+                        const k = (n.title || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+                        const kw = new Set(k.split(' ').filter(w => w.length > 3));
+                        return !ownKeys.some(o => {
+                            const ow = o.split(' ').filter(w => w.length > 3);
+                            if (!ow.length || !kw.size) return false;
+                            const shared = ow.filter(w => kw.has(w)).length;
+                            return shared / Math.min(ow.length, kw.size) > 0.6;
+                        });
+                    })
+                    : [];
+
+                const merged = [...ownCoverage, ...externals].sort((a, b) => b.timestamp - a.timestamp);
+                const filtered = newsFilter === 'ALL' ? merged : merged.filter(n => n.category === newsFilter);
                 
                 const recentNews = filtered.filter(n => now - n.timestamp <= THIRTY_DAYS);
                 const archiveNews = filtered.filter(n => now - n.timestamp > THIRTY_DAYS);
@@ -2477,8 +2563,8 @@
                         <div className="max-w-[1680px] mx-auto px-5 md:px-10">
                             <Reveal>
                                 <div className="flex flex-wrap gap-2 md:gap-3 mb-10 -mt-2">
-                                    {['ALL', 'CLUB', 'PRESS', 'FANZONE'].map(f => {
-                                        const count = f === 'ALL' ? newsItems.length : newsItems.filter(n => n.category === f).length;
+                                    {['ALL', 'UNITED ROAD', 'TRANSFERS', 'CLUB', 'PRESS', 'FANZONE'].map(f => {
+                                        const count = f === 'ALL' ? merged.length : merged.filter(n => n.category === f).length;
                                         return (
                                             <button key={f} onClick={() => setNewsFilter(f)}
                                                 className={`px-5 md:px-6 py-2.5 rounded-full text-[10px] md:text-xs font-heading font-black tracking-[1.5px] transition-all border flex items-center gap-2 ${newsFilter === f ? 'bg-gray-900 text-white border-gray-900 shadow-md' : 'bg-white text-gray-600 border-gray-200 hover:border-[#DA291C] hover:text-[#DA291C]'}`}>
@@ -2507,7 +2593,11 @@
                                     <div className="grid lg:grid-cols-12 gap-5 mb-24">
                                         {lead && (
                                             <Reveal className="lg:col-span-7">
-                                                <a href={lead.link} target="_blank" rel="nofollow" className="relative block h-[420px] md:h-[600px] group overflow-hidden rounded-[32px] shadow-[var(--ur-shadow-md)] hover:shadow-[var(--ur-shadow-lg)] transition-shadow">
+                                                <a href={lead.link}
+                                                    {...(lead.internal
+                                                        ? { onClick: (e) => { e.preventDefault(); doNavigate(lead.link.replace('#', '')); } }
+                                                        : { target: '_blank', rel: 'nofollow' })}
+                                                    className="relative block h-[420px] md:h-[600px] group overflow-hidden rounded-[32px] shadow-[var(--ur-shadow-md)] hover:shadow-[var(--ur-shadow-lg)] transition-shadow">
                                                     <SmartImage src={lead.img} alt={lead.title} seed={lead.link || lead.title} label={lead.source} eager
                                                         wrapperClassName="absolute inset-0 ur-media--flat" className="w-full h-full object-cover brightness-[0.72] transition-transform duration-[1200ms] group-hover:scale-105" />
                                                     <div className="absolute inset-0 bg-gradient-to-t from-[#07040A] via-[#07040A]/55 to-transparent"></div>
@@ -2528,7 +2618,11 @@
                                         <div className="lg:col-span-5 flex flex-col gap-4">
                                             {recentNews.slice(1, 5).map((n, i) => (
                                                 <Reveal key={n.link || i} delay={i * 70} className="flex-1">
-                                                    <a href={n.link} target="_blank" rel="nofollow" className="ur-card ur-edge h-full p-6 md:p-7 flex flex-col justify-center group relative overflow-hidden">
+                                                    <a href={n.link}
+                                                        {...(n.internal
+                                                            ? { onClick: (e) => { e.preventDefault(); doNavigate(n.link.replace('#', '')); } }
+                                                            : { target: '_blank', rel: 'nofollow' })}
+                                                        className="ur-card ur-edge h-full p-6 md:p-7 flex flex-col justify-center group relative overflow-hidden">
                                                         <div className="absolute -right-8 -top-8 w-32 h-32 bg-gray-50 rounded-full blur-[40px] group-hover:bg-red-50 transition-colors"></div>
                                                         <div className="relative z-10">
                                                             <div className="flex justify-between items-center gap-3 mb-3">

@@ -129,16 +129,27 @@ Respond with a single JSON object and nothing else. No markdown fence, no commen
   "sourceLinks": ["the URLs from the source material you actually drew on"]
 }`
 
-// How many pieces the desk aims for in one run, and the minimum amount of
-// genuinely new material each one needs. If the day is quiet the run writes
-// fewer — or nothing at all. Publishing filler is worse than publishing
-// nothing.
+// How many pieces the desk aims for in one run.
+//
+// The site no longer republishes other outlets' headlines — the desk rewrites
+// the day's reporting into United Road articles instead, so the run has to
+// produce enough to actually fill the news page rather than a token two or
+// three. Two scheduled runs a day at this size comfortably clears the daily
+// cap on a normal news day.
+//
+// Sizing is bounded by the background function's 15 minute ceiling. At roughly
+// 10-20 seconds per article, ten per run leaves a wide margin even when several
+// need a corrective retry.
 export const BATCH = {
-  maxArticles: 3,
-  minArticles: 0,
+  /** Most articles a single run will write. */
+  maxArticles: 10,
+  /** Most articles published in one calendar day, across all runs. */
+  maxPerDay: 20,
   // A story needs this many uncovered candidates left in the pool before the
   // desk will start another article on top of the ones it has already written.
-  storiesPerArticle: 3,
+  // Lower than it was: with the wider source list there is far more genuine
+  // news per run, and the ranking already puts the weakest stories last.
+  storiesPerArticle: 1.5,
 } as const
 
 // Supporting context handed to the model alongside the lead story, so a piece
