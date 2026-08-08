@@ -332,6 +332,65 @@
         .line-clamp-3 { -webkit-line-clamp: 3; }
         .line-clamp-4 { -webkit-line-clamp: 4; }
 
+        /* ---------- Layout safety ---------- */
+        /* The floating chant player is fixed to the bottom-right. Without room
+           reserved for it, it sits on top of the last card or paragraph on every
+           page — clearly visible on mobile. */
+        main { padding-bottom: 96px; }
+        @media (min-width: 768px) { main { padding-bottom: 40px; } }
+
+        /* iOS home-indicator safe area. */
+        body { padding-bottom: env(safe-area-inset-bottom, 0px); }
+
+        /* ---------- Editorial typography ---------- */
+        .prose { font-size: 1.0625rem; line-height: 1.78; }
+        @media (min-width: 768px) { .prose { font-size: 1.15rem; line-height: 1.8; } }
+
+        /* Opening paragraph carries more weight than the rest. */
+        .prose > p:first-of-type {
+            font-size: 1.2em; line-height: 1.62; color: #1f2937; font-weight: 500;
+        }
+        @media (min-width: 768px) { .prose > p:first-of-type { font-size: 1.25em; } }
+
+        .prose h2 {
+            font-size: 1.45rem; margin-top: 2.6rem; margin-bottom: 0.9rem;
+            padding-left: 0; letter-spacing: -0.02em;
+        }
+        @media (min-width: 768px) { .prose h2 { font-size: 1.9rem; } }
+        /* Replace the gradient bar with a rule above the heading: less busy at
+           mobile widths, and it reads as a section break rather than a bullet. */
+        .prose h2::before {
+            content: ''; position: absolute; left: 0; top: -1.1rem;
+            width: 56px; height: 3px; border-radius: 2px; bottom: auto;
+            background: linear-gradient(90deg, var(--ur-red), var(--ur-gold));
+        }
+        .prose strong { color: #0B0308; font-weight: 800; }
+        .prose blockquote {
+            border-left: 0; position: relative; margin: 2.2rem 0; padding: 0 0 0 1.6rem;
+            font-family: 'Montserrat', sans-serif; font-style: normal; font-weight: 800;
+            font-size: 1.25rem; line-height: 1.45; color: #111827; letter-spacing: -0.02em;
+        }
+        .prose blockquote::before {
+            content: ''; position: absolute; left: 0; top: 4px; bottom: 4px; width: 4px;
+            border-radius: 2px; background: linear-gradient(180deg, var(--ur-red), var(--ur-gold));
+        }
+        .prose ul { padding-left: 1.25rem; }
+        .prose li::marker { color: var(--ur-red); }
+
+        /* ---------- Mobile refinements ---------- */
+        @media (max-width: 640px) {
+            /* Oversized display type wraps into four or five lines on a phone. */
+            .ur-display { letter-spacing: -0.03em; line-height: 0.95; }
+            .ur-eyebrow { letter-spacing: 2px; font-size: 9px; }
+            /* Tap targets. */
+            .ur-btn { min-height: 48px; }
+            /* Cards sit closer to the edge, so soften the corner radius. */
+            .ur-card, .ur-card-dark { border-radius: 20px; }
+        }
+
+        /* Respect users who ask for less motion on the tilt effect too. */
+        @media (hover: none) { .ur-tilt { transform: none !important; } }
+
         /* ---------- Accessibility ---------- */
         @media (prefers-reduced-motion: reduce) {
             *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; scroll-behavior: auto !important; }
@@ -3155,20 +3214,29 @@
                 return (
                     <div className="bg-white min-h-screen pb-32">
                         {/* Cover */}
-                        <header className="relative pt-32 pb-12 md:pt-40 md:pb-16 overflow-hidden bg-[#07040A]">
-                            <SmartImage src={post.image} alt={post.title} seed={post.id} label={post.category || 'Article'} eager
-                                wrapperClassName="absolute inset-0 ur-media--flat" className="w-full h-full object-cover opacity-30" />
-                            <div className="absolute inset-0 bg-gradient-to-t from-[#07040A] via-[#07040A]/70 to-[#07040A]/85"></div>
+                        <header className="relative pt-28 pb-10 md:pt-40 md:pb-16 overflow-hidden bg-[#07040A]">
+                            {/* Blurred hard, because when there is no real photo the generated
+                                cover carries a UNITED ROAD wordmark that otherwise reads
+                                straight through the headline. Blurring turns it into texture. */}
+                            <SmartImage src={post.image} alt="" seed={post.id} label={post.category || 'Article'} eager
+                                wrapperClassName="absolute inset-0 ur-media--flat" className="w-full h-full object-cover opacity-40 scale-110 blur-2xl" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-[#07040A] via-[#07040A]/85 to-[#07040A]/90"></div>
+                            <div className="absolute inset-0 ur-grid-lines opacity-25 pointer-events-none"></div>
                             <div className="relative z-10 max-w-[820px] mx-auto px-5">
                                 <button onClick={() => doNavigate('/articles')} className="flex items-center gap-2 text-xs font-heading font-black tracking-[2px] uppercase text-white/60 hover:text-white transition-colors mb-8">
                                     <ArrowLeft className="w-4 h-4" /> Back To Articles
                                 </button>
-                                <div className="flex flex-wrap items-center gap-3 mb-5">
+                                <div className="flex flex-wrap items-center gap-x-3 gap-y-2 mb-6">
                                     <span className="ur-chip !bg-[#DA291C] !text-white !border-transparent"><PenTool className="w-3 h-3" /> {post.category || 'Editorial'}</span>
                                     <span className="text-[10px] font-heading font-bold text-white/50 uppercase tracking-widest">{post.date} • {post.author}</span>
                                     {post.readMinutes ? <span className="text-[10px] font-heading font-bold text-white/50 uppercase tracking-widest">{post.readMinutes} min read</span> : null}
                                 </div>
-                                <h1 className="ur-display text-4xl md:text-6xl text-white leading-[1.05] text-balance">{post.title}</h1>
+                                <h1 className="ur-display text-[34px] sm:text-5xl md:text-6xl text-white leading-[1.03] text-balance">{post.title}</h1>
+                                {post.excerpt && (
+                                    <p className="mt-5 text-lg md:text-2xl text-white/70 font-body font-medium leading-snug max-w-3xl text-balance">
+                                        {post.excerpt.replace(/<[^>]+>/g, '')}
+                                    </p>
+                                )}
                                 {post.tags?.length > 0 && (
                                     <div className="flex flex-wrap gap-2 mt-7">
                                         {post.tags.map(t => <span key={t} className="text-[9px] font-heading font-black tracking-[2px] uppercase text-white/70 bg-white/10 border border-white/15 px-3 py-1.5 rounded-full">{t}</span>)}
@@ -3177,23 +3245,15 @@
                             </div>
                         </header>
 
-                        <div className="max-w-[820px] mx-auto px-5 pt-12">
-                            <div className="prose prose-lg max-w-none font-body text-gray-700" dangerouslySetInnerHTML={{ __html: post.content || '' }}></div>
-
-                            {post.sources?.length > 0 && (
-                                <div className="mt-14 pt-8 border-t border-gray-200">
-                                    <h3 className="font-heading font-black text-xs tracking-[3px] uppercase text-gray-400 mb-5">Reporting Behind This Piece</h3>
-                                    <div className="space-y-2.5">
-                                        {post.sources.map((s, i) => (
-                                            <a key={i} href={s.link} target="_blank" rel="nofollow noopener" className="flex items-start gap-3 p-4 rounded-2xl border border-gray-200 hover:border-[#DA291C] hover:bg-gray-50 transition-colors group">
-                                                <span className="ur-chip ur-chip-red flex-shrink-0 !py-1">{s.source || 'Source'}</span>
-                                                <span className="font-body text-sm text-gray-700 group-hover:text-gray-900 leading-snug">{s.title}</span>
-                                                <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-[#DA291C] ml-auto flex-shrink-0 mt-0.5" />
-                                            </a>
-                                        ))}
-                                    </div>
+                        <div className="max-w-[760px] mx-auto px-5 pt-12 md:pt-16">
+                            <div className="flex items-center gap-3 pb-8 mb-10 border-b border-gray-200">
+                                <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[#DA291C] to-[#8B1109] flex items-center justify-center text-white font-heading font-black text-sm flex-shrink-0">AJ</div>
+                                <div className="min-w-0">
+                                    <div className="font-heading font-black text-sm text-gray-900">{post.author}</div>
+                                    <div className="text-[11px] font-heading font-bold text-gray-400 uppercase tracking-widest">{post.date}{post.readMinutes ? ` · ${post.readMinutes} min read` : ''}</div>
                                 </div>
-                            )}
+                            </div>
+                            <div className="prose max-w-none font-body text-gray-700" dangerouslySetInnerHTML={{ __html: post.content || '' }}></div>
 
                             {/* Share */}
                             <div className="mt-12 pt-8 border-t border-gray-200 flex flex-wrap items-center gap-3">
