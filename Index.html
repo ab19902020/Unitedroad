@@ -1859,7 +1859,7 @@
                     </section>
 
                     {/* ============ LIVE HEADLINE TICKER ============ */}
-                    {newsItems.length > 0 && (
+                    {blogPosts.length > 0 && (
                         <section className="bg-[#0B132B] border-y border-white/10 overflow-hidden">
                             <div className="flex items-stretch">
                                 <div className="flex-shrink-0 bg-[#DA291C] px-5 md:px-7 flex items-center gap-2.5 z-10 shadow-[8px_0_20px_rgba(11,19,43,0.6)]">
@@ -1870,10 +1870,11 @@
                                     <div className="ur-marquee-track">
                                         {[0, 1].map(pass => (
                                             <div key={pass} className="flex items-center" aria-hidden={pass === 1}>
-                                                {newsItems.slice(0, 12).map((n, i) => (
-                                                    <a key={`${pass}-${i}`} href={n.link} target="_blank" rel="nofollow"
+                                                {blogPosts.slice(0, 12).map((n, i) => (
+                                                    <a key={`${pass}-${i}`} href={`#/article/${n.id}`}
+                                                        onClick={(e) => { e.preventDefault(); doNavigate(`/article/${n.id}`); }}
                                                         className="flex items-center gap-3 px-6 whitespace-nowrap group">
-                                                        <span className="text-[9px] font-heading font-black tracking-[2px] text-[#FFD700] uppercase">{n.source}</span>
+                                                        <span className="text-[9px] font-heading font-black tracking-[2px] text-[#FFD700] uppercase">{n.category || 'United Road'}</span>
                                                         <span className="font-body text-sm text-white/75 group-hover:text-white transition-colors">{n.title}</span>
                                                         <span className="w-1 h-1 rounded-full bg-white/25"></span>
                                                     </a>
@@ -1931,26 +1932,28 @@
                                     })()}
                                 </Reveal>
 
-                                {/* LATEST NEWS */}
+                                {/* LATEST NEWS — ours, not a link off the site */}
                                 <Reveal delay={90}>
                                     {(() => {
-                                        const n = newsItems[0];
+                                        const n = blogPosts.find(p => p.kind === 'news') || blogPosts[1] || blogPosts[0];
                                         if (!n) return <CardSkeleton />;
                                         return (
-                                            <a href={n.link} target="_blank" rel="nofollow" className="ur-card ur-edge h-full overflow-hidden group flex flex-col">
+                                            <div onClick={() => doNavigate(`/article/${n.id}`)} role="button" tabIndex={0}
+                                                onKeyDown={(e) => { if (e.key === 'Enter') doNavigate(`/article/${n.id}`); }}
+                                                className="ur-card ur-edge h-full overflow-hidden cursor-pointer group flex flex-col">
                                                 <div className="relative">
-                                                    <SmartImage src={n.img} alt={n.title} seed={n.link || n.title} label={n.source}
-                                                        wrapperClassName="aspect-video" className="w-full h-full object-cover" dim />
-                                                    <div className="absolute top-4 left-4 z-10 bg-[#DA291C] text-white font-heading font-black text-[9px] tracking-[2px] px-3 py-1.5 rounded-lg uppercase">News</div>
+                                                    <SmartImage src={n.image} alt={n.title} seed={n.id} label={n.category || 'News'}
+                                                        wrapperClassName="aspect-video" className="w-full h-full object-cover" />
+                                                    <div className="absolute top-4 left-4 z-10 bg-[#DA291C] text-white font-heading font-black text-[9px] tracking-[2px] px-3 py-1.5 rounded-lg uppercase">{n.category || 'News'}</div>
                                                 </div>
                                                 <div className="p-7 flex-1 flex flex-col justify-between">
                                                     <div>
-                                                        <div className="text-[10px] font-heading font-bold text-gray-400 uppercase tracking-widest mb-3">{n.source} • {n.date}</div>
+                                                        <div className="text-[10px] font-heading font-bold text-gray-400 uppercase tracking-widest mb-3">{n.date} • {n.author}</div>
                                                         <h3 className="text-xl font-heading font-black text-gray-900 group-hover:text-[#DA291C] transition-colors leading-tight line-clamp-3">{n.title}</h3>
                                                     </div>
                                                     <div className="mt-6 font-heading font-bold text-xs text-[#DA291C] uppercase tracking-widest flex items-center gap-2">Read More <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" /></div>
                                                 </div>
-                                            </a>
+                                            </div>
                                         );
                                     })()}
                                 </Reveal>
@@ -2577,19 +2580,23 @@
             );
 
             // UPGRADED NEWS SECTION
-            // The news page leads with United Road's own coverage — the desk rewrites
-            // the day's reporting rather than the site republishing other outlets'
-            // headlines. External items only backfill beneath, so the page is never
-            // thin while the archive builds; set BACKFILL_WITH_FEEDS to false once
-            // there is enough of our own writing to stand alone.
-            const BACKFILL_WITH_FEEDS = true;
+            // The news page carries United Road's own coverage and nothing else. The
+            // desk rewrites the day's reporting in our voice under our byline; we do
+            // not republish other outlets' headlines or send readers to their sites.
+            //
+            // Raw third-party feeds still appear in exactly two places, deliberately:
+            // Transfers, where seeing the wire as it lands is the point, and the
+            // Social Hub, which is a feed of other people's channels by definition.
+            const BACKFILL_WITH_FEEDS = false;
 
             // Map a desk article into the shape the news cards already expect.
             const articleAsNewsItem = (post) => ({
                 title: post.title,
                 desc: (post.excerpt || '').replace(/<[^>]+>/g, ''),
-                source: 'United Road',
-                category: (post.category || '').includes('TRANSFER') ? 'TRANSFERS' : 'UNITED ROAD',
+                source: post.kind === 'article' ? 'Opinion' : 'United Road',
+                // The desk's own categories drive the filters now that no external
+                // items reach this page.
+                category: (post.category || 'NEWS').toUpperCase().includes('TRANSFER') ? 'TRANSFERS' : (post.category || 'NEWS').toUpperCase(),
                 date: timeAgo(new Date(post.timestamp).toUTCString()),
                 timestamp: post.timestamp,
                 link: `#/article/${post.id}`,
@@ -2631,7 +2638,7 @@
                         <PageHero
                             eyebrow="Real-Time Auto Updating" live icon={Newspaper}
                             title="Latest" accent="Updates"
-                            blurb="United Road\u2019s own coverage first, then twenty trusted feeds — the club, the national press and the best fanzones — merged, de-duplicated and sorted by the minute.">
+                            blurb="Every story here is written by us. We read the wires every five minutes and report it in our own words — we do not republish anyone else's copy.">
                             <ViewToggle value={newsView} onChange={setNewsView} options={[
                                 { id: 'recent', label: 'Recent', icon: ClockIcon },
                                 { id: 'archive', label: 'Archive', icon: ArchiveIcon },
@@ -2641,7 +2648,7 @@
                         <div className="max-w-[1680px] mx-auto px-5 md:px-10">
                             <Reveal>
                                 <div className="flex flex-wrap gap-2 md:gap-3 mb-10 -mt-2">
-                                    {['ALL', 'UNITED ROAD', 'TRANSFERS', 'CLUB', 'PRESS', 'FANZONE'].map(f => {
+                                    {['ALL', ...Array.from(new Set(merged.map(n => n.category))).filter(Boolean).sort()].map(f => {
                                         const count = f === 'ALL' ? merged.length : merged.filter(n => n.category === f).length;
                                         return (
                                             <button key={f} onClick={() => setNewsFilter(f)}
@@ -2666,7 +2673,7 @@
                                 </div>
                             ) : newsView === 'recent' ? (
                                 recentNews.length === 0 ? (
-                                    <EmptyState icon={Shield} title="No recent news available" body="Nothing published in the last 30 days for this filter. Try the Archive tab or switch categories." />
+                                    <EmptyState icon={Newspaper} title="Nothing published yet" body="The desk checks the wires every five minutes and writes up anything new. Fresh stories land here automatically — nothing is republished from elsewhere." />
                                 ) : (
                                     <div className="grid lg:grid-cols-12 gap-5 mb-24">
                                         {lead && (
@@ -2676,9 +2683,12 @@
                                                         ? { onClick: (e) => { e.preventDefault(); doNavigate(lead.link.replace('#', '')); } }
                                                         : { target: '_blank', rel: 'nofollow' })}
                                                     className="relative block h-[420px] md:h-[600px] group overflow-hidden rounded-[32px] shadow-[var(--ur-shadow-md)] hover:shadow-[var(--ur-shadow-lg)] transition-shadow">
-                                                    <SmartImage src={lead.img} alt={lead.title} seed={lead.link || lead.title} label={lead.source} eager
-                                                        wrapperClassName="absolute inset-0 ur-media--flat" className="w-full h-full object-cover brightness-[0.72] transition-transform duration-[1200ms] group-hover:scale-105" />
-                                                    <div className="absolute inset-0 bg-gradient-to-t from-[#07040A] via-[#07040A]/55 to-transparent"></div>
+                                                    {/* Blurred when there is no real photograph: the generated
+                                                        cover carries a UNITED ROAD wordmark that otherwise reads
+                                                        straight through the headline. */}
+                                                    <SmartImage src={lead.img} alt="" seed={lead.link || lead.title} label={lead.source} eager
+                                                        wrapperClassName="absolute inset-0 ur-media--flat" className={`w-full h-full object-cover transition-transform duration-[1200ms] group-hover:scale-105 ${lead.img ? 'brightness-[0.7]' : 'brightness-[0.6] scale-110 blur-xl'}`} />
+                                                    <div className="absolute inset-0 bg-gradient-to-t from-[#07040A] via-[#07040A]/65 to-[#07040A]/25"></div>
                                                     <div className="absolute inset-x-0 bottom-0 p-8 md:p-12 z-10 text-white">
                                                         <div className="flex items-center gap-2 mb-4">
                                                             <span className="bg-[#DA291C] font-heading text-white text-[10px] font-black tracking-[2px] px-3 py-1.5 rounded-lg uppercase">{lead.source}</span>
