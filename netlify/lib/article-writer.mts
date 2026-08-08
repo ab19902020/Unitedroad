@@ -970,13 +970,14 @@ export const runDailyBatch = async (opts: {
 
   // Headroom per kind. Forcing ignores the daily ceilings but never the
   // per-run one, so a manual trigger cannot run away.
-  // On a busy day the news ceiling lifts, but only breaking stories unlock it.
   const BREAKING_WINDOW = 30 * 60 * 1000
-  const newsCeiling = BATCH.newsPerDay
-  const newsRoom = opts.force ? BATCH.newsPerDayBreaking : Math.max(0, newsCeiling - newsToday)
+  const newsRoom = opts.force ? BATCH.newsPerDayMax : Math.max(0, BATCH.newsPerDay - newsToday)
   const articleRoom = opts.force ? BATCH.articlesPerDay : Math.max(0, BATCH.articlesPerDay - articlesToday)
   const perRun = Math.max(1, Math.min(opts.max ?? BATCH.maxPerRun, BATCH.maxPerRun))
 
+  // Note: the quota check happens before stories are fetched, so a day that is
+  // full still costs one round of feed reads. That is deliberate — it is the
+  // only way to discover whether something big has broken.
   if (newsRoom === 0 && articleRoom === 0 && !opts.force) {
     return {
       status: 'skipped',
@@ -1015,12 +1016,40 @@ export const runDailyBatch = async (opts: {
   const urgentCount = stories.filter(isUrgent).length
   if (urgentCount) notes.push(`${urgentCount} story/stories broke in the last 30 minutes.`)
 
-  // Breaking activity lifts the day's news ceiling.
+  /**
+   * Big enough to publish even though the day's quota is used up.
+   *
+   * Two independent routes, because they catch different things. Broad
+   * corroboration — several separate desks filing on the same story within the
+   * hour — is the strongest signal that something real has happened. Confirmed
+   * club events are the other: a completed signing or a departure is worth
+   * covering whether or not four outlets have caught up yet.
+   */
+  const CONFIRMED = /\b(sign(s|ed|ing)?|complete[ds]?|confirm(s|ed)|announce[ds]?|unveil(s|ed)|sack(s|ed)|depart(s|ure)|joins?|agree[ds]?|medical|contract|injur(y|ed)|ruled out)\b/i
+  const breaksCap = (c: StoryCluster) =>
+    (c.outlets.length >= BATCH.breakCapOutlets && isUrgent(c)) ||
+    (CONFIRMED.test(c.lead.title) && c.outlets.length >= 2 && isUrgent(c))
+
   let newsAllowance = newsRoom
-  if (!opts.force && urgentCount > 0 && newsAllowance === 0 && newsToday < BATCH.newsPerDayBreaking) {
-    newsAllowance = Math.min(urgentCount, BATCH.newsPerDayBreaking - newsToday)
-    notes.push(`Breaking activity lifted the news ceiling to ${BATCH.newsPerDayBreaking} for today.`)
+  let articleAllowance = articleRoom
+  const bigStories = stories.filter(breaksCap)
+
+  if (!opts.force && bigStories.length) {
+    // Only ever enough room for the big stories themselves, and never past the
+    // hard ceiling.
+    const extraNews = Math.max(0, Math.min(bigStories.length, BATCH.newsPerDayMax - newsToday) - newsAllowance)
+    const extraArticles = Math.max(0, Math.min(1, BATCH.articlesPerDayMax - articlesToday) - articleAllowance)
+    if (extraNews > 0 || extraArticles > 0) {
+      newsAllowance += extraNews
+      articleAllowance += extraArticles
+      notes.push(
+        `${bigStories.length} story/stories cleared the significance bar, so the day's quota was extended by ${extraNews} news and ${extraArticles} article(s).`,
+      )
+    }
   }
+
+  // Big stories go first — the whole point of extending the quota.
+  stories.sort((a, b) => Number(breaksCap(b)) - Number(breaksCap(a)))
 
   const published: StoredArticle[] = []
   const writtenTitles = publishedToday.map((a) => a.title)
@@ -1035,7 +1064,7 @@ export const runDailyBatch = async (opts: {
   const recentOpenings = recent.map((a) => stripTags(a.content).split(/\s+/).slice(0, 7).join(' '))
 
   let newsLeft = newsAllowance
-  let articlesLeft = articleRoom
+  let articlesLeft = articleAllowance
   const callBudget = perRun * 2 + 2
   let callsUsed = 0
 

@@ -426,6 +426,16 @@
         </div>
     </noscript>
 
+    <!-- Netlify detects forms by parsing the deployed HTML at build time, and it
+         cannot see a form React renders at runtime. This hidden copy is what it
+         registers; the visible React form posts to it. Submissions appear under
+         Forms in the Netlify dashboard and can be set to email you. -->
+    <form name="contact" netlify netlify-honeypot="bot-field" hidden>
+      <input type="text" name="name" />
+      <input type="email" name="email" />
+      <textarea name="message"></textarea>
+    </form>
+
     <div id="bg-audio" style="display: none; position: absolute; width: 0; height: 0; pointer-events: none;"></div>
     <div class="film-grain"></div>
     <div id="root"></div>
@@ -1275,7 +1285,9 @@
                     '/privacy': 'Privacy Policy | United Road',
                     '/terms': 'Terms of Service | United Road',
                     '/about': 'About United Road | Fan Hub',
-                    '/contact': 'Contact Us | United Road'
+                    '/contact': 'Contact Us | United Road',
+                    '/author': 'Adam James — Founder & Editor | United Road',
+                    '/standards': 'Editorial Standards | United Road'
                 };
                 if (path.startsWith('/article/')) {
                     // The server already set the real title for the initial load;
@@ -3431,6 +3443,72 @@
                 </div>
             );
 
+            // An author page and a published editorial policy are what tell a reader —
+            // and an ad network's reviewer — that there are real people and real
+            // standards behind the site.
+            const renderAuthorPage = () => {
+                const mine = blogPosts.slice(0, 12);
+                return (
+                    <div className="pt-20 bg-[#F9FAFB] min-h-screen pb-32">
+                        <PageHero eyebrow="Who Writes This" icon={PenTool} title="Adam" accent="James"
+                            blurb="Founder and editor of United Road." />
+                        <div className="max-w-[820px] mx-auto px-5">
+                            <div className="ur-card !shadow-md p-8 md:p-10 mb-12 hover:!translate-y-0">
+                                <div className="flex items-center gap-5 mb-7">
+                                    <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#DA291C] to-[#8B1109] flex items-center justify-center text-white font-heading font-black text-2xl flex-shrink-0">AJ</div>
+                                    <div>
+                                        <div className="font-heading font-black text-2xl text-gray-900">Adam James</div>
+                                        <div className="text-[11px] font-heading font-bold text-gray-400 uppercase tracking-widest mt-1">Founder & Editor · Manchester</div>
+                                    </div>
+                                </div>
+                                <div className="prose max-w-none font-body text-gray-700">
+                                    <p>I started United Road because I wanted somewhere that covered Manchester United the way supporters actually talk about it — properly informed, willing to say when something is not good enough, and never pretending a rumour is a done deal.</p>
+                                    <p>Everything published here is written for United Road. We read the reporting, work out what has actually happened, and write it in our own words with our own view attached. We do not republish other outlets' copy.</p>
+                                    <p>If you spot something wrong, tell me and I will fix it. That offer is genuine — see our <button onClick={() => doNavigate('/standards')} className="text-[#DA291C] font-bold underline">editorial standards</button>.</p>
+                                </div>
+                                <div className="flex flex-wrap gap-3 mt-8">
+                                    <button onClick={() => doNavigate('/contact')} className="ur-btn ur-btn-red px-7 py-3.5 text-[11px]">Get In Touch</button>
+                                    <a href={LINKS.youtubeUrl} target="_blank" rel="noopener" className="ur-btn ur-btn-outline px-7 py-3.5 text-[11px] flex items-center gap-2"><YouTubeIcon /> YouTube</a>
+                                </div>
+                            </div>
+
+                            {mine.length > 0 && (
+                                <>
+                                    <h2 className="ur-display text-2xl md:text-3xl text-gray-900 mb-6">Recent Work</h2>
+                                    <div className="space-y-3">
+                                        {mine.map(post => (
+                                            <div key={post.id} onClick={() => doNavigate(`/article/${post.id}`)} role="button" tabIndex={0}
+                                                onKeyDown={(e) => { if (e.key === 'Enter') doNavigate(`/article/${post.id}`); }}
+                                                className="ur-card p-5 flex items-center gap-4 cursor-pointer group">
+                                                <span className="ur-chip ur-chip-red flex-shrink-0">{post.category || 'News'}</span>
+                                                <span className="font-heading font-bold text-gray-900 group-hover:text-[#DA291C] transition-colors leading-snug flex-1">{post.title}</span>
+                                                <span className="text-[10px] font-heading font-bold text-gray-400 uppercase tracking-widest whitespace-nowrap hidden sm:block">{post.date}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    </div>
+                );
+            };
+
+            const renderStandardsPage = () => renderLegalPage('Editorial Standards', (
+                <>
+                    <p>United Road is an independent Manchester United site. These are the rules we hold ourselves to, published so you can hold us to them as well.</p>
+                    <h3>What we publish</h3>
+                    <p>Everything on this site is written for United Road. We read the day's reporting, establish what has actually happened, and write it in our own words with our own analysis attached. We do not republish other outlets' articles, and we do not reproduce their phrasing.</p>
+                    <h3>Fact and speculation</h3>
+                    <p>We distinguish between what is confirmed and what is being reported. A rumour is described as a rumour. We do not state a fee, a contract length or a medical outcome we cannot stand behind, and we would rather write a shorter piece than a speculative one.</p>
+                    <h3>Opinion</h3>
+                    <p>Our articles carry a point of view — that is the point of a fan site. Where we take a position, we argue it and show the reasoning. Opinion is kept clearly separate from reporting.</p>
+                    <h3>Corrections</h3>
+                    <p>If we get something wrong, tell us and we will correct it. Email <a href="mailto:theunitedroad2@gmail.com">theunitedroad2@gmail.com</a> or use the <strong>contact page</strong>. Significant corrections are noted on the article itself.</p>
+                    <h3>Independence</h3>
+                    <p>United Road is not affiliated with, endorsed by, or connected to Manchester United Football Club. We are funded by advertising and we do not accept payment for coverage. No article on this site has been paid for by a third party.</p>
+                </>
+            ));
+
             const renderContactPage = () => (
                 <div className="pt-32 bg-[#F9FAFB] min-h-screen pb-32 relative overflow-hidden">
                     <div className="absolute inset-0 ur-dot-grid opacity-50 pointer-events-none"></div>
@@ -3440,13 +3518,37 @@
                             <div className="relative w-16 h-16 bg-gradient-to-br from-[#F0392B] to-[#8B1109] rounded-2xl flex items-center justify-center shadow-xl"><Send className="w-7 h-7 text-white" /></div>
                         </div>
                         <h1 className="ur-display text-4xl md:text-6xl text-gray-900 mb-4">Contact <span className="ur-ink-red">Us</span></h1>
-                        <p className="text-gray-500 font-body text-lg mb-10">Have a question about the site, advertising, or want to submit a chant? Let us know.</p>
-                        <form onSubmit={(e) => { 
-                            e.preventDefault(); 
-                            setContactStatus('Thanks! Your message has been sent to the United Road team.');
-                            setTimeout(() => setContactStatus(''), 4000);
-                            e.target.reset();
-                        }} className="bg-white p-8 md:p-10 rounded-[32px] shadow-xl border border-gray-200 text-left">
+                        <p className="text-gray-500 font-body text-lg mb-4">Have a question about the site, advertising, or want to submit a chant? Let us know.</p>
+                        <p className="text-gray-500 font-body mb-10">Or email us directly at <a href="mailto:theunitedroad2@gmail.com" className="text-[#DA291C] font-bold underline">theunitedroad2@gmail.com</a>.</p>
+                        <form
+                            name="contact"
+                            data-netlify="true"
+                            netlify-honeypot="bot-field"
+                            onSubmit={async (e) => {
+                                e.preventDefault();
+                                const form = e.target;
+                                const data = new FormData(form);
+                                data.append('form-name', 'contact');
+                                setContactStatus('Sending…');
+                                try {
+                                    // Posting to the site root is how Netlify Forms
+                                    // receives a submission from a JavaScript app.
+                                    const res = await fetch('/', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                                        body: new URLSearchParams(data).toString(),
+                                    });
+                                    if (!res.ok) throw new Error(res.status);
+                                    setContactStatus('Thanks — your message has reached us. We read everything.');
+                                    form.reset();
+                                } catch (_) {
+                                    setContactStatus('Something went wrong. Email us directly at theunitedroad2@gmail.com and we will pick it up.');
+                                }
+                                setTimeout(() => setContactStatus(''), 8000);
+                            }}
+                            className="bg-white p-8 md:p-10 rounded-[32px] shadow-xl border border-gray-200 text-left">
+                            <input type="hidden" name="form-name" value="contact" />
+                            <p className="hidden"><label>Leave this empty: <input name="bot-field" /></label></p>
                             
                             {contactStatus && (
                                 <div className="mb-6 p-4 bg-green-50 border border-green-200 text-green-800 rounded-xl font-bold font-heading text-sm text-center">
@@ -3454,9 +3556,9 @@
                                 </div>
                             )}
 
-                            <div className="mb-6"><label className="block text-xs font-heading font-bold text-gray-700 uppercase tracking-widest mb-2">Name</label><input type="text" required className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-[#DA291C] transition-colors"/></div>
-                            <div className="mb-6"><label className="block text-xs font-heading font-bold text-gray-700 uppercase tracking-widest mb-2">Email</label><input type="email" required className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-[#DA291C] transition-colors"/></div>
-                            <div className="mb-8"><label className="block text-xs font-heading font-bold text-gray-700 uppercase tracking-widest mb-2">Message</label><textarea required rows="4" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-[#DA291C] transition-colors"></textarea></div>
+                            <div className="mb-6"><label className="block text-xs font-heading font-bold text-gray-700 uppercase tracking-widest mb-2">Name</label><input type="text" name="name" required className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-[#DA291C] transition-colors"/></div>
+                            <div className="mb-6"><label className="block text-xs font-heading font-bold text-gray-700 uppercase tracking-widest mb-2">Email</label><input type="email" name="email" required className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-[#DA291C] transition-colors"/></div>
+                            <div className="mb-8"><label className="block text-xs font-heading font-bold text-gray-700 uppercase tracking-widest mb-2">Message</label><textarea name="message" required rows="4" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-[#DA291C] transition-colors"></textarea></div>
                             <button type="submit" className="w-full bg-[#DA291C] text-white font-heading font-black text-sm tracking-widest uppercase py-4 rounded-xl hover:bg-red-700 transition-colors shadow-md">Send Message</button>
                         </form>
                     </div>
@@ -3480,6 +3582,8 @@
                     case '/manager': return renderGamesPage();
                     case '/articles': return renderBlogList();
                     case '/contact': return renderContactPage();
+                    case '/author': return renderAuthorPage();
+                    case '/standards': return renderStandardsPage();
                     case '/transfers': return renderTransferPage();
                     case '/academy': return renderAcademyPage();
                     case '/about': return renderLegalPage("About United Road", (
@@ -3666,6 +3770,8 @@
                                     <div className="uppercase font-heading text-[10px] tracking-[3px] text-white/40 mb-6 font-black drop-shadow-sm">LEGAL</div>
                                     <div className="space-y-4 text-[11px] tracking-widest font-heading font-bold">
                                         <button onClick={() => doNavigate('/about')} className="block text-white/80 hover:text-[#DA291C] mx-auto md:mx-0 transition-colors uppercase">ABOUT US</button>
+                                        <button onClick={() => doNavigate('/author')} className="block text-white/80 hover:text-[#DA291C] mx-auto md:mx-0 transition-colors uppercase">WHO WRITES THIS</button>
+                                        <button onClick={() => doNavigate('/standards')} className="block text-white/80 hover:text-[#DA291C] mx-auto md:mx-0 transition-colors uppercase">EDITORIAL STANDARDS</button>
                                         <button onClick={() => doNavigate('/privacy')} className="block text-white/80 hover:text-[#DA291C] mx-auto md:mx-0 transition-colors uppercase">PRIVACY POLICY</button>
                                         <button onClick={() => doNavigate('/terms')} className="block text-white/80 hover:text-[#DA291C] mx-auto md:mx-0 transition-colors uppercase">TERMS OF SERVICE</button>
                                         <button onClick={() => doNavigate('/contact')} className="block text-white/80 hover:text-[#DA291C] mx-auto md:mx-0 transition-colors uppercase">CONTACT US</button>

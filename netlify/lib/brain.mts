@@ -160,17 +160,29 @@ Respond with a single JSON object and nothing else. No markdown fence, no commen
 export const BATCH = {
   /** Most pieces of either kind a single five-minute run will write. */
   maxPerRun: 3,
-  /** Daily ceilings, counted separately per kind. */
-  newsPerDay: 10,
-  articlesPerDay: 5,
+
+  // Ordinary daily ceilings. Deliberately modest: six thin pieces a day is a
+  // worse site — and a worse ad-network application — than a handful of good
+  // ones.
+  newsPerDay: 5,
+  articlesPerDay: 2,
+
+  // Hard ceilings that a genuinely big story may reach past the ordinary caps.
+  //
+  // Without this, the desk would sit out an actual signing or a sacking simply
+  // because it had already filed five squad-number stories that morning, which
+  // is the one failure a news site cannot have. Only stories clearing the
+  // significance bar below unlock this room, and these numbers still stop a
+  // busy day running away.
+  newsPerDayMax: 12,
+  articlesPerDayMax: 4,
+
   /**
-   * On a genuinely busy day the news ceiling lifts. A story counts towards this
-   * only if it broke within the last half hour, so an ordinary day cannot creep
-   * past newsPerDay — it takes real breaking activity to unlock the extra room.
+   * How many outlets must be running a story before it counts as big enough to
+   * break the ordinary cap. Corroboration is the honest signal here: when six
+   * separate desks file on the same thing within the hour, it is real.
    */
-  newsPerDayBreaking: 18,
-  /** Below this many news pieces the day is considered under-served. */
-  newsFloorPerDay: 5,
+  breakCapOutlets: 4,
 } as const
 
 export type ArticleKind = 'news' | 'article' | 'match' | 'weekly'
