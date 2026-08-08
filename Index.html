@@ -2435,6 +2435,12 @@
                                     </div>
                                 )}
 
+                                {!videoSearchQuery && archiveItems.length === 0 && (
+                                    <div className="pb-20">
+                                        <EmptyState dark icon={Film} title="The Archive Is Quiet" body="No titles came back from the film archives this time. It refreshes whenever you open this page — try again shortly." />
+                                    </div>
+                                )}
+
                                 {/* Netflix Rows (If not searching) */}
                                 {!videoSearchQuery && (
                                     <div className="space-y-14 pb-20">
@@ -2454,11 +2460,24 @@
                                                         <span className="text-[10px] font-heading font-bold tracking-[2px] uppercase text-gray-500 mt-0.5">{row.items.length}</span>
                                                         <div className="flex-1 h-[1px] bg-gradient-to-r from-white/15 to-transparent ml-2"></div>
                                                     </div>
-                                                    <div className="flex gap-4 overflow-x-auto netflix-row snap-x pb-6 pt-2 px-2 -mx-2">
-                                                        {row.items.map((item, idx) => (
-                                                            <div key={item.videoId || idx} className="flex-shrink-0 w-[240px] md:w-[290px] lg:w-[330px] snap-start">
-                                                                <VideoTile item={item} onPlay={setActiveArchiveVideo} />
-                                                            </div>
+                                                    {/* Arrow controls: a horizontal row is discoverable on a
+                                                        phone by swiping, but on desktop there is nothing to tell
+                                                        the reader more titles exist off-screen. */}
+                                                    <div className="relative group/row">
+                                                        <div id={`ur-row-${index}`} className="flex gap-4 overflow-x-auto netflix-row snap-x pb-6 pt-2 px-2 -mx-2 scroll-smooth">
+                                                            {row.items.map((item, idx) => (
+                                                                <div key={item.videoId || idx} className="flex-shrink-0 w-[240px] md:w-[290px] lg:w-[330px] snap-start">
+                                                                    <VideoTile item={item} onPlay={setActiveArchiveVideo} />
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                        {[-1, 1].map(dir => (
+                                                            <button key={dir}
+                                                                aria-label={dir < 0 ? 'Scroll left' : 'Scroll right'}
+                                                                onClick={() => document.getElementById(`ur-row-${index}`)?.scrollBy({ left: dir * 640, behavior: 'smooth' })}
+                                                                className={`hidden md:flex absolute top-1/2 -translate-y-1/2 ${dir < 0 ? 'left-0 -ml-3' : 'right-0 -mr-3'} w-11 h-11 items-center justify-center rounded-full bg-black/70 border border-white/20 text-white backdrop-blur opacity-0 group-hover/row:opacity-100 hover:bg-[#DA291C] hover:border-[#DA291C] transition-all z-30`}>
+                                                                <ChevronRight className={`w-5 h-5 ${dir < 0 ? 'rotate-180' : ''}`} />
+                                                            </button>
                                                         ))}
                                                     </div>
                                                 </div>
@@ -2479,20 +2498,52 @@
                         title="Live Match" accent="& Table"
                         blurb="Latest highlights, the next fixture and where United sit in the Premier League — pulled live, no refresh needed." />
 
+                    {/* Matchday band: the ground, in the site's own artwork, so the page
+                        opens on something of ours rather than straight into an iframe. */}
+                    <div className="max-w-[1680px] mx-auto px-5 md:px-10 mb-10">
+                        <Reveal>
+                            <div className="relative rounded-[32px] overflow-hidden border border-[#FFD700]/20 bg-[#07040A] shadow-[var(--ur-shadow-lg)]">
+                                <img src="/assets/old-trafford.svg" alt="" aria-hidden="true"
+                                    className="absolute inset-0 w-full h-full object-cover object-bottom opacity-70" />
+                                <div className="absolute inset-0 bg-gradient-to-r from-[#07040A] via-[#07040A]/70 to-transparent"></div>
+                                <div className="relative z-10 p-8 md:p-12 lg:p-14 max-w-2xl">
+                                    <div className="inline-flex items-center gap-2.5 bg-[#DA291C] px-4 py-2 rounded-full mb-5 shadow-lg">
+                                        <span className="w-2 h-2 bg-white rounded-full animate-pulse"></span>
+                                        <span className="text-[10px] font-heading font-black tracking-[2.5px] text-white uppercase">Matchday</span>
+                                    </div>
+                                    <h2 className="ur-display text-3xl sm:text-4xl md:text-5xl text-white mb-4">The Theatre<br /><span className="ur-ink-gold">Of Dreams</span></h2>
+                                    <p className="text-white/70 font-body text-base md:text-lg max-w-lg">
+                                        Every fixture, every result and where we sit in the table — live, on one screen.
+                                    </p>
+                                    <div className="flex flex-wrap gap-2.5 mt-7">
+                                        {['Old Trafford', 'Capacity 74,310', 'Since 1910'].map(t => (
+                                            <span key={t} className="ur-chip ur-chip-dark">{t}</span>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </Reveal>
+                    </div>
+
                     <div className="max-w-[1680px] mx-auto px-5 md:px-10">
                         <div className="grid lg:grid-cols-12 gap-6 lg:gap-8 mb-16">
                             <Reveal className="lg:col-span-7">
-                                <div className="ur-card !rounded-[32px] p-2 h-[650px] overflow-hidden relative hover:!translate-y-0">
-                                    <div className="absolute top-6 left-6 z-10 flex items-center gap-2 uppercase tracking-[2px] font-heading text-[10px] font-black text-gray-900 bg-white/90 backdrop-blur px-4 py-2 rounded-full border border-gray-200 shadow-sm">
-                                        <span className="ur-live"></span> Live / Next Fixture
+                                <div className="ur-card !rounded-[32px] overflow-hidden relative hover:!translate-y-0 flex flex-col h-[680px]">
+                                    <div className="flex items-center gap-2.5 px-6 py-4 border-b border-gray-100 bg-gray-50/70">
+                                        <span className="ur-live"></span>
+                                        <span className="uppercase tracking-[2px] font-heading text-[10px] font-black text-gray-900">Live / Next Fixture</span>
+                                        <span className="ml-auto text-[10px] font-heading font-bold text-gray-400 uppercase tracking-widest hidden sm:block">Highlights & results</span>
                                     </div>
-                                    <iframe src="https://www.scorebat.com/embed/team/manchester-united/?sort=recent" width="100%" height="100%" frameBorder="0" scrolling="no" className="rounded-[26px] mt-12 bg-white" allowFullScreen title="Manchester United fixtures and highlights"></iframe>
+                                    <iframe src="https://www.scorebat.com/embed/team/manchester-united/?sort=recent" width="100%" height="100%" frameBorder="0" scrolling="no" className="flex-1 bg-white" allowFullScreen title="Manchester United fixtures and highlights"></iframe>
                                 </div>
                             </Reveal>
                             <Reveal delay={100} className="lg:col-span-5">
-                                <div className="ur-card !rounded-[32px] p-2 flex flex-col h-[650px] overflow-hidden relative hover:!translate-y-0">
-                                    <div className="absolute top-6 left-6 z-10 uppercase font-heading tracking-[2px] text-[10px] font-black text-[#DA291C] bg-white/90 backdrop-blur px-4 py-2 rounded-full border border-red-100 shadow-sm">Premier League Standings</div>
-                                    <div className="w-full h-full pt-14 rounded-[26px] overflow-hidden bg-white">
+                                <div className="ur-card !rounded-[32px] overflow-hidden relative hover:!translate-y-0 flex flex-col h-[680px]">
+                                    <div className="flex items-center gap-2.5 px-6 py-4 border-b border-gray-100 bg-gray-50/70">
+                                        <Trophy className="w-4 h-4 text-[#DA291C]" />
+                                        <span className="uppercase font-heading tracking-[2px] text-[10px] font-black text-gray-900">Premier League Table</span>
+                                    </div>
+                                    <div className="flex-1 overflow-hidden bg-white">
                                         <iframe frameBorder="0" scrolling="yes" width="100%" height="100%" title="Premier League table" src="https://www.fctables.com/england/premier-league/iframe/?type=table&lang_id=2&country=67&template=11&team=190302&timezone=Europe/London&time=24&po=1&ma=1&wi=0&dr=0&los=0&gf=0&ga=0&gd=1&pts=1&ng=0&form=0&set_color=ffffff&text_color=111111&link_color=DA291C&hlt=DA291C"></iframe>
                                     </div>
                                 </div>
@@ -2837,8 +2888,19 @@
                                             <button onClick={toggleChantMode} className="mb-10 mx-auto flex items-center gap-3 px-8 py-4 bg-[#DA291C] text-white font-heading font-black text-xs md:text-sm tracking-[2px] rounded-full shadow-lg hover:bg-red-700 transition-colors">
                                                 {isPlayingChant ? <>STOP SINGING <div className="w-2 h-2 bg-white animate-pulse rounded-full"/></> : <>START SINGING <Volume2 className="w-4 h-4"/></>}
                                             </button>
-                                            <div className="font-heading text-xl md:text-3xl leading-[1.6] text-gray-700 max-w-2xl mx-auto font-bold tracking-tight">
-                                                {chantLines.map((line, idx) => (<div key={idx} className={`transition-all duration-300 py-1 ${currentLyricIndex === idx ? 'text-[#DA291C] scale-105' : 'text-gray-300'}`}>{line || <br/>}</div>))}
+                                            <div className="relative max-w-2xl mx-auto rounded-[28px] border border-gray-100 bg-gradient-to-b from-gray-50 to-white px-6 py-10 md:px-10 md:py-12 shadow-inner">
+                                                <div className="font-heading text-xl md:text-[32px] leading-[1.55] font-black tracking-tight">
+                                                    {chantLines.map((line, idx) => (
+                                                        <div key={idx} className={`transition-all duration-500 py-1.5 ${currentLyricIndex === idx ? 'text-[#DA291C] scale-[1.04]' : isPlayingChant ? 'text-gray-300' : 'text-gray-800'}`}>
+                                                            {line || <br/>}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                                {isPlayingChant && (
+                                                    <div className="absolute top-5 right-5 flex items-end gap-[3px] h-4">
+                                                        {[0,1,2,3].map(i => <span key={i} className="audio-bar w-[3px] bg-[#DA291C] rounded-full" style={{animationDelay:`${i*130}ms`}}/>)}
+                                                    </div>
+                                                )}
                                             </div>
                                             <button onClick={handleCopy} className="mt-10 mx-auto flex items-center gap-2 text-xs font-heading font-bold tracking-widest text-gray-600 bg-gray-100 hover:bg-gray-200 px-6 py-3 rounded-full transition-colors border border-gray-200">
                                                 {copied ? <CheckCircle className="w-4 h-4 text-[#1DB954]"/> : <Copy className="w-4 h-4"/>} COPY LYRICS
@@ -2897,16 +2959,21 @@
                                     </div>
                                 </div>
                             </div>
-                            <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-6 oracle-scroll relative z-10">
+                            <div className="flex-1 overflow-y-auto p-5 md:p-7 space-y-5 oracle-scroll relative z-10 bg-[#FAFAFB]">
                                 {chatHistory.map((msg, i) => (
-                                    <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                        <div className={`max-w-[85%] px-6 py-4 font-body text-sm md:text-base font-medium rounded-3xl shadow-sm border ${msg.role === 'user' ? 'bg-[#DA291C] text-white border-[#DA291C] rounded-br-sm' : 'bg-gray-50 border-gray-100 text-gray-800 rounded-bl-sm'}`}>{msg.text}</div>
+                                    <div key={i} className={`flex items-end gap-2.5 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                        {msg.role !== 'user' && (
+                                            <div className="w-8 h-8 rounded-full bg-black flex items-center justify-center flex-shrink-0 overflow-hidden border border-gray-200 mb-0.5">
+                                                <img src={LINKS.logoUrl} alt="" className="w-full h-full object-contain" />
+                                            </div>
+                                        )}
+                                        <div className={`max-w-[80%] px-5 py-3.5 font-body text-sm md:text-[15px] leading-relaxed font-medium shadow-sm border ${msg.role === 'user' ? 'bg-gradient-to-br from-[#F0392B] to-[#B41C12] text-white border-transparent rounded-[20px] rounded-br-md' : 'bg-white border-gray-200 text-gray-800 rounded-[20px] rounded-bl-md'}`}>{msg.text}</div>
                                     </div>
                                 ))}
                                 {isOracleThinking && (
                                     <div className="flex justify-start">
                                         <div className="bg-gray-50 border border-gray-100 px-6 py-5 rounded-3xl rounded-bl-sm flex items-center gap-4 shadow-sm">
-                                            <div className="flex gap-1.5"><div className="w-2 h-2 bg-[#DA291C]/50 rounded-full animate-bounce"/><div className="w-2 h-2 bg-[#DA291C]/50 rounded-full animate-bounce" style={{animationDelay:'150ms'}}/><div className="w-2 h-2 bg-[#DA291C]/50 rounded-full animate-bounce" style={{animationDelay:'300ms'}}/></div>
+                                            <div className="flex gap-1.5"><div className="w-2 h-2 bg-[#DA291C]/60 rounded-full animate-bounce"/><div className="w-2 h-2 bg-[#DA291C]/60 rounded-full animate-bounce" style={{animationDelay:'150ms'}}/><div className="w-2 h-2 bg-[#DA291C]/60 rounded-full animate-bounce" style={{animationDelay:'300ms'}}/></div>
                                         </div>
                                     </div>
                                 )}

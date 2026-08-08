@@ -157,6 +157,14 @@ const FEEDS: FeedDef[] = [
   { url: googleNews('Manchester United signing agreement medical'), source: 'Google News', discovery: true },
   { url: googleNews('"Man Utd" OR "Manchester United" academy youth'), source: 'Google News', discovery: true },
   { url: googleNews('Manchester United Old Trafford Ineos Ratcliffe'), source: 'Google News', discovery: true },
+  // The reporters whose word actually settles a story. Discovery only — used to
+  // spot which lines are real and which outlets are running them, never quoted
+  // or named in the copy.
+  { url: googleNews('Laurie Whitwell Manchester United'), source: 'Google News', discovery: true },
+  { url: googleNews('Simon Stone Manchester United'), source: 'Google News', discovery: true },
+  { url: googleNews('James Ducker OR "Mike McGrath" Manchester United'), source: 'Google News', discovery: true },
+  { url: googleNews('Rob Dawson OR "Mark Critchley" Manchester United'), source: 'Google News', discovery: true },
+  { url: googleNews('"Charlotte Duncker" OR "Andy Mitten" OR "Simon Peach" Manchester United'), source: 'Google News', discovery: true },
 ]
 
 // Terms that identify a story as being about *this* club.
