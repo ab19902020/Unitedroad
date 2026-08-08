@@ -57,9 +57,12 @@ the desk has already written up are filtered out so a story never appears twice.
 Set `BACKFILL_WITH_FEEDS` to `false` in `Index.html` to drop the external items
 entirely once the archive is deep enough to stand alone.
 
-A measured full run writes ten articles in about three minutes. Finished pieces are stored in Netlify Blobs and appear
-on `/articles` alongside the Substack posts, badged **AI Desk**, with the
+A measured full run writes ten articles in about three minutes. Finished pieces
+are stored in Netlify Blobs and appear on `/articles`, `/news` and `/transfers`
+alongside the Substack posts, under the byline **Adam James**, with the
 reporting they were written from listed at the bottom.
+
+Nothing on the site states how an article was produced.
 
 On a quiet day it writes one. On a dead day it writes nothing. Publishing filler
 is worse than publishing nothing, so the desk is never obliged to fill a quota.
@@ -74,18 +77,18 @@ Sign in at [platform.deepseek.com](https://platform.deepseek.com), go to **API
 Keys → Create new API key**, and copy it. You only see it once. Make sure the
 account has credit on it — the desk cannot write without it.
 
-**2. Invent a writer token**
+**2. Optionally, invent a writer token**
 
-Any long random string will do. On a Mac or Linux terminal:
+Only needed if you want to trigger runs by hand. Any long random string:
 
 ```bash
 openssl rand -hex 24
 ```
 
-Copy the result. This is not a DeepSeek thing — it is a password that stops
-strangers from triggering your writer and spending your credit.
+Skip this and the desk still runs on schedule — it falls back to the site's own
+ID as the internal secret between the cron and the worker.
 
-**3. Add both to Netlify**
+**3. Add to Netlify**
 
 In the Netlify dashboard, open the United Road site, then:
 
@@ -97,8 +100,8 @@ Add these one at a time. Leave the scope as **All scopes** and the context as
 
 | Key | Value |
 | --- | --- |
-| `DEEPSEEK_API_KEY` | the key from step 1 |
-| `ARTICLE_WRITER_TOKEN` | the random string from step 2 |
+| `DEEPSEEK_API_KEY` | the key from step 1 — **required** |
+| `ARTICLE_WRITER_TOKEN` | the random string from step 2 — optional |
 
 Optionally also add `DEEPSEEK_MODEL` with the value `deepseek-v4-pro` if you
 ever want longer, more considered pieces — it costs roughly 3× more. Leave it
@@ -113,7 +116,7 @@ green.
 **5. Check the functions registered**
 
 Go to **Logs → Functions.** You should see `generate-article`,
-`article-desk-background`, `articles`, `rss` and `substack`. If
+`article-desk-background`, `articles`, `desk-status`, `rss` and `substack`. If
 `article-desk-background` is missing, the deploy did not pick up the new files —
 re-run step 4.
 
@@ -133,7 +136,7 @@ that reports the truth (see the warning below).
 
 ```bash
 curl -X POST https://unitedroad.uk/.netlify/functions/article-desk-background \
-     -H "Authorization: Bearer YOUR_TOKEN_FROM_STEP_2" \
+     -H "Authorization: Bearer YOUR_TOKEN_OR_SITE_ID" \
      -H "Content-Type: application/json" \
      -d '{"force":true}'
 ```
@@ -144,12 +147,15 @@ curl -X POST https://unitedroad.uk/.netlify/functions/article-desk-background \
 > crashed on the first line. Never treat it as success. Wait a minute, then
 > reload `/api/desk-status` — that is where the real outcome is recorded.
 
-Once it reports articles stored, open `https://unitedroad.uk/#/articles`. The
-new pieces will be at the top with an **AI Desk** badge.
+Once it reports articles stored, open `https://unitedroad.uk/#/articles`.
+
+If you did not set `ARTICLE_WRITER_TOKEN`, use your **Site ID** as the bearer
+value instead — Netlify dashboard → **Site configuration → General → Site
+information → Site ID**.
 
 **That is it.** From then on it runs by itself at **07:15 and 16:15 UTC**, every
 day, with no prompting. The morning run catches the overnight reporting; the
-afternoon run picks up whatever broke during the day. The three-a-day ceiling
+afternoon run picks up whatever broke during the day. The twenty-a-day ceiling
 applies across both, so the second run tops the day up rather than doubling it.
 
 ---
@@ -157,15 +163,16 @@ applies across both, so the second run tops the day up rather than doubling it.
 ### Options on the manual trigger
 
 ```bash
--d '{"force":true}'      # ignore the "already published today" guard
--d '{"max":1}'           # write at most one this run
--d '{"max":3,"force":true}'
+-d '{"force":true}'       # ignore the per-day cap
+-d '{"max":1}'            # write at most one this run
+-d '{"max":10,"force":true}'
 ```
 
 ### Timing and cost
 
-Each article takes roughly 20–30 seconds end to end, so a three-article run is
-about a minute. Cost is around **$0.002 per article** on `deepseek-v4-flash`. At the twenty-a-day
+Each article takes roughly 15–20 seconds end to end; a full ten-article run
+measured 167 seconds across 18 API calls, well inside the worker's 15 minute
+limit. Cost is around **$0.002 per article** on `deepseek-v4-flash`. At the twenty-a-day
 ceiling that is roughly **$25 a year**; a normal day costs less, because the desk
 only writes what there is genuine news for.
 
@@ -177,15 +184,16 @@ minutes by the site's own polling.
 
 The work happens in a *background* function because Netlify kills scheduled
 functions at 30 seconds. The daily cron does nothing but hand the job over,
-which is what `ARTICLE_WRITER_TOKEN` authenticates. Without the token the cron
-logs an error and skips rather than paying for a generation that would be cut
-off.
+which is authenticated with `ARTICLE_WRITER_TOKEN` when set, and otherwise with
+the site's own ID.
 
 ---
 
 ### How the desk decides what to write about
 
-1. **Fetch** eleven United feeds — the club, the national press, the fanzones.
+1. **Fetch** twenty-one United feeds — the club, the national press, the
+   fanzones — plus five Google News searches covering United generally and
+   Fabrizio Romano, David Ornstein, transfers and injuries specifically.
 2. **Filter** out anything that is not about United, plus live blogs, quizzes
    and betting content.
 3. **Cluster** by headline similarity, so one transfer covered by five outlets
