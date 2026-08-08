@@ -22,5 +22,14 @@
 [functions."articles"]
   included_files = ["netlify/lib/**"]
 
+[functions."article-page"]
+  included_files = ["netlify/lib/**"]
+
+[functions."sitemap"]
+  included_files = ["netlify/lib/**"]
+
+[functions."feed"]
+  included_files = ["netlify/lib/**"]
+
 [functions."desk-status"]
   included_files = ["netlify/lib/**"]

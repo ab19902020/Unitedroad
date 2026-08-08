@@ -1098,17 +1098,52 @@
         // ==========================================
         // CUSTOM ROUTER
         // ==========================================
+        // Articles live on real paths (/article/:id), everything else on hashes.
+        //
+        // A fragment is never sent to a server, so "#/article/abc" and
+        // "#/article/xyz" are one URL to Google and carry the homepage's title
+        // and share image to every social crawler. Article pages therefore use
+        // real paths, which a Netlify function serves with their own <head>
+        // (see netlify/functions/article-page.mts). The rest of the site keeps
+        // its hash routes, which cost nothing to leave alone.
         const useHashRouter = () => {
-            const getHash = () => window.location.hash.replace('#', '') || '/';
-            const [path, setPath] = useState(getHash);
+            const readLocation = () => {
+                const p = window.location.pathname;
+                if (p.startsWith('/article/')) return p;
+                return window.location.hash.replace('#', '') || '/';
+            };
+            const [path, setPath] = useState(readLocation);
+
             useEffect(() => {
-                const onHashChange = () => setPath(getHash());
-                window.addEventListener('hashchange', onHashChange);
-                return () => window.removeEventListener('hashchange', onHashChange);
+                const onChange = () => setPath(readLocation());
+                window.addEventListener('hashchange', onChange);
+                window.addEventListener('popstate', onChange);
+                return () => {
+                    window.removeEventListener('hashchange', onChange);
+                    window.removeEventListener('popstate', onChange);
+                };
             }, []);
-            const navigate = (newPath) => { 
-                if(window.location.hash !== '#' + newPath) { window.location.hash = newPath; }
-                window.scrollTo(0,0); 
+
+            const navigate = (newPath) => {
+                if (newPath.startsWith('/article/')) {
+                    // pushState keeps the SPA instant while leaving a crawlable,
+                    // shareable URL in the address bar.
+                    if (window.location.pathname !== newPath) {
+                        window.history.pushState({}, '', newPath);
+                    }
+                    setPath(newPath);
+                } else {
+                    // Leaving an article path: clear it, or the pathname wins.
+                    if (window.location.pathname.startsWith('/article/')) {
+                        window.history.pushState({}, '', '/' + (newPath === '/' ? '' : '#' + newPath));
+                        setPath(newPath);
+                    } else if (window.location.hash !== '#' + newPath) {
+                        window.location.hash = newPath;
+                    } else {
+                        setPath(newPath);
+                    }
+                }
+                window.scrollTo(0, 0);
             };
             return { path, navigate };
         };
@@ -1242,9 +1277,14 @@
                     '/about': 'About United Road | Fan Hub',
                     '/contact': 'Contact Us | United Road'
                 };
-                if (path.startsWith('/article/')) document.title = 'Manchester United Blog Article | United Road';
+                if (path.startsWith('/article/')) {
+                    // The server already set the real title for the initial load;
+                    // this keeps it correct after client-side navigation.
+                    const post = blogPosts.find(p => p.id === path.split('/article/')[1]);
+                    document.title = post ? `${post.title} | United Road` : 'Manchester United News | United Road';
+                }
                 else document.title = titles[path] || titles['/'];
-            }, [path]);
+            }, [path, blogPosts]);
 
             // --- ARTICLE SYNC ---
             // Everything on the site is now written in-house by the editorial desk
@@ -3286,7 +3326,7 @@
                 );
 
                 const related = blogPosts.filter(p => p.id !== post.id).slice(0, 3);
-                const shareUrl = `${window.location.origin}/#/article/${post.id}`;
+                const shareUrl = `${window.location.origin}/article/${post.id}`;
 
                 return (
                     <div className="bg-white min-h-screen pb-32">
