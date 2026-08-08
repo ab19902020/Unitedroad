@@ -486,6 +486,12 @@ ${correction}
 Choose the shape that fits this story, judge whether it is good news, bad news or a rumour worth being sceptical about, and write it in the United Road house voice. Respond with the JSON object only.`
 }
 
+const buildLengthCorrection = (shortBy: number): string => `
+YOUR PREVIOUS ATTEMPT WAS REJECTED FOR BEING TOO SHORT.
+It fell roughly ${shortBy} words below the minimum. Do not pad it with filler or restate what you have already said. Instead go deeper: add the context the sources give that you left out, develop your verdict with an actual argument, and say what this changes for the squad or the season. Write the full 500 to 750 words.
+Remember to bold the key phrase in the opening with <strong>, and to use <strong> two or three times in total across the piece.
+`
+
 const buildCorrection = (phrases: string[]): string => `
 YOUR PREVIOUS ATTEMPT WAS REJECTED FOR COPYING.
 These runs of words appeared in your draft and in the source material, word for word:
@@ -594,16 +600,26 @@ const writeOne = async (
     if (result.ok) return { ...result, calls }
 
     lastReason = result.reason
-    if (!result.copiedPhrases?.length) break
-    correction = buildCorrection(result.copiedPhrases)
+    if (result.copiedPhrases?.length) {
+      correction = buildCorrection(result.copiedPhrases)
+    } else if (result.shortBy) {
+      correction = buildLengthCorrection(result.shortBy)
+    } else {
+      break
+    }
   }
 
   return { ok: false, reason: lastReason, calls }
 }
 
+// A draft this short is not a publishable article, and the model reliably
+// under-runs the brief on a first pass — so shortness is treated as a
+// retry-able fault rather than a reason to abandon the story.
+const MIN_WORDS = 400
+
 type ValidateResult =
   | { ok: true; article: StoredArticle }
-  | { ok: false; reason: string; copiedPhrases?: string[] }
+  | { ok: false; reason: string; copiedPhrases?: string[]; shortBy?: number }
 
 const validate = (parsed: any, story: StoryCluster, model: string): ValidateResult => {
   const title = stripTags(parsed?.title || '').slice(0, 160)
@@ -612,7 +628,9 @@ const validate = (parsed: any, story: StoryCluster, model: string): ValidateResu
   if (!title) return { ok: false, reason: 'no usable title' }
 
   const words = wordCount(bodyHtml)
-  if (words < 220) return { ok: false, reason: `only ${words} words of body copy` }
+  if (words < MIN_WORDS) {
+    return { ok: false, reason: `only ${words} words of body copy`, shortBy: MIN_WORDS - words }
+  }
 
   // Refuse anything that has lifted whole sentences from a source.
   const bodyText = stripTags(bodyHtml)
