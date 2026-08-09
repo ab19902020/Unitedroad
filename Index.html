@@ -1639,6 +1639,8 @@ FORMAT: plain text. No markdown, no headings, no bullet lists.`;
                             link: '',
                             readMinutes: item.readMinutes || 3,
                             tags: Array.isArray(item.tags) ? item.tags : [],
+                            people: Array.isArray(item.people) ? item.people : [],
+                            relatedIds: Array.isArray(item.relatedIds) ? item.relatedIds : [],
                             sources: Array.isArray(item.sources) ? item.sources : [],
                             category: item.category || 'NEWS',
                             kind: item.kind || 'article',
@@ -3823,7 +3825,17 @@ FORMAT: plain text. No markdown, no headings, no bullet lists.`;
                     </div>
                 );
 
-                const related = blogPosts.filter(p => p.id !== post.id).slice(0, 3);
+                // The writer picks what a reader of this piece would actually want
+                // next — it has just read the story, so it knows. "The three most
+                // recent other pieces" is only the fallback for older articles
+                // written before that existed, or when nothing genuinely fitted.
+                const chosen = (post.relatedIds || [])
+                    .map(id => blogPosts.find(p => p.id === id))
+                    .filter(p => p && p.id !== post.id);
+                const related = [
+                    ...chosen,
+                    ...blogPosts.filter(p => p.id !== post.id && !chosen.some(c => c.id === p.id)),
+                ].slice(0, 3);
                 const shareUrl = `${window.location.origin}/article/${post.id}`;
 
                 return (

@@ -139,15 +139,36 @@ Do not include links. No <a> tags at all — the piece stands on its own.
 OUTPUT
 Respond with a single JSON object and nothing else. No markdown fence, no commentary.
 {
-  "title": "Title Case headline, 45-85 characters",
+  "title": "Title Case headline, 45-85 characters — your best one",
+  "titleOptions": ["Two more Title Case headlines for the same piece, genuinely different in angle — not the same sentence reworded. One should lead on the concrete fact, one on what it means."],
   "standfirst": "One sentence, 120-180 characters, saying what the piece argues",
   "shape": "REPORT | OPINION | CASE",
   "tone": "positive | negative | sceptical | neutral",
   "tags": ["3 to 5 short lowercase tags, e.g. transfers, ownership, midfield, academy, analysis"],
+  "people": ["Full names of Manchester United players, staff or executives this piece is genuinely about — not everyone mentioned in passing. Empty array if none."],
   "category": "TRANSFERS | ANALYSIS | NEWS | OWNERSHIP | ACADEMY | HISTORY",
   "bodyHtml": "The article body as HTML, per the rules above",
+  "relatedIds": ["Up to 3 ids from OUR EARLIER COVERAGE below that a reader of this piece would genuinely want next. Only ids from that list. Empty array if none fit — a forced link is worse than none."],
   "sourceLinks": []
 }`
+
+/**
+ * The site's own back catalogue, offered to the writer so a new piece can point
+ * at what we have already published on the same subject.
+ *
+ * Internal links are the cheapest compounding thing a small site has: they keep
+ * a reader moving, and they tell a crawler which of our pages matter and how
+ * they relate. Doing it by keyword overlap produces confident nonsense, so the
+ * writer picks — it has just read the story and knows what a reader would
+ * actually want next. It is told to return nothing rather than force a link.
+ */
+export const buildArchiveNote = (archive: { id: string; title: string; date: string }[]): string => {
+  if (!archive.length) return ''
+  return `\nOUR EARLIER COVERAGE — for relatedIds. Choose only what a reader of this piece would genuinely want next.\n${archive
+    .slice(0, 40)
+    .map((a) => `  ${a.id}  |  ${a.title}  (${a.date})`)
+    .join('\n')}\n`
+}
 
 // The desk publishes two different things, and they are not the same job.
 //

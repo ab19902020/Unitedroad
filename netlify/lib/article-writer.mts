@@ -15,7 +15,7 @@
 
 import { getStore } from '@netlify/blobs'
 import { fetchFeed, stripTags, type FeedItem } from './feed.mts'
-import { UNITED_ROAD_BRAIN, NEWS_MODE_BRIEF, ARTICLE_MODE_BRIEF, MATCH_MODE_BRIEF, WEEKLY_MODE_BRIEF, ANTI_TEMPLATE, buildVarietyNote, BATCH, RELATED_CONTEXT_COUNT, type ArticleKind } from './brain.mts'
+import { UNITED_ROAD_BRAIN, NEWS_MODE_BRIEF, ARTICLE_MODE_BRIEF, MATCH_MODE_BRIEF, WEEKLY_MODE_BRIEF, ANTI_TEMPLATE, buildVarietyNote, buildArchiveNote, BATCH, RELATED_CONTEXT_COUNT, type ArticleKind } from './brain.mts'
 import { getWorkerAuth } from './worker-auth.mts'
 
 const DEEPSEEK_ENDPOINT = 'https://api.deepseek.com/chat/completions'
@@ -42,6 +42,12 @@ export type StoredArticle = {
   excerpt: string
   content: string
   tags: string[]
+  /** People the piece is genuinely about, for the /player topic pages. */
+  people?: string[]
+  /** Ids of our own earlier pieces a reader would want next. */
+  relatedIds?: string[]
+  /** Alternative headlines the writer produced, kept for review. */
+  titleOptions?: string[]
   category: string
   shape: string
   tone: string
@@ -907,6 +913,8 @@ const writeOne = async (
   alreadyWritten: string[],
   kind: ArticleKind,
   varietyNote: string,
+  archiveNote = '',
+  archiveIds: Set<string> = new Set(),
 ): Promise<WriteOutcome> => {
   let correction = ''
   let calls = 0
@@ -928,13 +936,14 @@ const writeOne = async (
           : ARTICLE_MODE_BRIEF,
         ANTI_TEMPLATE,
         varietyNote,
+        archiveNote,
       ]
         .filter(Boolean)
         .join('\n'),
       buildUserPrompt(story, otherStories, alreadyWritten, correction),
     )
 
-    const result = validate(parsed, story, model, kind, image)
+    const result = validate(parsed, story, model, kind, image, archiveIds)
     if (result.ok) return { ...result, calls }
 
     lastReason = result.reason
@@ -972,7 +981,7 @@ const BANNED_HEADINGS = [
   'conclusion', 'analysis', 'introduction', 'the story so far',
 ]
 
-const validate = (parsed: any, story: StoryCluster, model: string, kind: ArticleKind, image: string): ValidateResult => {
+const validate = (parsed: any, story: StoryCluster, model: string, kind: ArticleKind, image: string, archiveIds: Set<string> = new Set()): ValidateResult => {
   const title = stripTags(parsed?.title || '').slice(0, 160)
   const bodyHtml = sanitizeHtml(parsed?.bodyHtml || '')
 
@@ -1028,6 +1037,22 @@ const validate = (parsed: any, story: StoryCluster, model: string, kind: Article
       excerpt: standfirst || stripTags(bodyHtml).slice(0, 200),
       content: bodyHtml,
       tags,
+      // Only people the piece is actually about, capped so a name-dropping
+      // paragraph cannot spawn ten topic pages.
+      people: Array.isArray(parsed?.people)
+        ? parsed.people
+            .map((n: unknown) => stripTags(String(n)).replace(/\s+/g, ' ').trim().slice(0, 40))
+            .filter((n: string) => /^[\p{L}][\p{L}'’.\- ]{2,}$/u.test(n))
+            .slice(0, 4)
+        : [],
+      // The writer may only point at ids we actually gave it, so a hallucinated
+      // link cannot reach the page.
+      relatedIds: Array.isArray(parsed?.relatedIds)
+        ? parsed.relatedIds.filter((r: unknown) => typeof r === 'string' && archiveIds.has(r as string)).slice(0, 3)
+        : [],
+      titleOptions: Array.isArray(parsed?.titleOptions)
+        ? parsed.titleOptions.map((t: unknown) => stripTags(String(t)).slice(0, 160)).filter(Boolean).slice(0, 3)
+        : [],
       category: stripTags(parsed?.category || 'NEWS').toUpperCase().slice(0, 24),
       shape: stripTags(parsed?.shape || '').toUpperCase().slice(0, 12),
       kind,
@@ -1272,7 +1297,14 @@ export const runDailyBatch = async (opts: {
         // every piece rather than resetting each run.
         index.articles.length + published.length,
       )
-      const outcome = await writeOne(apiKey, model, story, others, writtenTitles, kind, varietyNote)
+      // Our own back catalogue, so the piece can point at what we already have.
+      const archive = [...published, ...index.articles]
+        .slice(0, 40)
+        .map((a) => ({ id: a.id, title: a.title, date: a.date }))
+      const outcome = await writeOne(
+        apiKey, model, story, others, writtenTitles, kind, varietyNote,
+        buildArchiveNote(archive), new Set(archive.map((a) => a.id)),
+      )
       callsUsed += outcome.calls
       if (!outcome.ok) {
         notes.push(`Skipped "${story.lead.title.slice(0, 60)}": ${outcome.reason}.`)
