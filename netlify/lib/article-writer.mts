@@ -77,15 +77,43 @@ export type RunRecord = {
   durationMs: number
 }
 
+/**
+ * A story the desk judged worth covering but had no quota left to write.
+ *
+ * This exists because the old behaviour was to drop it. Once the day's ceiling
+ * was reached, anything that did not clear the significance bar in that exact
+ * five-minute window was gone — not deferred, gone — and the next run started
+ * from the feeds again with no memory that it had ever seen the story. A signing
+ * confirmed at nine in the evening simply never got written.
+ *
+ * Nothing is discarded now. A story we cannot write is remembered, its
+ * significance carried with it, and it takes priority the moment there is room
+ * — including first thing the next morning when the quota resets.
+ */
+type PendingStory = {
+  /** Normalised lead title; the same key sameStory() matches on. */
+  key: string
+  title: string
+  firstSeen: number
+  lastSeen: number
+  /** Highest outlet count seen while it has been waiting. */
+  outlets: number
+  /** 0-10 significance from triage; -1 until it has been scored. */
+  score: number
+  /** How many runs have passed it over, so a story cannot starve forever. */
+  waits: number
+}
+
 type Index = {
   updatedAt: number
   covered: { title: string; at: number }[]
   articles: StoredArticle[]
+  pending?: PendingStory[]
   lastRun?: RunRecord
   lastRejectedAt?: number
 }
 
-const EMPTY_INDEX: Index = { updatedAt: 0, covered: [], articles: [] }
+const EMPTY_INDEX: Index = { updatedAt: 0, covered: [], articles: [], pending: [] }
 
 // --- Sources -------------------------------------------------------------
 
@@ -670,6 +698,63 @@ export const callDeepSeek = async (
   }
 }
 
+/**
+ * Score every candidate story 0-10 for how much a United supporter would care.
+ *
+ * The significance test used to be a keyword regex over the headline. That is a
+ * guess about importance dressed up as a rule: it cannot tell "United Confirm
+ * Signing Of A 17-Year-Old Third-Choice Keeper" from "United Confirm Sale Of The
+ * Club", it scores both on the word "confirm", and anything phrased outside its
+ * vocabulary is invisible to it no matter how big — which is exactly how the
+ * Rashford story was missed.
+ *
+ * So the model decides instead. One call rates the whole candidate list at once:
+ * a few hundred tokens against the ~4,000 a single article costs, so it runs on
+ * every cycle without meaningfully changing the bill. The regex survives as the
+ * fallback for when this call fails, because a worse signal beats no signal.
+ */
+export const triageStories = async (
+  apiKey: string,
+  model: string,
+  stories: { title: string; outlets: string[] }[],
+): Promise<number[]> => {
+  if (!stories.length) return []
+  const list = stories
+    .map((s, i) => `${i + 1}. ${s.title}  [${s.outlets.length} outlet${s.outlets.length === 1 ? '' : 's'}]`)
+    .join('\n')
+
+  const system = `You are the news editor of a Manchester United site, deciding what is worth the desk's time today.
+
+Score each headline 0-10 for how much a Manchester United supporter would care.
+
+9-10  The club is unmistakably changed: a signing or sale completed, a manager appointed or sacked, a takeover or ownership change, a major long-term injury, a senior player leaving or returning to the squad.
+7-8   Firm and consequential: a fee agreed, a medical booked, a contract signed or refused, a player back in training, a decisive team-selection call before a big fixture, a serious financial or ownership development.
+4-6   Real but ordinary: squad news, form, a well-sourced link to a target, youth progress, pre-match and post-match matter.
+1-3   Speculation, "could", "eyeing", "monitoring", listicles, polls, nostalgia, betting odds.
+0     Not about Manchester United at all, or pure clickbait.
+
+Judge the substance, not the wording. A confirmed but trivial event is not an 8. A huge story written flatly is still huge. A rumour phrased as fact is still a rumour.
+
+Respond with a single JSON object: {"scores":[{"n":1,"s":7},...]} covering every numbered headline, and nothing else.`
+
+  try {
+    const parsed = await callDeepSeek(apiKey, model, system, list)
+    const raw = Array.isArray(parsed?.scores) ? parsed.scores : []
+    const out = new Array(stories.length).fill(-1)
+    for (const row of raw) {
+      const i = Number(row?.n) - 1
+      const s = Number(row?.s)
+      if (Number.isInteger(i) && i >= 0 && i < out.length && Number.isFinite(s)) {
+        out[i] = Math.max(0, Math.min(10, s))
+      }
+    }
+    return out
+  } catch (err) {
+    console.warn('[triage] scoring failed, falling back to keywords:', (err as Error).message)
+    return new Array(stories.length).fill(-1)
+  }
+}
+
 const describeItem = (item: FeedItem, n: number): string => {
   const when = item.timestamp
     ? `${new Date(item.timestamp).toISOString().slice(0, 16).replace('T', ' ')} UTC`
@@ -749,6 +834,7 @@ export const readIndex = async (): Promise<Index> => {
       articles: Array.isArray(data.articles)
         ? data.articles.map((a) => (LEGACY_BYLINES.has(a.author) ? { ...a, author: AUTHOR_NAME } : a))
         : [],
+      pending: Array.isArray(data.pending) ? data.pending : [],
       lastRun: data.lastRun,
       lastRejectedAt: data.lastRejectedAt,
     }
@@ -992,19 +1078,28 @@ export const runDailyBatch = async (opts: {
   const articleRoom = opts.force ? BATCH.articlesPerDay : Math.max(0, BATCH.articlesPerDay - articlesToday)
   const perRun = Math.max(1, Math.min(opts.max ?? BATCH.maxPerRun, BATCH.maxPerRun))
 
-  // Note: the quota check happens before stories are fetched, so a day that is
-  // full still costs one round of feed reads. That is deliberate — it is the
-  // only way to discover whether something big has broken.
-  if (newsRoom === 0 && articleRoom === 0 && !opts.force) {
-    return {
-      status: 'skipped',
-      published: [],
-      storiesAvailable: 0,
-      notes: [`Daily ceilings reached: ${newsToday}/${BATCH.newsPerDay} news, ${articlesToday}/${BATCH.articlesPerDay} articles.`],
-    }
+  // A full day does NOT stop the desk looking.
+  //
+  // This used to return here, and the comment above it claimed the opposite of
+  // what the code did — it said fetching anyway was "the only way to discover
+  // whether something big has broken", and then returned before fetching
+  // anything. So from the moment the ordinary quota was spent, usually early
+  // afternoon, the desk was blind for the rest of the day: it never read the
+  // feeds, never scored a story, and breaksCap — the whole mechanism for letting
+  // a big story through — could not run, because there were no stories to test.
+  // A signing confirmed at nine in the evening was never even seen.
+  //
+  // So the run always reads the feeds and always scores them. What an exhausted
+  // quota means is only that ordinary stories get no room; a story that clears
+  // the significance bar is written regardless of the hour.
+  const quotaSpent = newsRoom === 0 && articleRoom === 0 && !opts.force
+  if (quotaSpent) {
+    notes.push(
+      `Daily ceilings reached (${newsToday}/${BATCH.newsPerDay} news, ${articlesToday}/${BATCH.articlesPerDay} articles) — still checking for anything significant.`,
+    )
   }
 
-  const stories = await gatherStories(index.covered)
+  let stories = await gatherStories(index.covered)
   if (stories.length === 0) {
     // The common case on a five-minute poll: nothing new since last time.
     // Costs one round of feed fetches and no DeepSeek call at all.
@@ -1056,13 +1151,53 @@ export const runDailyBatch = async (opts: {
   const CORROBORATION_WINDOW = 3 * 60 * 60 * 1000
   const CONFIRMED =
     /\b(sign(s|ed|ing)?|complete[ds]?|confirm(s|ed)|announce[ds]?|unveil(s|ed)|sack(s|ed)|appoint(s|ed)|depart(s|ure)|exit|joins?|rejoins?|return(s|ing|ed)?|recall(s|ed)|agree[ds]?|medical|contract|deal|injur(y|ed|ies)|ruled out|out for|suspend(s|ed)|ban(ned)?|takeover|stake)\b/i
-  const breaksCap = (c: StoryCluster) =>
-    (c.outlets.length >= BATCH.breakCapOutlets && Date.now() - c.timestamp < CORROBORATION_WINDOW) ||
-    (CONFIRMED.test(c.lead.title) && c.outlets.length >= 2)
+
+  // Editorial judgement first, keywords only if the call failed (score -1).
+  const scores = await triageStories(
+    apiKey,
+    model,
+    stories.map((s) => ({ title: s.lead.title, outlets: s.outlets })),
+  )
+  const scoreOf = (i: number) => scores[i] ?? -1
+
+  // A story that has been waiting keeps the significance it was given, and
+  // gains a little each run it is passed over, so nothing starves.
+  const pendingByKey = new Map((index.pending || []).map((p) => [p.key, p]))
+  const keyOf = (c: StoryCluster) => normaliseTitle(c.lead.title)
+  // Escalation is capped at a single point on purpose. It lets a 7 — "firm and
+  // consequential", which is where a story like a senior player rejoining the
+  // squad lands — reach the bar after two runs, about ten minutes, so it is
+  // published the same evening rather than waiting for the next day's quota. It
+  // deliberately cannot lift ordinary squad news at 6 over the bar however long
+  // it waits, or every quiet day would eventually spend its hard ceiling on
+  // filler. Below the bar is not lost, only queued.
+  const effectiveScore = (c: StoryCluster, i: number) => {
+    const held = pendingByKey.get(keyOf(c))
+    const base = Math.max(scoreOf(i), held?.score ?? -1)
+    return base < 0 ? -1 : Math.min(10, base + Math.min(1, (held?.waits ?? 0) * 0.5))
+  }
+
+  const breaksCap = (c: StoryCluster, i: number) => {
+    const s = effectiveScore(c, i)
+    if (s >= 0) return s >= BATCH.breakCapScore
+    // Fallback only — the model did not answer.
+    return (
+      (c.outlets.length >= BATCH.breakCapOutlets && Date.now() - c.timestamp < CORROBORATION_WINDOW) ||
+      (CONFIRMED.test(c.lead.title) && c.outlets.length >= 2)
+    )
+  }
+
+  // Decide significance once, then carry it with the story. Sorting and the
+  // pending queue both need it, and re-deriving it invites the two disagreeing.
+  const ranked = stories.map((c, i) => ({
+    story: c,
+    score: effectiveScore(c, i),
+    big: breaksCap(c, i),
+  }))
 
   let newsAllowance = newsRoom
   let articleAllowance = articleRoom
-  const bigStories = stories.filter(breaksCap)
+  const bigStories = ranked.filter((r) => r.big)
 
   if (!opts.force && bigStories.length) {
     // Only ever enough room for the big stories themselves, and never past the
@@ -1078,8 +1213,13 @@ export const runDailyBatch = async (opts: {
     }
   }
 
-  // Big stories go first — the whole point of extending the quota.
-  stories.sort((a, b) => Number(breaksCap(b)) - Number(breaksCap(a)))
+  // Most significant first, so if anything goes unwritten it is the least
+  // important thing on the list rather than whatever happened to sort last.
+  ranked.sort((a, b) => Number(b.big) - Number(a.big) || b.score - a.score)
+  stories = ranked.map((r) => r.story)
+  const scoreByKey = new Map(ranked.map((r) => [normaliseTitle(r.story.lead.title), r.score]))
+  const topScore = ranked.length ? Math.max(...ranked.map((r) => r.score)) : -1
+  if (topScore >= 0) notes.push(`Top significance score this run: ${topScore}/10.`)
 
   const published: StoredArticle[] = []
   const writtenTitles = publishedToday.map((a) => a.title)
@@ -1128,6 +1268,9 @@ export const runDailyBatch = async (opts: {
       const varietyNote = buildVarietyNote(
         [...recentHeadings, ...published.flatMap((p) => [...p.content.matchAll(/<h2>(.*?)<\/h2>/gi)].map((m) => stripTags(m[1])))],
         [...recentOpenings, ...published.map((p) => stripTags(p.content).split(/\s+/).slice(0, 7).join(' '))],
+        // Seeded on how much the site has published, so the shape advances with
+        // every piece rather than resetting each run.
+        index.articles.length + published.length,
       )
       const outcome = await writeOne(apiKey, model, story, others, writtenTitles, kind, varietyNote)
       callsUsed += outcome.calls
@@ -1155,7 +1298,61 @@ export const runDailyBatch = async (opts: {
     }
   }
 
+  /**
+   * Remember everything we did not write.
+   *
+   * This is the guarantee that a story cannot be lost to the clock. Anything
+   * left on the table — because the quota was spent, because the run hit its
+   * per-run limit, because a write failed — is carried forward with its
+   * significance intact and its wait count incremented, which nudges it up the
+   * order next time. The moment there is room, including at the daily reset,
+   * these are the stories in front.
+   *
+   * Only things worth a second look are kept: scored 4 or better, or unscored
+   * (so a triage failure cannot quietly bin the day's news). Entries stop being
+   * carried once they are covered, once they have gone unwritten for three days
+   * — by then the feeds no longer hold the reporting to write from — or once the
+   * queue is full, oldest and least significant first.
+   */
+  const publishedKeys = new Set(published.map((p) => normaliseTitle(p.title)))
+  const seenNow = new Set(stories.map((s) => normaliseTitle(s.lead.title)))
+  const PENDING_TTL = 3 * 24 * 60 * 60 * 1000
+  const now = Date.now()
+
+  const carried: PendingStory[] = []
+  for (const s of stories) {
+    const key = normaliseTitle(s.lead.title)
+    if (publishedKeys.has(key)) continue
+    const score = scoreByKey.get(key) ?? -1
+    if (score >= 0 && score < 4) continue
+    const held = pendingByKey.get(key)
+    carried.push({
+      key,
+      title: s.lead.title,
+      firstSeen: held?.firstSeen ?? now,
+      lastSeen: now,
+      outlets: Math.max(s.outlets.length, held?.outlets ?? 0),
+      score: Math.max(score, held?.score ?? -1),
+      waits: (held?.waits ?? 0) + 1,
+    })
+  }
+  // Keep queued stories that simply fell out of this run's feed window; they
+  // may resurface, and forgetting them is the failure this queue exists to stop.
+  for (const held of pendingByKey.values()) {
+    if (publishedKeys.has(held.key) || seenNow.has(held.key)) continue
+    if (now - held.firstSeen > PENDING_TTL) continue
+    carried.push(held)
+  }
+  const pending = carried
+    .sort((a, b) => b.score - a.score || b.lastSeen - a.lastSeen)
+    .slice(0, 60)
+
+  if (pending.length) {
+    notes.push(`${pending.length} story/stories held for the next run rather than dropped.`)
+  }
+
   if (published.length === 0) {
+    await writeIndex({ ...index, updatedAt: Date.now(), pending })
     return { status: 'nothing-to-write', published: [], storiesAvailable: stories.length, notes }
   }
 
@@ -1163,6 +1360,7 @@ export const runDailyBatch = async (opts: {
     ...index,
     updatedAt: Date.now(),
     covered: coveredNow.slice(0, COVERED_MEMORY),
+    pending,
     articles: [
       ...published,
       ...index.articles.filter((a) => !published.some((p) => p.id === a.id)),

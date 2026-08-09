@@ -179,9 +179,17 @@ export const BATCH = {
   articlesPerDayMax: 5,
 
   /**
-   * How many outlets must be running a story before it counts as big enough to
-   * break the ordinary cap. Corroboration is the honest signal here: when six
-   * separate desks file on the same thing within the hour, it is real.
+   * Significance score (0-10, from triageStories) at which a story is written
+   * even though the day's ordinary quota is gone. Eight is "firm and
+   * consequential" — a fee agreed, a medical booked, a player back in the squad
+   * — and above. Ordinary squad news sits at 4-6 and waits its turn.
+   */
+  breakCapScore: 8,
+
+  /**
+   * Fallback only, for when the triage call fails and there is no score: how
+   * many outlets must be running a story before it counts as big enough to
+   * break the ordinary cap.
    */
   breakCapOutlets: 3,
 } as const
@@ -272,9 +280,37 @@ Your headings must come from THIS story. Name them for what is actually in them.
 
 // Fed back into the prompt so a run does not repeat the furniture it has just
 // used. Kept short — it is a nudge, not a ban list.
-export const buildVarietyNote = (recentHeadings: string[], recentOpenings: string[]): string => {
-  if (!recentHeadings.length && !recentOpenings.length) return ''
+/**
+ * Structural approaches, rotated so consecutive pieces are built differently.
+ *
+ * Avoiding repeated headings and openings stops two pieces reading identically,
+ * but it does not stop every piece being the same shape underneath — set the
+ * scene, lay out the facts, offer a verdict, every time. A desk of ten writers
+ * does not produce ten identically built articles, and the tier of journalists
+ * this site writes to are distinguishable precisely by how they construct a
+ * piece. So each one is handed a different architecture to build to.
+ */
+const SHAPES = [
+  'Open on the single most concrete fact and let everything else hang off it. No scene-setting first paragraph.',
+  'Open on the consequence rather than the event — what changes because of this — then come back and explain what happened.',
+  'Build it around the tension between two readings of the same facts, and come down on one.',
+  'Anchor it in a specific moment — a substitution, a press conference answer, a passage of play — and widen out from there.',
+  'Lead with the number that matters and interrogate it. Do not let the statistic stand as the argument on its own.',
+  'Start with what the club has said, then set it against what the club has done.',
+  'Take the obvious reaction to this story and explain why it is too simple.',
+  'Write it forward: what this makes likely, what it rules out, what to watch for next.',
+]
+
+/** Deterministic per piece, so a run of articles cycles rather than repeats. */
+export const pickShape = (seed: number): string => SHAPES[Math.abs(seed) % SHAPES.length]
+
+export const buildVarietyNote = (recentHeadings: string[], recentOpenings: string[], shapeSeed?: number): string => {
+  const shape = typeof shapeSeed === 'number' ? pickShape(shapeSeed) : ''
+  if (!recentHeadings.length && !recentOpenings.length && !shape) return ''
   const parts: string[] = ['\nAVOID REPEATING YOURSELF']
+  if (shape) {
+    parts.push(`Shape for this piece — build it this way, and do not fall back on the house default:\n  ${shape}`)
+  }
   if (recentHeadings.length) {
     parts.push(`Section headings already used on the site recently — do not reuse any of these, or anything close to them:\n${recentHeadings.slice(0, 14).map((h) => `  - ${h}`).join('\n')}`)
   }
