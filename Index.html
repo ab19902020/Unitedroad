@@ -294,6 +294,30 @@
         .ur-reveal { opacity: 0; transform: translateY(26px); transition: opacity 0.75s var(--ur-ease), transform 0.75s var(--ur-ease); }
         .ur-reveal.is-visible { opacity: 1; transform: none; }
 
+        /* ---------- Dense story rows ---------- */
+        .ur-story-row { transition: background-color 0.25s ease; margin-inline: -0.75rem; padding-inline: 0.75rem; border-radius: 14px; }
+        .ur-story-row:hover { background-color: rgba(218, 41, 28, 0.035); }
+        .ur-story-row:hover img { transform: scale(1.06); }
+        .ur-story-row img { transition: transform 0.7s var(--ur-ease); }
+
+        /* The short red mark that tags a story to its section. */
+        .ur-rail { display: inline-block; width: 3px; height: 11px; border-radius: 2px; background: var(--ur-red); flex-shrink: 0; }
+
+        .ur-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .ur-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+
+        /* Sticky filter bar under the section header. Keeps the controls to hand
+           on a long list instead of stranding them at the top of the page. */
+        .ur-sticky-bar {
+            position: sticky; top: 64px; z-index: 30;
+            background: rgba(255,255,255,0.88); backdrop-filter: blur(14px) saturate(150%);
+            border-bottom: 1px solid var(--ur-line);
+        }
+
+        /* Panel heading: a rule that runs to the edge, the way a paper does it. */
+        .ur-panel-head { display: flex; align-items: center; gap: 0.75rem; }
+        .ur-panel-head::after { content: ''; flex: 1; height: 1px; background: var(--ur-line); }
+
         .ur-float { animation: ur-float 7s ease-in-out infinite; }
         @keyframes ur-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
 
@@ -746,36 +770,78 @@
         );
 
         // Shared page masthead so every section opens with the same rhythm.
+        // Section header.
+        //
+        // This used to run to about 380px on desktop and 530 on mobile before a
+        // single story appeared — an icon badge, a 72px title, a three-line
+        // standfirst and a control row, all stacked. On a phone that is most of
+        // the screen and a full scroll before any news. A sports desk gives its
+        // section header a fraction of that and puts the story at the top, so
+        // this is now a single tight band: eyebrow and title on one line,
+        // standfirst beside them, controls on the right.
         const PageHero = ({ eyebrow, title, accent, blurb, icon: Icon, tone = 'light', children, live = false }) => {
             const dark = tone === 'dark';
             return (
-                <div className={`relative overflow-hidden ${dark ? '' : 'border-b border-gray-200'}`}>
-                    {!dark && <div className="absolute inset-0 ur-dot-grid opacity-60 pointer-events-none"></div>}
-                    <div className="max-w-[1680px] mx-auto px-5 md:px-10 pt-10 pb-10 md:pb-14 relative z-10">
-                        <Reveal>
-                            <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8">
-                                <div className="max-w-3xl">
-                                    <div className="flex items-center gap-3 mb-4">
-                                        {Icon && (
-                                            <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shadow-lg ${dark ? 'bg-[#FFD700] text-[#02331F]' : 'bg-[#DA291C] text-white'}`}>
-                                                <Icon className="w-5 h-5" />
-                                            </div>
-                                        )}
-                                        <span className={`ur-eyebrow flex items-center gap-2 ${dark ? 'text-[#FFD700]' : 'text-[#DA291C]'}`}>
-                                            {live && <span className="ur-live"></span>}
-                                            {eyebrow}
-                                        </span>
-                                    </div>
-                                    <h1 className={`ur-display text-[44px] sm:text-6xl md:text-7xl ${dark ? 'text-white' : 'text-gray-900'}`}>
+                <div className={`relative overflow-hidden ${dark ? '' : 'border-b border-gray-200 bg-white'}`}>
+                    {!dark && <div className="absolute inset-0 ur-dot-grid opacity-50 pointer-events-none"></div>}
+                    <div className="max-w-[1680px] mx-auto px-5 md:px-10 pt-6 pb-5 md:pt-8 md:pb-7 relative z-10">
+                        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 lg:gap-10">
+                            <div className="min-w-0">
+                                <div className={`flex items-center gap-2.5 mb-2 ${dark ? 'text-[#FFD700]' : 'text-[#DA291C]'}`}>
+                                    {Icon && <Icon className="w-4 h-4 flex-shrink-0" />}
+                                    <span className="ur-eyebrow flex items-center gap-2 !text-[10px]">
+                                        {live && <span className="ur-live"></span>}
+                                        {eyebrow}
+                                    </span>
+                                </div>
+                                <div className="flex flex-col xl:flex-row xl:items-baseline xl:gap-5">
+                                    <h1 className={`ur-display text-[34px] sm:text-[42px] md:text-[52px] leading-[0.95] whitespace-nowrap ${dark ? 'text-white' : 'text-gray-900'}`}>
                                         {title}{accent && <> <span className={dark ? 'ur-ink-gold' : 'ur-ink-red'}>{accent}</span></>}
                                     </h1>
-                                    {blurb && <p className={`mt-5 text-base md:text-lg font-body font-medium max-w-2xl text-balance ${dark ? 'text-white/70' : 'text-gray-600'}`}>{blurb}</p>}
+                                    {/* Hidden on phones. It explains the section rather
+                                        than navigating it, and three lines of it is a
+                                        third of a small screen spent before the news. */}
+                                    {blurb && (
+                                        <p className={`hidden sm:block mt-2 xl:mt-0 text-[13px] md:text-[14px] font-body font-medium max-w-xl leading-snug ${dark ? 'text-white/60' : 'text-gray-500'}`}>{blurb}</p>
+                                    )}
                                 </div>
-                                {children && <div className="flex-shrink-0">{children}</div>}
                             </div>
-                        </Reveal>
+                            {children && <div className="flex-shrink-0">{children}</div>}
+                        </div>
                     </div>
                 </div>
+            );
+        };
+
+        // Dense story row — the workhorse of a news page.
+        //
+        // The secondary stories used to be full cards: ~290px tall to hold two
+        // lines of headline and nothing else, so four of them filled a screen
+        // with mostly white space. This is the shape a sports desk actually
+        // uses for everything below the lead — thumbnail, category rail,
+        // headline, timestamp, about 96px, scannable a dozen at a time.
+        const StoryRow = ({ title, image, kicker, date, seed, meta, onOpen, href, index }) => {
+            const open = (e) => { if (onOpen) { e.preventDefault(); onOpen(); } };
+            return (
+                <a href={href || '#'} onClick={open}
+                    {...(!onOpen && href ? { target: '_blank', rel: 'nofollow' } : {})}
+                    className="ur-story-row group flex items-stretch gap-4 py-3.5 cursor-pointer border-b border-gray-100 last:border-0">
+                    <div className="relative w-[100px] sm:w-[124px] flex-shrink-0 rounded-xl overflow-hidden aspect-[4/3] bg-gray-100">
+                        <SmartImage src={image} alt="" seed={seed || title} label={kicker || 'NEWS'} className="w-full h-full object-cover" />
+                        {index != null && index < 3 && (
+                            <span className="absolute top-1.5 left-1.5 w-5 h-5 rounded-md bg-black/70 backdrop-blur-sm text-[10px] font-heading font-black text-white flex items-center justify-center">{index + 1}</span>
+                        )}
+                    </div>
+                    <div className="min-w-0 flex-1 flex flex-col justify-center">
+                        <div className="flex items-center gap-2 mb-1.5">
+                            <span className="ur-rail"></span>
+                            <span className="text-[9px] font-heading font-black tracking-[1.5px] uppercase text-[#DA291C] truncate">{kicker}</span>
+                            <span className="text-[9px] font-heading font-bold tracking-[1px] uppercase text-gray-400 ml-auto whitespace-nowrap">{date}</span>
+                        </div>
+                        <h3 className="font-heading font-bold text-[15px] sm:text-[16px] text-gray-900 leading-[1.25] group-hover:text-[#DA291C] transition-colors ur-clamp-3">{title}</h3>
+                        {meta && <div className="text-[10px] font-heading font-bold tracking-wide uppercase text-gray-400 mt-1.5">{meta}</div>}
+                    </div>
+                </a>
             );
         };
 
@@ -2808,29 +2874,29 @@ FORMAT: plain text. No markdown, no headings, no bullet lists.`;
 
                     {/* Matchday band: the ground, in the site's own artwork, so the page
                         opens on something of ours rather than straight into an iframe. */}
-                    <div className="max-w-[1680px] mx-auto px-5 md:px-10 mb-10">
-                        <Reveal>
-                            <div className="relative rounded-[32px] overflow-hidden border border-[#FFD700]/20 bg-[#07040A] shadow-[var(--ur-shadow-lg)]">
-                                <img src="/assets/old-trafford.svg" alt="" aria-hidden="true"
-                                    className="absolute inset-0 w-full h-full object-cover object-bottom opacity-70" />
-                                <div className="absolute inset-0 bg-gradient-to-r from-[#07040A] via-[#07040A]/70 to-transparent"></div>
-                                <div className="relative z-10 p-8 md:p-12 lg:p-14 max-w-2xl">
-                                    <div className="inline-flex items-center gap-2.5 bg-[#DA291C] px-4 py-2 rounded-full mb-5 shadow-lg">
-                                        <span className="w-2 h-2 bg-white rounded-full animate-pulse"></span>
-                                        <span className="text-[10px] font-heading font-black tracking-[2.5px] text-white uppercase">Matchday</span>
-                                    </div>
-                                    <h2 className="ur-display text-3xl sm:text-4xl md:text-5xl text-white mb-4">The Theatre<br /><span className="ur-ink-gold">Of Dreams</span></h2>
-                                    <p className="text-white/70 font-body text-base md:text-lg max-w-lg">
-                                        Every fixture, every result and where we sit in the table — live, on one screen.
-                                    </p>
-                                    <div className="flex flex-wrap gap-2.5 mt-7">
-                                        {['Old Trafford', 'Capacity 74,310', 'Since 1910'].map(t => (
-                                            <span key={t} className="ur-chip ur-chip-dark">{t}</span>
-                                        ))}
-                                    </div>
+                    {/* This was a second full hero stacked under the first: two big
+                        headlines and ~770px of scrolling before a single fixture.
+                        Compressed to an atmospheric strip — the Old Trafford artwork
+                        and the ground's details still set the scene, but the fixture
+                        is now near the top of the page where it belongs. */}
+                    <div className="max-w-[1680px] mx-auto px-5 md:px-10 mb-7">
+                        <div className="relative rounded-3xl overflow-hidden border border-[#FFD700]/20 bg-[#07040A] shadow-[var(--ur-shadow-md)]">
+                            <img src="/assets/old-trafford.svg" alt="" aria-hidden="true"
+                                className="absolute inset-0 w-full h-full object-cover object-bottom opacity-60" />
+                            <div className="absolute inset-0 bg-gradient-to-r from-[#07040A] via-[#07040A]/75 to-[#07040A]/20"></div>
+                            <div className="relative z-10 px-6 md:px-9 py-5 md:py-6 flex flex-wrap items-center gap-x-6 gap-y-3">
+                                <span className="inline-flex items-center gap-2 bg-[#DA291C] px-3.5 py-1.5 rounded-full shadow-lg flex-shrink-0">
+                                    <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></span>
+                                    <span className="text-[9px] font-heading font-black tracking-[2px] text-white uppercase">Matchday</span>
+                                </span>
+                                <h2 className="ur-display text-xl md:text-2xl text-white whitespace-nowrap">The Theatre <span className="ur-ink-gold">Of Dreams</span></h2>
+                                <div className="flex flex-wrap gap-2 md:ml-auto">
+                                    {['Old Trafford', 'Capacity 74,310', 'Since 1910'].map(t => (
+                                        <span key={t} className="ur-chip ur-chip-dark !text-[9px]">{t}</span>
+                                    ))}
                                 </div>
                             </div>
-                        </Reveal>
+                        </div>
                     </div>
 
                     <div className="max-w-[1680px] mx-auto px-5 md:px-10">
@@ -2950,21 +3016,24 @@ FORMAT: plain text. No markdown, no headings, no bullet lists.`;
                             ]} />
                         </PageHero>
 
-                        <div className="max-w-[1680px] mx-auto px-5 md:px-10">
-                            <Reveal>
-                                <div className="flex flex-wrap gap-2 md:gap-3 mb-10 -mt-2">
-                                    {['ALL', ...Array.from(new Set(merged.map(n => n.category))).filter(Boolean).sort()].map(f => {
-                                        const count = f === 'ALL' ? merged.length : merged.filter(n => n.category === f).length;
-                                        return (
-                                            <button key={f} onClick={() => setNewsFilter(f)}
-                                                className={`px-5 md:px-6 py-2.5 rounded-full text-[10px] md:text-xs font-heading font-black tracking-[1.5px] transition-all border flex items-center gap-2 ${newsFilter === f ? 'bg-gray-900 text-white border-gray-900 shadow-md' : 'bg-white text-gray-600 border-gray-200 hover:border-[#DA291C] hover:text-[#DA291C]'}`}>
-                                                {f}
-                                                {count > 0 && <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${newsFilter === f ? 'bg-white/20' : 'bg-gray-100'}`}>{count}</span>}
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            </Reveal>
+                        {/* Filters stay with you down a long list rather than being
+                            stranded at the top of the page. */}
+                        <div className="ur-sticky-bar">
+                            <div className="max-w-[1680px] mx-auto px-5 md:px-10 py-3 flex gap-2 overflow-x-auto scrollbar-hide snap-x">
+                                {['ALL', ...Array.from(new Set(merged.map(n => n.category))).filter(Boolean).sort()].map(f => {
+                                    const count = f === 'ALL' ? merged.length : merged.filter(n => n.category === f).length;
+                                    return (
+                                        <button key={f} onClick={() => setNewsFilter(f)}
+                                            className={`flex-shrink-0 snap-start px-4 md:px-5 py-2 rounded-full text-[10px] font-heading font-black tracking-[1.5px] transition-all border flex items-center gap-2 ${newsFilter === f ? 'bg-gray-900 text-white border-gray-900 shadow-sm' : 'bg-white text-gray-600 border-gray-200 hover:border-[#DA291C] hover:text-[#DA291C]'}`}>
+                                            {f}
+                                            {count > 0 && <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${newsFilter === f ? 'bg-white/20' : 'bg-gray-100'}`}>{count}</span>}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        <div className="max-w-[1680px] mx-auto px-5 md:px-10 pt-7">
 
                             {newsLoading ? (
                                 <div className="space-y-6">
@@ -2987,50 +3056,52 @@ FORMAT: plain text. No markdown, no headings, no bullet lists.`;
                                                     {...(lead.internal
                                                         ? { onClick: (e) => { e.preventDefault(); doNavigate(lead.link.replace('#', '')); } }
                                                         : { target: '_blank', rel: 'nofollow' })}
-                                                    className="relative block h-[420px] md:h-[600px] group overflow-hidden rounded-[32px] shadow-[var(--ur-shadow-md)] hover:shadow-[var(--ur-shadow-lg)] transition-shadow">
+                                                    className="relative block h-[360px] md:h-[520px] group overflow-hidden rounded-[28px] shadow-[var(--ur-shadow-md)] hover:shadow-[var(--ur-shadow-lg)] transition-shadow">
                                                     {/* Blurred when there is no real photograph: the generated
                                                         cover carries a UNITED ROAD wordmark that otherwise reads
                                                         straight through the headline. */}
                                                     <SmartImage src={lead.img} alt="" seed={lead.link || lead.title} label={lead.source} eager
                                                         wrapperClassName="absolute inset-0 ur-media--flat" className={`w-full h-full object-cover transition-transform duration-[1200ms] group-hover:scale-105 ${lead.img ? 'brightness-[0.7]' : 'brightness-[0.6] scale-110 blur-xl'}`} />
                                                     <div className="absolute inset-0 bg-gradient-to-t from-[#07040A] via-[#07040A]/65 to-[#07040A]/25"></div>
-                                                    <div className="absolute inset-x-0 bottom-0 p-8 md:p-12 z-10 text-white">
-                                                        <div className="flex items-center gap-2 mb-4">
+                                                    <div className="absolute inset-x-0 bottom-0 p-7 md:p-10 z-10 text-white">
+                                                        <div className="flex items-center gap-2 mb-3.5">
                                                             <span className="bg-[#DA291C] font-heading text-white text-[10px] font-black tracking-[2px] px-3 py-1.5 rounded-lg uppercase">{lead.source}</span>
                                                             <span className="font-heading text-white/70 text-[10px] font-bold tracking-[2px] uppercase">{lead.date}</span>
                                                         </div>
-                                                        <h3 className="ur-display text-3xl sm:text-5xl md:text-[52px] mb-4 text-white drop-shadow-lg text-balance">{lead.title}</h3>
-                                                        <p className="text-white/80 line-clamp-2 text-base md:text-lg font-body font-medium max-w-2xl">{lead.desc}</p>
-                                                        <div className="mt-6 inline-flex items-center gap-2 font-heading font-black text-[11px] tracking-[2px] uppercase text-[#FFD700]">
+                                                        <h3 className="ur-display text-[30px] sm:text-[42px] md:text-[46px] leading-[0.98] mb-3 text-white drop-shadow-lg text-balance">{lead.title}</h3>
+                                                        <p className="text-white/75 ur-clamp-2 text-[15px] md:text-base font-body font-medium max-w-2xl">{lead.desc}</p>
+                                                        <div className="mt-5 inline-flex items-center gap-2 font-heading font-black text-[11px] tracking-[2px] uppercase text-[#FFD700]">
                                                             Read The Story <ChevronRight className="w-4 h-4 group-hover:translate-x-1.5 transition-transform" />
                                                         </div>
                                                     </div>
                                                 </a>
                                             </Reveal>
                                         )}
-                                        <div className="lg:col-span-5 flex flex-col gap-4">
-                                            {recentNews.slice(1, 5).map((n, i) => (
-                                                <Reveal key={n.link || i} delay={i * 70} className="flex-1">
-                                                    <a href={n.link}
-                                                        {...(n.internal
-                                                            ? { onClick: (e) => { e.preventDefault(); doNavigate(n.link.replace('#', '')); } }
-                                                            : { target: '_blank', rel: 'nofollow' })}
-                                                        className="ur-card ur-edge h-full p-6 md:p-7 flex flex-col justify-center group relative overflow-hidden">
-                                                        <div className="absolute -right-8 -top-8 w-32 h-32 bg-gray-50 rounded-full blur-[40px] group-hover:bg-red-50 transition-colors"></div>
-                                                        <div className="relative z-10">
-                                                            <div className="flex justify-between items-center gap-3 mb-3">
-                                                                <div className="text-[10px] font-heading font-black text-[#DA291C] tracking-widest uppercase truncate">{n.source}</div>
-                                                                <div className="text-[10px] font-heading text-gray-400 font-bold uppercase whitespace-nowrap">{n.date}</div>
-                                                            </div>
-                                                            <h4 className="text-lg md:text-xl font-heading font-black text-gray-900 group-hover:text-[#DA291C] transition-colors leading-snug line-clamp-3">{n.title}</h4>
-                                                        </div>
-                                                    </a>
-                                                </Reveal>
-                                            ))}
+                                        {/* Six rows in the height four padded cards used
+                                            to take, each one actually telling you what the
+                                            story is. */}
+                                        <div className="lg:col-span-5">
+                                            <div className="ur-card !shadow-sm hover:!translate-y-0 hover:!shadow-sm p-5 md:p-6">
+                                                <div className="ur-panel-head mb-1">
+                                                    <span className="font-heading font-black text-[11px] tracking-[2px] uppercase text-gray-900">The Latest</span>
+                                                </div>
+                                                {recentNews.slice(1, 7).map((n, i) => (
+                                                    <StoryRow key={n.link || i} index={i}
+                                                        title={n.title} image={n.img} kicker={n.source} date={n.date}
+                                                        seed={n.link || n.title}
+                                                        href={n.link}
+                                                        onOpen={n.internal ? () => doNavigate(n.link.replace('#', '')) : null} />
+                                                ))}
+                                            </div>
                                         </div>
-                                        {recentNews.length > 5 && (
-                                            <div className="lg:col-span-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 mt-4">
-                                                {recentNews.slice(5).map((n, i) => <Reveal key={n.link || i} delay={(i % 4) * 60}><NewsCard n={n} /></Reveal>)}
+                                        {recentNews.length > 7 && (
+                                            <div className="lg:col-span-12 mt-6">
+                                                <div className="ur-panel-head mb-5">
+                                                    <span className="font-heading font-black text-[12px] tracking-[2px] uppercase text-gray-900">More Coverage</span>
+                                                </div>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                                                    {recentNews.slice(7).map((n, i) => <Reveal key={n.link || i} delay={(i % 4) * 60}><NewsCard n={n} /></Reveal>)}
+                                                </div>
                                             </div>
                                         )}
                                     </div>
