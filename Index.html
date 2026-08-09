@@ -351,10 +351,15 @@
 
         /* Sticky filter bar under the section header. Keeps the controls to hand
            on a long list instead of stranding them at the top of the page. */
+        /* No border. It sat directly under the section header's own bottom rule,
+           giving two parallel hairlines about 50px apart — which reads as a
+           stray line rather than as structure. The shadow does the separating
+           once the bar lifts off, and at rest the bar sits flush under the one
+           rule the header already draws. */
         .ur-sticky-bar {
             position: sticky; top: 64px; z-index: 30;
-            background: rgba(255,255,255,0.88); backdrop-filter: blur(14px) saturate(150%);
-            border-bottom: 1px solid var(--ur-line);
+            background: rgba(255,255,255,0.92); backdrop-filter: blur(14px) saturate(150%);
+            box-shadow: 0 6px 16px -12px rgba(11, 19, 43, 0.35);
         }
 
         /* Panel heading: a rule that runs to the edge, the way a paper does it. */
@@ -3272,7 +3277,12 @@ FORMAT: plain text. No markdown, no headings, no bullet lists.`;
                         <div className="max-w-[1400px] mx-auto px-5 md:px-10">
                             {creators.length > 0 && (
                                 <Reveal>
-                                    <div className="flex flex-wrap items-center gap-2.5 mb-10 -mt-2">
+                                    {/* No negative top margin. It pulled this row up
+                                        across the section header's bottom border, so the
+                                        rule appeared to run through the chips — a thin
+                                        line across the page that moved as you scrolled
+                                        and read as a rendering fault. */}
+                                    <div className="flex flex-wrap items-center gap-2.5 mb-10 mt-6">
                                         <span className="ur-eyebrow text-gray-400 mr-1">Tracking</span>
                                         {creators.map(c => (
                                             <span key={c} className="ur-chip ur-chip-red !bg-white !border-gray-200 !text-gray-700">{c}</span>

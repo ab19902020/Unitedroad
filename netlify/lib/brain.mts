@@ -159,13 +159,14 @@ Respond with a single JSON object and nothing else. No markdown fence, no commen
 // DeepSeek at all. Cost tracks stories that actually broke, not clock ticks.
 export const BATCH = {
   /** Most pieces of either kind a single five-minute run will write. */
-  maxPerRun: 3,
+  maxPerRun: 4,
 
-  // Ordinary daily ceilings. Deliberately modest: six thin pieces a day is a
-  // worse site — and a worse ad-network application — than a handful of good
-  // ones.
-  newsPerDay: 5,
-  articlesPerDay: 2,
+  // Ordinary daily ceilings. Raised from 5/2: the site was running dry by
+  // mid-afternoon and then turning away real stories, which is the worse of the
+  // two failures. Still short of a content farm, and the significance override
+  // below is what carries a genuinely big story past these.
+  newsPerDay: 8,
+  articlesPerDay: 3,
 
   // Hard ceilings that a genuinely big story may reach past the ordinary caps.
   //
@@ -174,15 +175,15 @@ export const BATCH = {
   // is the one failure a news site cannot have. Only stories clearing the
   // significance bar below unlock this room, and these numbers still stop a
   // busy day running away.
-  newsPerDayMax: 12,
-  articlesPerDayMax: 4,
+  newsPerDayMax: 16,
+  articlesPerDayMax: 5,
 
   /**
    * How many outlets must be running a story before it counts as big enough to
    * break the ordinary cap. Corroboration is the honest signal here: when six
    * separate desks file on the same thing within the hour, it is real.
    */
-  breakCapOutlets: 4,
+  breakCapOutlets: 3,
 } as const
 
 export type ArticleKind = 'news' | 'article' | 'match' | 'weekly'

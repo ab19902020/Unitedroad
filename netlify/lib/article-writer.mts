@@ -1036,16 +1036,29 @@ export const runDailyBatch = async (opts: {
   /**
    * Big enough to publish even though the day's quota is used up.
    *
-   * Two independent routes, because they catch different things. Broad
-   * corroboration — several separate desks filing on the same story within the
-   * hour — is the strongest signal that something real has happened. Confirmed
-   * club events are the other: a completed signing or a departure is worth
-   * covering whether or not four outlets have caught up yet.
+   * Two independent routes, because they catch different things.
+   *
+   * The time gates here were both 30 minutes and that was the bug: once the
+   * day's quota was spent, breaksCap was the only way anything reached the site,
+   * and it demanded the story be less than half an hour old. A confirmed club
+   * event picked up 40 minutes after it broke — which is ordinary, since feeds
+   * lag publication and corroboration takes time to gather — was silently
+   * dropped for the rest of the day. Real stories were being missed for being
+   * slightly too late rather than for being too small.
+   *
+   * So confirmation no longer has a time gate at all. A completed signing, a
+   * sacking, a player rejoining the squad is worth covering whether it landed
+   * twenty minutes ago or this morning; what stops it being written twice is the
+   * covered-story index, not the clock. Corroboration keeps a window, because a
+   * pile-on is only evidence of something breaking if it happened in a burst,
+   * but three hours is the realistic span for several desks to file.
    */
-  const CONFIRMED = /\b(sign(s|ed|ing)?|complete[ds]?|confirm(s|ed)|announce[ds]?|unveil(s|ed)|sack(s|ed)|depart(s|ure)|joins?|agree[ds]?|medical|contract|injur(y|ed)|ruled out)\b/i
+  const CORROBORATION_WINDOW = 3 * 60 * 60 * 1000
+  const CONFIRMED =
+    /\b(sign(s|ed|ing)?|complete[ds]?|confirm(s|ed)|announce[ds]?|unveil(s|ed)|sack(s|ed)|appoint(s|ed)|depart(s|ure)|exit|joins?|rejoins?|return(s|ing|ed)?|recall(s|ed)|agree[ds]?|medical|contract|deal|injur(y|ed|ies)|ruled out|out for|suspend(s|ed)|ban(ned)?|takeover|stake)\b/i
   const breaksCap = (c: StoryCluster) =>
-    (c.outlets.length >= BATCH.breakCapOutlets && isUrgent(c)) ||
-    (CONFIRMED.test(c.lead.title) && c.outlets.length >= 2 && isUrgent(c))
+    (c.outlets.length >= BATCH.breakCapOutlets && Date.now() - c.timestamp < CORROBORATION_WINDOW) ||
+    (CONFIRMED.test(c.lead.title) && c.outlets.length >= 2)
 
   let newsAllowance = newsRoom
   let articleAllowance = articleRoom
