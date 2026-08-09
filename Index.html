@@ -107,15 +107,58 @@
         @keyframes radar-spin { 100% { transform: rotate(360deg); } }
         .radar-sweep { position: absolute; top: 50%; left: 50%; width: 100%; height: 100%; background: conic-gradient(from 0deg, transparent 70%, rgba(218, 41, 28, 0.4) 100%); transform-origin: 0 0; animation: radar-spin 4s linear infinite; pointer-events: none;}
         
-        /* Prose styles for blog posts and legal pages */
-        .prose h2 { font-family: 'Montserrat', sans-serif; font-weight: 900; font-size: 1.5rem; margin-top: 2rem; margin-bottom: 1rem; color: #111827; letter-spacing: -0.025em; }
-        .prose h3 { font-family: 'Montserrat', sans-serif; font-weight: 800; font-size: 1.25rem; margin-top: 1.5rem; margin-bottom: 0.75rem; color: #1f2937; }
-        .prose p { margin-bottom: 1.25rem; line-height: 1.75; color: #4b5563; word-break: break-word; }
-        .prose ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 1.25rem; color: #4b5563; }
-        .prose li { margin-bottom: 0.5rem; }
-        .prose a { color: #DA291C; text-decoration: underline; font-weight: 500; word-break: break-all; }
-        .prose img { width: 100%; border-radius: 1rem; margin-top: 1.5rem; margin-bottom: 1.5rem; }
-        .prose blockquote { border-left: 4px solid #DA291C; padding-left: 1rem; font-style: italic; color: #6b7280; margin: 1.5rem 0; }
+        /* ---------- Reading typography ---------- */
+        /* Body copy was 16px in #4b5563, which is light for a 700-word read, and
+           headings sat close to the paragraph above them so the piece ran as one
+           grey block. Bigger type, darker ink, and space banked above each
+           heading rather than below it so a section visibly belongs to its
+           heading. */
+        .prose { font-size: 1.0625rem; line-height: 1.75; color: #374151; }
+        @media (min-width: 768px) { .prose { font-size: 1.125rem; line-height: 1.78; } }
+
+        .prose > p:first-of-type { font-size: 1.1875rem; line-height: 1.65; color: #1f2937; font-weight: 500; }
+        @media (min-width: 768px) { .prose > p:first-of-type { font-size: 1.3125rem; } }
+
+        .prose h2 {
+            font-family: 'Montserrat', sans-serif; font-weight: 900;
+            font-size: 1.4rem; letter-spacing: -0.02em; color: #0B132B;
+            margin-top: 2.75rem; margin-bottom: 0.9rem; padding-top: 0.25rem;
+        }
+        @media (min-width: 768px) { .prose h2 { font-size: 1.65rem; } }
+        /* Short red mark above each section heading — the same rail the story
+           rows use, so the two read as one system. */
+        .prose h2::before {
+            content: ''; display: block; width: 28px; height: 3px; border-radius: 2px;
+            background: var(--ur-red); margin-bottom: 0.85rem;
+        }
+        .prose h3 { font-family: 'Montserrat', sans-serif; font-weight: 800; font-size: 1.15rem; margin-top: 1.9rem; margin-bottom: 0.6rem; color: #1f2937; }
+        .prose p { margin-bottom: 1.3rem; overflow-wrap: break-word; }
+        .prose ul, .prose ol { padding-left: 1.4rem; margin-bottom: 1.3rem; }
+        .prose ul { list-style-type: disc; }
+        .prose ol { list-style-type: decimal; }
+        .prose li { margin-bottom: 0.45rem; padding-left: 0.2rem; }
+        .prose li::marker { color: var(--ur-red); }
+        .prose strong { color: #111827; font-weight: 700; }
+        /* break-all was mangling ordinary links mid-word; break-word only splits
+           when a URL genuinely cannot fit. */
+        .prose a { color: var(--ur-red); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1.5px; overflow-wrap: break-word; }
+        .prose a:hover { color: #8B1109; }
+        .prose img { width: 100%; border-radius: 1rem; margin: 1.75rem 0; }
+
+        /* Pull quote. A quote in the middle of a piece is the one place the eye
+           should stop, so it gets scale and weight rather than grey italics. */
+        .prose blockquote {
+            margin: 2.25rem 0; padding: 0 0 0 1.4rem;
+            border-left: 3px solid var(--ur-red);
+            font-family: 'Montserrat', sans-serif; font-weight: 700;
+            font-size: 1.25rem; line-height: 1.4; letter-spacing: -0.01em;
+            color: #0B132B; font-style: normal;
+        }
+        @media (min-width: 768px) { .prose blockquote { font-size: 1.5rem; padding-left: 1.75rem; } }
+        .prose blockquote p { margin-bottom: 0.5rem; color: inherit; font-size: inherit; line-height: inherit; }
+        .prose blockquote p:last-child { margin-bottom: 0; }
+
+        .prose hr { border: 0; border-top: 1px solid var(--ur-line); margin: 2.5rem 0; }
         
         /* Netflix Style Hiding scrollbars for video rows */
         .netflix-row::-webkit-scrollbar { display: none; }
@@ -317,6 +360,13 @@
         /* Panel heading: a rule that runs to the edge, the way a paper does it. */
         .ur-panel-head { display: flex; align-items: center; gap: 0.75rem; }
         .ur-panel-head::after { content: ''; flex: 1; height: 1px; background: var(--ur-line); }
+
+        /* Applied to an element scrolled out of view, and to <html> when the tab
+           is in the background. Nine animations run forever on this site — the
+           aurora alone is a blur(70px) layer inset -30% repainting on a 22s
+           loop — and a phone pays for all of them whether or not they are on
+           screen. See usePausedOffscreenAnimations. */
+        .ur-anim-off, .ur-anim-off * { animation-play-state: paused !important; }
 
         .ur-float { animation: ur-float 7s ease-in-out infinite; }
         @keyframes ur-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
@@ -812,6 +862,73 @@
                 </div>
             );
         };
+
+        // Stop paying for animations nobody is looking at.
+        //
+        // The site runs nine infinite CSS animations — the aurora drift, the
+        // ticker marquee, the floating cards, the radar sweep, the audio bars,
+        // the live dots and the loading skeletons. The browser keeps compositing
+        // every one of them whether it is on screen or not, and the aurora is a
+        // 70px blur over a layer inset -30%, which is the single most expensive
+        // thing on the page. On a mid-range Android that is real battery and a
+        // dropped-frame scroll for decoration nobody can see.
+        //
+        // So: paused when scrolled out of view, and paused wholesale when the tab
+        // is in the background. The margin is generous so an animation is already
+        // running by the time it scrolls in — it never appears frozen.
+        const ANIMATED_SELECTOR = '.ur-aurora, .ur-marquee-track, .ur-float, .radar-sweep, .audio-bar, .ur-live, .ur-skeleton, .ur-skeleton-dark';
+
+        const usePausedOffscreenAnimations = (key) => {
+            useEffect(() => {
+                if (typeof IntersectionObserver === 'undefined') return;
+                const nodes = Array.from(document.querySelectorAll(ANIMATED_SELECTOR));
+                const io = new IntersectionObserver(
+                    (entries) => entries.forEach(e => e.target.classList.toggle('ur-anim-off', !e.isIntersecting)),
+                    { rootMargin: '200px 0px' },
+                );
+                // Observe only — never pre-pause. If IntersectionObserver is slow
+                // to deliver its first records, or never fires at all, the site
+                // behaves exactly as it did before rather than freezing every
+                // animation on the page. Pausing is something the observer does,
+                // not a state we start in and hope to be rescued from.
+                nodes.forEach(n => io.observe(n));
+
+                const onVisibility = () =>
+                    document.documentElement.classList.toggle('ur-anim-off', document.hidden);
+                document.addEventListener('visibilitychange', onVisibility);
+
+                return () => {
+                    io.disconnect();
+                    document.removeEventListener('visibilitychange', onVisibility);
+                    nodes.forEach(n => n.classList.remove('ur-anim-off'));
+                };
+            }, [key]);
+        };
+
+        // Compact heading for a band within a page. The home page's section
+        // headings were 60px display type with an eyebrow above and 40px of air
+        // below — a third of a screen to say "The Latest" before the stories it
+        // introduces. This says the same thing in a quarter of the height, with
+        // the rule carrying the eye across to the action on the right.
+        const SectionHead = ({ eyebrow, title, accent, live = false, action, onAction }) => (
+            <div className="flex items-end justify-between gap-6 mb-6">
+                <div className="min-w-0">
+                    {eyebrow && (
+                        <span className="ur-eyebrow !text-[10px] text-[#DA291C] flex items-center gap-2 mb-1.5">
+                            {live && <span className="ur-live"></span>}{eyebrow}
+                        </span>
+                    )}
+                    <h2 className="ur-display text-[26px] md:text-[34px] leading-none text-gray-900">
+                        {title}{accent && <> <span className="ur-ink-red">{accent}</span></>}
+                    </h2>
+                </div>
+                {action && (
+                    <button onClick={onAction} className="flex-shrink-0 font-heading font-black text-[10px] tracking-[1.5px] uppercase text-gray-500 hover:text-[#DA291C] transition-colors flex items-center gap-1.5 pb-1">
+                        {action} <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                )}
+            </div>
+        );
 
         // Dense story row — the workhorse of a news page.
         //
@@ -1981,6 +2098,10 @@ FORMAT: plain text. No markdown, no headings, no bullet lists.`;
 
             useEffect(() => { if (!searchOpen) setSearchQuery(''); }, [searchOpen]);
 
+            // Re-scan on every route change and whenever new stories land, since
+            // both mount fresh animated elements.
+            usePausedOffscreenAnimations(`${path}:${blogPosts.length}:${newsItems.length}`);
+
             const doNavigate = (p) => {
                 navigate(p);
                 setIsNavOpen(false);
@@ -2178,7 +2299,12 @@ FORMAT: plain text. No markdown, no headings, no bullet lists.`;
             const renderHomePage = () => (
                 <div className="pb-32">
                     {/* ============ HERO ============ */}
-                    <section className="relative min-h-[92dvh] flex items-center justify-center overflow-hidden bg-[#07040A] pt-24 pb-16">
+                    {/* Was 92dvh — a full screen of anthem before any football. It is
+                        the site's brand moment and worth keeping, but at 74/78 the
+                        breaking ticker and the top of the first story now show above
+                        the fold, so the page announces itself and still gets on with
+                        the news. */}
+                    <section className="relative min-h-[70dvh] md:min-h-[74dvh] flex items-center justify-center overflow-hidden bg-[#07040A] pt-20 pb-10">
                         <div className="absolute inset-0 bg-cover bg-bottom opacity-[0.48]"
                             style={{ backgroundImage: "url('/assets/old-trafford.svg')" }}></div>
                         <div className="ur-aurora" style={{ background: 'radial-gradient(circle at 22% 28%, rgba(218,41,28,0.65), transparent 55%), radial-gradient(circle at 78% 72%, rgba(255,215,0,0.30), transparent 55%)' }}></div>
@@ -2199,11 +2325,11 @@ FORMAT: plain text. No markdown, no headings, no bullet lists.`;
                                 <span className="text-[10px] font-heading font-black tracking-[2.5px] text-white/90 uppercase">The Official Matchday Anthem</span>
                             </div>
 
-                            <h1 className="ur-display text-[52px] sm:text-[84px] lg:text-[118px] text-white mb-7 text-balance">
+                            <h1 className="ur-display text-[46px] sm:text-[70px] lg:text-[96px] text-white mb-5 text-balance">
                                 TAKE ME<br />HOME,<br /><span className="ur-ink-red">UNITED ROAD</span>
                             </h1>
 
-                            <p className="max-w-xl mx-auto text-lg sm:text-2xl font-body text-white/70 font-medium tracking-tight mb-10 text-balance">
+                            <p className="max-w-xl mx-auto text-base sm:text-xl font-body text-white/70 font-medium tracking-tight mb-7 text-balance">
                                 Chants, transfers, news, the film archive and the web arcade — every corner of following United, in one place.
                             </p>
 
@@ -2259,20 +2385,11 @@ FORMAT: plain text. No markdown, no headings, no bullet lists.`;
                     )}
 
                     {/* ============ FRESH OFF UNITED ROAD ============ */}
-                    <section className="py-20 md:py-28 bg-[#F9FAFB] border-b border-gray-200 relative">
+                    <section className="py-12 md:py-16 bg-[#F9FAFB] border-b border-gray-200 relative">
                         <div className="absolute inset-0 ur-dot-grid opacity-50 pointer-events-none"></div>
                         <div className="max-w-[1400px] mx-auto px-5 md:px-10 relative z-10">
-                            <Reveal>
-                                <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6 mb-10">
-                                    <div>
-                                        <span className="ur-eyebrow text-[#DA291C] flex items-center gap-2 mb-3"><span className="ur-live"></span> The Latest</span>
-                                        <h2 className="ur-display text-4xl md:text-6xl text-gray-900">Fresh Off <span className="ur-ink-red">United Road</span></h2>
-                                    </div>
-                                    <button onClick={() => doNavigate('/news')} className="ur-btn ur-btn-outline self-start px-7 py-3.5 text-[11px] flex items-center gap-2">
-                                        All Updates <ChevronRight className="w-4 h-4" />
-                                    </button>
-                                </div>
-                            </Reveal>
+                            <SectionHead eyebrow="The Latest" live title="Fresh Off" accent="United Road"
+                                action="All Updates" onAction={() => doNavigate('/news')} />
 
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                 {/* LATEST ARTICLE */}
