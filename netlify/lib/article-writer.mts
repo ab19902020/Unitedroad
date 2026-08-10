@@ -1480,20 +1480,33 @@ export const runDailyBatch = async (opts: {
       if (kind === 'article') articlesLeft--
       else newsLeft--
 
-      // No usable photograph from the reporting — either none was offered or
-      // the only candidate was already used today. Rather than fall straight to
-      // generated art, look for a free-licensed photograph of whoever the piece
-      // is actually about. The writer has just told us in `people`.
-      if (!outcome.article.image) {
-        for (const person of outcome.article.people || []) {
-          const found = await findCommonsImage(person, usedImages)
-          if (found) {
-            outcome.article.image = found.url
-            outcome.article.imageCredit = `${found.credit} / ${found.licence}`
-            notes.push(`Cover for "${outcome.article.title.slice(0, 40)}" from Wikimedia Commons (${person}).`)
-            break
-          }
+      // A free-licensed photograph first, the publisher's own second.
+      //
+      // The og:image scraped from the outlet we are writing from is almost
+      // always a Getty, PA or Reuters frame licensed to *them*. Serving it from
+      // our pages is republishing someone else's licensed photograph, and it is
+      // the clearest legal exposure on this site — worse now that the site
+      // carries advertising, because it is commercial use.
+      //
+      // Wikimedia Commons gives us CC-licensed photographs we may genuinely use,
+      // provided the photographer is credited, which we do. So Commons is now
+      // the preferred source and the scraped press photo is the fallback for
+      // stories with no identifiable subject — a fixture, the finances, the
+      // stadium. That shrinks the exposure to the cases where nothing else
+      // exists, rather than making it the default on every piece.
+      const pressPhoto = outcome.article.image
+      outcome.article.image = ''
+      for (const person of outcome.article.people || []) {
+        const found = await findCommonsImage(person, usedImages)
+        if (found) {
+          outcome.article.image = found.url
+          outcome.article.imageCredit = `${found.credit} / ${found.licence}`
+          notes.push(`Cover from Wikimedia Commons (${person}) for "${outcome.article.title.slice(0, 40)}".`)
+          break
         }
+      }
+      if (!outcome.article.image && pressPhoto && !usedImages.has(pressPhoto)) {
+        outcome.article.image = pressPhoto
       }
       if (outcome.article.image) usedImages.add(outcome.article.image)
       coveredNow.unshift(
