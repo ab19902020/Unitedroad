@@ -126,3 +126,6 @@
 
 [functions."section-page"]
   included_files = ["netlify/lib/**"]
+
+[functions."self-audit"]
+  included_files = ["netlify/lib/**"]

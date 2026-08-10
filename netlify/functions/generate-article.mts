@@ -71,6 +71,12 @@ export default async (_req: Request, context: Context) => {
         .catch((e) => console.error('[club-state] refresh failed:', e.message))
     }
 
+    // Sunday evening, before the round-up: read back the week's output.
+    if (now.getUTCDay() === 0 && now.getUTCHours() === 17) {
+      fetch(`${siteUrl}/api/self-audit`, { method: 'POST' })
+        .catch((e) => console.error('[self-audit] kick failed:', e.message))
+    }
+
     // Sunday evening: also kick the weekly round-up. It no-ops if one has
     // already gone out this week, so firing it on every Sunday run is safe.
     if (now.getUTCDay() === 0 && now.getUTCHours() === 18) {
