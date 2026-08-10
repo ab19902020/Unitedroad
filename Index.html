@@ -1336,10 +1336,21 @@ YOU MUST NOT: invent a current fact. If asked about today's squad, this season's
 
 FORMAT: plain text. No markdown, no headings, no bullet lists.`;
 
-        const getLocalOracleResponse = (input) => {
+        // `club` is the live state from /api/refresh-club-state — the same block
+        // the writing desk is prompted with. These offline answers used to name
+        // the head coach in hardcoded prose, which is correct right up until the
+        // day it is not, and then it is wrong on the page with no way to notice.
+        // Anything current is read from `club` and simply omitted when we have
+        // not established it, rather than guessed.
+        const getLocalOracleResponse = (input, club = null) => {
             const query = input.toLowerCase();
+            const boss = club?.manager || '';
             if (query.includes("manager game") || query.includes("red devil manager") || query.includes("football manager") || query.includes("management sim") || query.includes("manage united") || query.includes("26/27") || query.includes("2026/27")) return "That'll be Red Devil Manager 26/27 \u2014 our full Manchester United football manager game. Take charge at Old Trafford for the whole 2026/27 season: name your XI, drill the tactics, work the transfer window and chase the title. Hit 'MANAGER 26/27' in the menu to kick off.";
-            if (query.includes("manager") || query.includes("carrick") || query.includes("boss")) return "Michael Carrick is currently at the wheel, managing Manchester United in 2026! He understands the absolute DNA of this club perfectly. Glory Glory Man United!";
+            if (query.includes("manager") || query.includes("boss") || (boss && query.includes(boss.split(' ').pop().toLowerCase()))) {
+                return boss
+                    ? `${boss} is the man at the wheel. Whether the job is going well is a fair argument to have — but the standard at this club has never been a secret.`
+                    : "Head to the news page for where things stand with the manager — that is kept current, and I deal in history.";
+            }
             if (query.includes("treble") || query.includes("1999") || query.includes("bayern")) return "The 1999 Treble! The absolute pinnacle of English football. We won the Premier League, FA Cup, and of course, that magical night in Barcelona against Bayern Munich where Teddy and Ole won it in injury time. 'And Solskjaer has won it!'";
             if (query.includes("top scorer") || query.includes("goals") || query.includes("rooney")) return "Wayne Rooney is Manchester United's all-time record goalscorer, hitting the back of the net 253 times for the Red Devils. An absolute legend.";
             if (query.includes("appearances") || query.includes("games") || query.includes("giggs")) return "Ryan Giggs holds the record for the most appearances for Manchester United, playing an incredible 963 times for the club over a staggering 24-year career.";
@@ -1347,7 +1358,7 @@ FORMAT: plain text. No markdown, no headings, no bullet lists.`;
             if (query.includes("founded") || query.includes("history") || query.includes("newton heath")) return "Manchester United was originally founded in 1878 as Newton Heath LYR Football Club by the Carriage and Wagon department of the Lancashire and Yorkshire Railway depot. We officially changed our name to Manchester United in 1902.";
             if (query.includes("goldbridge") || query.includes("howson") || query.includes("stand") || query.includes("uptv")) return "Mark Goldbridge (The United Stand), Stephen Howson, and United Peoples TV are massive independent voices in the Manchester United fan community! You can catch their latest videos right here in our Social Hub.";
             if (query.includes("games") || query.includes("arcade") || query.includes("rhythm") || query.includes("quiz")) return "Head over to the Games Hub in the menu! Our headline title is 'Red Devil Manager 26/27', the Manchester United football manager game, alongside 'United Rhythm' and the 'Ultimate United Quiz'.";
-            return "My archives are vast, but my focus is singular. Ask me about our legends, the 1999 Treble, our top scorers, Old Trafford, or our current manager Michael Carrick! GGMU!";
+            return `My archives are vast, but my focus is singular. Ask me about our legends, the 1999 Treble, our top scorers, Old Trafford${boss ? `, or ${boss}` : ''}. GGMU!`;
         };
 
         // --- SECONDARY FEEDS: served by our own Netlify Function (see netlify/functions/rss.mts) ---
@@ -1479,9 +1490,13 @@ FORMAT: plain text. No markdown, no headings, no bullet lists.`;
             const [oracleInput, setOracleInput] = useState('');
             const [isOracleThinking, setIsOracleThinking] = useState(false);
             const [oracleCapped, setOracleCapped] = useState(false); // today's 10p is spent
+            // What the desk has established is currently true at the club. Read
+            // once; the offline Oracle answers and the greeting are built from it
+            // so nothing on this page states a current fact from a hardcoded string.
+            const [clubState, setClubState] = useState(null);
             const [puterReady, setPuterReady] = useState(false);
             const [puterBusy, setPuterBusy] = useState(false);
-            const [chatHistory, setChatHistory] = useState([{ role: 'oracle', text: "I am The United Oracle. I know our deep history, from 1878 to 2026. Ask me about Michael Carrick, our legends, or the 1999 Treble." }]);
+            const [chatHistory, setChatHistory] = useState([{ role: 'oracle', text: "I am The United Oracle. I know our deep history, from 1878 onwards. Ask me about our legends, the 1999 Treble, or Old Trafford itself." }]);
 
             // Refs
             const playerRef = useRef(null);
@@ -2192,6 +2207,15 @@ FORMAT: plain text. No markdown, no headings, no bullet lists.`;
                 }
             };
 
+            useEffect(() => {
+                let alive = true;
+                fetch('/api/refresh-club-state')
+                    .then(r => r.ok ? r.json() : null)
+                    .then(d => { if (alive && d && d.manager) setClubState(d); })
+                    .catch(() => { /* the Oracle simply omits current facts */ });
+                return () => { alive = false; };
+            }, []);
+
             // Reconnect silently on a later visit if they have already opted in.
             useEffect(() => {
                 if (localStorage.getItem('ur-oracle-puter') !== '1') return;
@@ -2240,7 +2264,7 @@ FORMAT: plain text. No markdown, no headings, no bullet lists.`;
                     try { response = await askPuter(query); } catch (_) { /* fall through */ }
                 }
 
-                if (!response) response = getLocalOracleResponse(query);
+                if (!response) response = getLocalOracleResponse(query, clubState);
                 setChatHistory(prev => [...prev, { role: 'oracle', text: response }]);
                 if (outOfBudget && !puterReady) setOracleCapped(true);
                 setIsOracleThinking(false);
