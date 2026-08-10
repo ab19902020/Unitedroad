@@ -120,3 +120,6 @@
 
 [functions."refresh-club-state"]
   included_files = ["netlify/lib/**"]
+
+[functions."refit-covers"]
+  included_files = ["netlify/lib/**"]

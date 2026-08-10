@@ -1785,3 +1785,16 @@ Respond with a single JSON object and nothing else:
   }
   return { status: 'ok', state }
 }
+
+/**
+ * Replace the stored article list wholesale.
+ *
+ * Used by the cover refit, which mutates existing pieces rather than adding
+ * new ones. Everything else in the index — covered, pending, lastRun — is read
+ * fresh and preserved, so a refit running alongside a desk run cannot roll back
+ * that run's bookkeeping.
+ */
+export const overwriteArticles = async (articles: StoredArticle[]): Promise<void> => {
+  const index = await readIndex()
+  await store().setJSON(INDEX_KEY, { ...index, articles, updatedAt: Date.now() })
+}
