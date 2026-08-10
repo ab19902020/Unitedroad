@@ -2403,33 +2403,61 @@ FORMAT: plain text. No markdown, no headings, no bullet lists.`;
                     </section>
 
                     {/* ============ LIVE HEADLINE TICKER ============ */}
-                    {blogPosts.length > 0 && (
+                    {/* "Breaking" used to mean "the last twelve things we published",
+                        whatever their age, so a day-old "debut nearing" ran under a
+                        flashing red BREAKING flag after the debut had happened. That is
+                        worse than having no ticker: it tells a reader the site does not
+                        know what time it is.
+
+                        The word is now earned. Only pieces from the last six hours
+                        qualify; below that the flag reads LATEST and the same strip
+                        does an honest job. Each item carries its own age, so nothing
+                        has to be taken on trust. */}
+                    {(() => {
+                        const HOT = 6 * 60 * 60 * 1000;
+                        const now = Date.now();
+                        const ticker = blogPosts.slice(0, 14);
+                        const isBreaking = ticker.some(n => now - n.timestamp < HOT);
+                        const ago = (ts) => {
+                            const m = Math.max(0, Math.round((now - ts) / 60000));
+                            if (m < 1) return 'now';
+                            if (m < 60) return `${m}m ago`;
+                            const h = Math.round(m / 60);
+                            return h < 24 ? `${h}h ago` : `${Math.round(h / 24)}d ago`;
+                        };
+                        return ticker.length > 0 && (
                         <section className="bg-[#0B132B] border-y border-white/10 overflow-hidden">
                             <div className="flex items-stretch">
                                 <div className="flex-shrink-0 bg-[#DA291C] px-5 md:px-7 flex items-center gap-2.5 z-10 shadow-[8px_0_20px_rgba(11,19,43,0.6)]">
-                                    <span className="w-2 h-2 rounded-full bg-white animate-pulse"></span>
-                                    <span className="font-heading font-black text-[10px] tracking-[2.5px] text-white uppercase whitespace-nowrap">Breaking</span>
+                                    <span className={`w-2 h-2 rounded-full bg-white ${isBreaking ? 'animate-pulse' : ''}`}></span>
+                                    <span className="font-heading font-black text-[10px] tracking-[2.5px] text-white uppercase whitespace-nowrap">{isBreaking ? 'Breaking' : 'Latest'}</span>
                                 </div>
                                 <div className="ur-marquee flex-1 overflow-hidden py-4">
                                     <div className="ur-marquee-track">
                                         {[0, 1].map(pass => (
                                             <div key={pass} className="flex items-center" aria-hidden={pass === 1}>
-                                                {blogPosts.slice(0, 12).map((n, i) => (
-                                                    <a key={`${pass}-${i}`} href={`#/article/${n.id}`}
-                                                        onClick={(e) => { e.preventDefault(); doNavigate(`/article/${n.id}`); }}
-                                                        className="flex items-center gap-3 px-6 whitespace-nowrap group">
-                                                        <span className="text-[9px] font-heading font-black tracking-[2px] text-[#FFD700] uppercase">{n.category || 'United Road'}</span>
-                                                        <span className="font-body text-sm text-white/75 group-hover:text-white transition-colors">{n.title}</span>
-                                                        <span className="w-1 h-1 rounded-full bg-white/25"></span>
-                                                    </a>
-                                                ))}
+                                                {ticker.map((n, i) => {
+                                                    const fresh = now - n.timestamp < HOT;
+                                                    return (
+                                                        <a key={`${pass}-${i}`} href={`/article/${n.id}`}
+                                                            onClick={(e) => { e.preventDefault(); doNavigate(`/article/${n.id}`); }}
+                                                            className="flex items-center gap-2.5 px-5 whitespace-nowrap group">
+                                                            {fresh && <span className="w-1.5 h-1.5 rounded-full bg-[#DA291C] flex-shrink-0"></span>}
+                                                            <span className="text-[9px] font-heading font-black tracking-[2px] text-[#FFD700] uppercase">{n.category || 'United Road'}</span>
+                                                            <span className="font-body text-sm text-white/80 group-hover:text-white transition-colors">{n.title}</span>
+                                                            <span className="text-[10px] font-heading font-bold tracking-wide text-white/35 uppercase">{ago(n.timestamp)}</span>
+                                                            <span className="w-1 h-1 rounded-full bg-white/20 ml-3"></span>
+                                                        </a>
+                                                    );
+                                                })}
                                             </div>
                                         ))}
                                     </div>
                                 </div>
                             </div>
                         </section>
-                    )}
+                        );
+                    })()}
 
                     {/* ============ FRESH OFF UNITED ROAD ============ */}
                     <section className="py-12 md:py-16 bg-[#F9FAFB] border-b border-gray-200 relative">
