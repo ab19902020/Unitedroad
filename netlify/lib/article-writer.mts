@@ -48,6 +48,11 @@ export type StoredArticle = {
   imageCredit?: string
   /** Ids of our own earlier pieces a reader would want next. */
   relatedIds?: string[]
+  /** Set on an older piece once a newer one has overtaken it. */
+  supersededBy?: string
+  supersededAt?: number
+  /** Transient: ids this piece retires. Consumed at publication, never stored. */
+  supersedesIds?: string[]
   /** Alternative headlines the writer produced, kept for review. */
   titleOptions?: string[]
   category: string
@@ -1179,6 +1184,9 @@ const validate = (parsed: any, story: StoryCluster, model: string, kind: Article
       relatedIds: Array.isArray(parsed?.relatedIds)
         ? parsed.relatedIds.filter((r: unknown) => typeof r === 'string' && archiveIds.has(r as string)).slice(0, 3)
         : [],
+      supersedesIds: Array.isArray(parsed?.supersedesIds)
+        ? parsed.supersedesIds.filter((r: unknown) => typeof r === 'string' && archiveIds.has(r as string)).slice(0, 3)
+        : [],
       titleOptions: Array.isArray(parsed?.titleOptions)
         ? parsed.titleOptions.map((t: unknown) => stripTags(String(t)).slice(0, 160)).filter(Boolean).slice(0, 3)
         : [],
@@ -1508,6 +1516,26 @@ export const runDailyBatch = async (opts: {
       if (!outcome.article.image && pressPhoto && !usedImages.has(pressPhoto)) {
         outcome.article.image = pressPhoto
       }
+      // Retire anything this piece has overtaken.
+      //
+      // A story stays live and wrong until something says otherwise: "Debut
+      // Looms" carried on running as breaking news after the debut had been
+      // played, because nothing on the site could retire it. The writer has just
+      // read both the new story and our archive, so it is the one thing in a
+      // position to say which earlier piece a reader would now be misled by.
+      // Marked pieces stay published and readable — they are a record of what
+      // was reported at the time — but they drop out of the live surfaces and
+      // carry a line pointing at what replaced them.
+      for (const staleId of outcome.article.supersedesIds || []) {
+        if (staleId === outcome.article.id) continue
+        const stale = index.articles.find((a) => a.id === staleId) || published.find((a) => a.id === staleId)
+        if (!stale || stale.supersededBy) continue
+        stale.supersededBy = outcome.article.id
+        stale.supersededAt = Date.now()
+        notes.push(`"${stale.title.slice(0, 44)}" superseded by "${outcome.article.title.slice(0, 44)}".`)
+      }
+      delete outcome.article.supersedesIds
+
       if (outcome.article.image) usedImages.add(outcome.article.image)
       coveredNow.unshift(
         { title: outcome.article.title, at: Date.now() },

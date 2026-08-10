@@ -149,6 +149,7 @@ Respond with a single JSON object and nothing else. No markdown fence, no commen
   "category": "TRANSFERS | ANALYSIS | NEWS | OWNERSHIP | ACADEMY | HISTORY",
   "bodyHtml": "The article body as HTML, per the rules above",
   "relatedIds": ["Up to 3 ids from OUR EARLIER COVERAGE below that a reader of this piece would genuinely want next. Only ids from that list. Empty array if none fit — a forced link is worse than none."],
+  "supersedesIds": ["Ids from OUR EARLIER COVERAGE that THIS piece makes out of date, because the thing they anticipated has now happened or been settled. A piece saying a debut is expected is superseded by the debut. A piece saying a fee is being discussed is superseded by the fee being agreed. Only where the earlier piece would now mislead a reader — NOT merely related, NOT the same topic, NOT background. Almost always empty."],
   "sourceLinks": []
 }`
 

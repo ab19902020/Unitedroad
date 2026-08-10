@@ -1672,6 +1672,7 @@ FORMAT: plain text. No markdown, no headings, no bullet lists.`;
                             people: Array.isArray(item.people) ? item.people : [],
                             imageCredit: item.imageCredit || '',
                             relatedIds: Array.isArray(item.relatedIds) ? item.relatedIds : [],
+                            supersededBy: item.supersededBy || '',
                             sources: Array.isArray(item.sources) ? item.sources : [],
                             category: item.category || 'NEWS',
                             kind: item.kind || 'article',
@@ -2427,7 +2428,7 @@ FORMAT: plain text. No markdown, no headings, no bullet lists.`;
                         // because the ticker is the one place the site is claiming
                         // something is happening right now.
                         const seenSubject = new Set();
-                        const ticker = blogPosts.filter(n => {
+                        const ticker = blogPosts.filter(n => !n.supersededBy).filter(n => {
                             const subjects = (n.people || []).map(x => String(x).toLowerCase());
                             if (!subjects.length) return true;
                             if (subjects.some(x => seenSubject.has(x))) return false;
@@ -3187,7 +3188,9 @@ FORMAT: plain text. No markdown, no headings, no bullet lists.`;
             const renderNewsPage = () => {
                 const now = Date.now();
 
-                const ownCoverage = blogPosts.map(articleAsNewsItem);
+                // A piece a later story has overtaken stays published and readable,
+                // but it does not belong in a list of what is currently true.
+                const ownCoverage = blogPosts.filter(p => !p.supersededBy).map(articleAsNewsItem);
                 // Drop any external item the desk has already written up, so the same
                 // story does not appear twice under two different bylines.
                 const ownKeys = ownCoverage.map(o => o.title.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim());
@@ -3965,6 +3968,15 @@ FORMAT: plain text. No markdown, no headings, no bullet lists.`;
                                     <div className="text-[11px] font-heading font-bold text-gray-400 uppercase tracking-widest">{post.date}{post.readMinutes ? ` · ${post.readMinutes} min read` : ''}</div>
                                 </div>
                             </div>
+                            {post.supersededBy && (
+                                <div className="mb-8 p-4 rounded-2xl border border-amber-200 bg-amber-50 flex items-start gap-3">
+                                    <InfoIcon className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                                    <div className="font-body text-sm text-amber-900">
+                                        <strong className="font-heading font-black">This story has been overtaken.</strong> It is left here as a record of what was reported at the time.{' '}
+                                        <button onClick={() => doNavigate(`/article/${post.supersededBy}`)} className="underline font-bold hover:text-[#DA291C]">Read the current story</button>.
+                                    </div>
+                                </div>
+                            )}
                             {/* CC BY and CC BY-SA require the photographer to be
                                 credited wherever the picture is shown. This is not
                                 decoration — without it we are not licensed to use it. */}
