@@ -3473,6 +3473,26 @@ FORMAT: plain text. No markdown, no headings, no bullet lists.`;
                                 )}
                             </div>
 
+                            {/* The next piece, offered at the point the reader has
+                                actually finished this one. "Keep Reading" below is a
+                                grid you have to choose from; this is a single
+                                decision, which is what someone at the end of an
+                                article wants. */}
+                            {related[0] && (
+                                <div onClick={() => doNavigate(`/article/${related[0].id}`)} role="button" tabIndex={0}
+                                    onKeyDown={(e) => { if (e.key === 'Enter') doNavigate(`/article/${related[0].id}`); }}
+                                    className="mt-12 ur-card !shadow-sm p-4 flex items-center gap-4 cursor-pointer group">
+                                    <SmartImage src={related[0].image} alt="" seed={related[0].id} label={related[0].category || 'Article'}
+                                        wrapperClassName="w-[92px] flex-shrink-0 rounded-xl overflow-hidden aspect-[4/3]"
+                                        className="w-full h-full object-cover" />
+                                    <div className="min-w-0">
+                                        <div className="text-[9px] font-heading font-black tracking-[2px] uppercase text-[#DA291C] mb-1">Read Next</div>
+                                        <div className="font-heading font-bold text-[15px] text-gray-900 leading-snug ur-clamp-2 group-hover:text-[#DA291C] transition-colors">{related[0].title}</div>
+                                    </div>
+                                    <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-[#DA291C] group-hover:translate-x-1 transition-all flex-shrink-0 ml-auto" />
+                                </div>
+                            )}
+
                             {related.length > 0 && (
                                 <div className="mt-16 pt-10 border-t border-gray-200">
                                     <h3 className="ur-display text-2xl md:text-3xl text-gray-900 mb-7">Keep Reading</h3>
