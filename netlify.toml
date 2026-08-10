@@ -123,3 +123,6 @@
 
 [functions."refit-covers"]
   included_files = ["netlify/lib/**"]
+
+[functions."section-page"]
+  included_files = ["netlify/lib/**"]
