@@ -439,6 +439,24 @@
         main { padding-bottom: calc(196px + env(safe-area-inset-bottom, 0px)); }
         @media (min-width: 768px) { main { padding-bottom: 48px; } }
 
+/* Appears once you are a screen or two down. Sits above the tab bar on a phone
+   and clear of the audio player on desktop. */
+        .ur-totop {
+            position: fixed; z-index: 44;
+            right: 20px; bottom: calc(140px + env(safe-area-inset-bottom, 0px));
+            width: 42px; height: 42px; border-radius: 999px;
+            display: flex; align-items: center; justify-content: center;
+            background: rgba(11,19,43,0.88); color: #fff;
+            backdrop-filter: blur(8px);
+            box-shadow: 0 10px 24px -10px rgba(11,19,43,0.6);
+            opacity: 0; pointer-events: none;
+            transform: translateY(8px);
+            transition: opacity 0.3s var(--ur-ease), transform 0.3s var(--ur-ease), background-color 0.2s ease;
+        }
+        .ur-totop.is-on { opacity: 1; pointer-events: auto; transform: none; }
+        .ur-totop:hover { background: var(--ur-red); }
+        @media (min-width: 768px) { .ur-totop { right: 32px; bottom: 112px; } }
+
         /* Everything was behind the hamburger, so getting between sections on a
            phone cost two taps and a menu. A thumb-reachable bar is how every
            sports site does this, for the reason that it works. */
@@ -1504,6 +1522,7 @@ FORMAT: plain text. No markdown, no headings, no bullet lists.`;
             // the reading-progress bar pinned under it.
             const [scrolled, setScrolled] = useState(false);
             const [readProgress, setReadProgress] = useState(0);
+            const [showTopBtn, setShowTopBtn] = useState(false);
             
             // Audio States
             const [isAudioPlaying, setIsAudioPlaying] = useState(false); 
@@ -2100,6 +2119,10 @@ FORMAT: plain text. No markdown, no headings, no bullet lists.`;
                         const y = window.scrollY || 0;
                         const max = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
                         setScrolled(y > 24);
+                        // Far enough down that scrolling back is a chore. Its own
+                        // signal, not readProgress — that only moves on article
+                        // pages, so the button never appeared anywhere else.
+                        setShowTopBtn(y > window.innerHeight * 1.2);
                         setReadProgress(Math.min(1, y / max));
                         ticking = false;
                     });
@@ -4501,6 +4524,14 @@ FORMAT: plain text. No markdown, no headings, no bullet lists.`;
                             </MotionDiv>
                         )}
                     </AnimatePresence>
+
+                    {hasEntered && (
+                        <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                            aria-label="Back to top"
+                            className={`ur-totop ${showTopBtn ? 'is-on' : ''}`}>
+                            <ArrowLeft className="w-4 h-4 rotate-90" />
+                        </button>
+                    )}
 
                     {hasEntered && (
                         <nav className="ur-tabbar lg:hidden" aria-label="Sections">
