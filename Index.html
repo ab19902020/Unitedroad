@@ -430,8 +430,12 @@
         /* The floating chant player is fixed to the bottom-right. Without room
            reserved for it, it sits on top of the last card or paragraph on every
            page — clearly visible on mobile. */
-        main { padding-bottom: 96px; }
-        @media (min-width: 768px) { main { padding-bottom: 40px; } }
+/* Clearance for the floating player, which is fixed to the bottom. This was
+   96px against a control that measures ~112px with its shadow, so the last card
+   on every page sat underneath it. Measured and given room, plus the safe area
+   on phones with a home indicator. */
+        main { padding-bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
+        @media (min-width: 768px) { main { padding-bottom: 48px; } }
 
         /* iOS home-indicator safe area. */
         body { padding-bottom: env(safe-area-inset-bottom, 0px); }
