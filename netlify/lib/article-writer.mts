@@ -1282,10 +1282,27 @@ export const runDailyBatch = async (opts: {
   // went to news, and the three daily long-form articles were never written.
   // A result reads differently from a rumour: a scoreline in the headline, or
   // the vocabulary of a finished game. These become match reports.
+  // Measured against the 40 pieces live on the site: the first three patterns
+  // matched NONE of them. Match reports were not rare, they were unreachable —
+  // one report exists across the whole archive — because a desk writing in the
+  // house voice does not produce headlines like "United Beat PSG 2-1". It
+  // produces "Antony and Target Both See Red as Friendly Turns Ugly".
+  //
+  // So the vocabulary of covering a fixture is included, not just the vocabulary
+  // of reporting a scoreline. Re-measured on the same 40: two match, and both are
+  // the PSG game. That is the hit rate wanted — a widening that turned ordinary
+  // squad news into match reports would be worse than the gap it fixes.
+  //
+  // This is a patch, not the fix. The right design is a job that knows a fixture
+  // has finished, waits for the reporting to land, and writes a report
+  // deliberately — rather than hoping a match-shaped headline turns up.
   const RESULT_PATTERNS = [
     /\b\d\s*[-\u2013]\s*\d\b/,
     /\b(full[- ]time|player ratings|match report|beat|thrash|held to|slump to|edge past|see off|come from behind)\b/i,
     /\b(win|defeat|draw|loss)\b.*\b(against|vs|over|at)\b/i,
+    /\b(friendly|pre[- ]season (win|defeat|draw|match|game)|cup (win|defeat|draw|tie))\b/i,
+    /\bas it happened\b/i,
+    /\b(kick[- ]?off|at half[- ]time|second half)\b/i,
   ]
   const isResult = (c: StoryCluster) => RESULT_PATTERNS.some((r) => r.test(c.lead.title))
 
