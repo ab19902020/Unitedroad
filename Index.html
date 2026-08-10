@@ -434,8 +434,36 @@
    96px against a control that measures ~112px with its shadow, so the last card
    on every page sat underneath it. Measured and given room, plus the safe area
    on phones with a home indicator. */
-        main { padding-bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
+/* Clearance for the two fixed things at the bottom on a phone: the tab bar and
+   the floating player above it. Desktop has neither. */
+        main { padding-bottom: calc(196px + env(safe-area-inset-bottom, 0px)); }
         @media (min-width: 768px) { main { padding-bottom: 48px; } }
+
+        /* Everything was behind the hamburger, so getting between sections on a
+           phone cost two taps and a menu. A thumb-reachable bar is how every
+           sports site does this, for the reason that it works. */
+        .ur-tabbar {
+            position: fixed; bottom: 0; left: 0; right: 0; z-index: 45;
+            display: flex; background: rgba(255,255,255,0.94);
+            backdrop-filter: blur(16px) saturate(150%);
+            border-top: 1px solid var(--ur-line);
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+            box-shadow: 0 -8px 24px -16px rgba(11,19,43,0.5);
+        }
+        @media (min-width: 1024px) { .ur-tabbar { display: none; } }
+        .ur-tab {
+            flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            gap: 3px; padding: 9px 4px 8px; color: #6b7280;
+            font-family: 'Montserrat', sans-serif; font-weight: 800;
+            font-size: 9px; letter-spacing: 1px; text-transform: uppercase;
+            transition: color 0.2s ease;
+        }
+        .ur-tab[aria-current="page"] { color: var(--ur-red); }
+        .ur-tab[aria-current="page"]::before {
+            content: ''; position: absolute; top: 0; width: 28px; height: 2px;
+            border-radius: 0 0 2px 2px; background: var(--ur-red);
+        }
+        .ur-tab { position: relative; }
 
         /* iOS home-indicator safe area. */
         body { padding-bottom: env(safe-area-inset-bottom, 0px); }
@@ -4475,6 +4503,32 @@ FORMAT: plain text. No markdown, no headings, no bullet lists.`;
                     </AnimatePresence>
 
                     {hasEntered && (
+                        <nav className="ur-tabbar lg:hidden" aria-label="Sections">
+                            {[
+                                { to: '/', label: 'Home', icon: Shield },
+                                { to: '/news', label: 'News', icon: Newspaper },
+                                { to: '/matchday', label: 'Matchday', icon: Activity },
+                                { to: '/vault', label: 'Vault', icon: Volume2 },
+                            ].map(t => {
+                                const Icon = t.icon;
+                                const active = t.to === '/' ? path === '/' : path.startsWith(t.to);
+                                return (
+                                    <button key={t.to} onClick={() => doNavigate(t.to)}
+                                        aria-current={active ? 'page' : undefined}
+                                        className="ur-tab">
+                                        <Icon className="w-[18px] h-[18px]" />
+                                        {t.label}
+                                    </button>
+                                );
+                            })}
+                            <button onClick={() => setIsNavOpen(true)} className="ur-tab" aria-label="More sections">
+                                <Menu className="w-[18px] h-[18px]" />
+                                More
+                            </button>
+                        </nav>
+                    )}
+
+                    {hasEntered && (
                         <main className="flex-1">
                             <AnimatePresence mode="wait"><MotionDiv key={path} initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }} transition={{ duration: 0.3 }}>{renderPage()}</MotionDiv></AnimatePresence>
                         </main>
@@ -4508,7 +4562,7 @@ FORMAT: plain text. No markdown, no headings, no bullet lists.`;
 
                     <AnimatePresence>
                         {hasEntered && !activeGame && !activeArchiveVideo && (
-                            <MotionDiv initial={{y:100,opacity:0}} animate={{y:0,opacity:1}} className={`fixed right-5 md:right-8 z-[90] transition-all duration-500 ${showCookieBanner ? 'bottom-48 md:bottom-36' : 'bottom-5 md:bottom-8'}`}>
+                            <MotionDiv initial={{y:100,opacity:0}} animate={{y:0,opacity:1}} className={`fixed right-5 md:right-8 z-[90] transition-all duration-500 ${showCookieBanner ? 'bottom-52 md:bottom-36' : 'bottom-[76px] md:bottom-8'}`}>
                                 <div className="bg-white/95 border border-gray-200 shadow-[0_15px_40px_rgba(0,0,0,0.15)] backdrop-blur-2xl flex items-center gap-2 p-1.5 pr-6 md:pr-7 rounded-full max-w-[85vw] md:max-w-none">
                                     <button aria-label={isAudioPlaying ? 'Pause Chant' : 'Play Chant'} onClick={handlePlayPause} className="flex-shrink-0 w-10 h-10 md:w-12 md:h-12 bg-gray-100 border border-gray-200 text-gray-900 flex items-center justify-center rounded-full hover:bg-[#DA291C] hover:text-white hover:border-[#DA291C] transition-all shadow-sm">{isAudioPlaying ? <Pause className="w-4 h-4 md:w-5 md:h-5"/> : <Play className="w-4 h-4 md:w-5 md:h-5"/>}</button>
                                     <button aria-label="Stop Chant" onClick={handleStop} className="flex-shrink-0 w-10 h-10 md:w-12 md:h-12 bg-gray-100 border border-gray-200 text-gray-900 flex items-center justify-center rounded-full hover:bg-gray-800 hover:text-white transition-all shadow-sm mr-2"><Square className="w-4 h-4"/></button>
