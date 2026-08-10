@@ -261,7 +261,11 @@ The news of this story is already reported elsewhere on the site. Assume the rea
 - 550 to 800 words.
 - Three or four <h2> sections, each named for the point it makes.
 - This is where "I" belongs. Use it.
-- If you cannot find an argument worth making about this story, say less rather than padding.`
+- If you cannot find an argument worth making about this story, say less rather than padding.
+
+YOUR HEADLINE MUST NOT RESTATE THE NEWS HEADLINE.
+The news piece already carries the facts — "United Make Approach For £30m Left-Back Target". Yours names the argument you are making about them: what the approach says about how the club recruits, why this position has gone unresolved for three seasons, what happens if it stalls again. If your headline would work unchanged on the news story, it is the wrong headline for this piece.
+If OUR EARLIER COVERAGE below contains the news report of this story, put its id in relatedIds — the two pieces belong together.`
 
 // A result is a different job again: the reader knows the score, so the value
 // is in what the ninety minutes actually showed.

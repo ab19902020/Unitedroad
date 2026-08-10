@@ -545,15 +545,27 @@ const scrapeOgImage = async (pageUrl: string): Promise<string> => {
   return ''
 }
 
-const pickStoryImage = async (story: StoryCluster): Promise<string> => {
-  const fromFeed = story.members.map((m) => m.thumbnail).find(usableImage)
+/**
+ * A cover photograph for the story, avoiding any already used today.
+ *
+ * Two stories built from the same outlet's coverage resolve to the same
+ * og:image, and the page then shows one photograph twice under two different
+ * headlines — which reads as a broken site even when the stories differ. So
+ * every candidate is checked against what today has already used, and a story
+ * that can only produce a duplicate gets no photograph at all: the generated
+ * cover art is always distinct, so no image is better than the same one twice.
+ */
+const pickStoryImage = async (story: StoryCluster, taken: Set<string> = new Set()): Promise<string> => {
+  const free = (u: string) => usableImage(u) && !taken.has(u)
+
+  const fromFeed = story.members.map((m) => m.thumbnail).find(free)
   if (fromFeed) return fromFeed
 
-  // Try the best-corroborated reports first; stop at the first hit.
-  for (const m of story.members.slice(0, 3)) {
+  // Try the best-corroborated reports first; stop at the first unused hit.
+  for (const m of story.members.slice(0, 4)) {
     if (!m.link || m.link.includes('news.google.com')) continue
     const og = await scrapeOgImage(m.link)
-    if (og) return og
+    if (og && !taken.has(og)) return og
   }
   return ''
 }
@@ -915,13 +927,14 @@ const writeOne = async (
   varietyNote: string,
   archiveNote = '',
   archiveIds: Set<string> = new Set(),
+  takenImages: Set<string> = new Set(),
 ): Promise<WriteOutcome> => {
   let correction = ''
   let calls = 0
   let lastReason = 'unknown'
 
   // Resolved once, before any generation, so a retry does not re-scrape.
-  const image = await pickStoryImage(story)
+  const image = await pickStoryImage(story, takenImages)
 
   for (let attempt = 0; attempt < 2; attempt++) {
     calls++
@@ -1250,6 +1263,12 @@ export const runDailyBatch = async (opts: {
   const writtenTitles = publishedToday.map((a) => a.title)
   const coveredNow = [...index.covered]
 
+  // Same matcher gatherStories uses, built over this run's headlines so the
+  // in-loop duplicate check below behaves identically to the pre-run filter.
+  const sameStory = makeSameStory(
+    stories.flatMap((c) => [c.lead.title, ...c.members.map((m) => m.title)]),
+  )
+
   // Show the writer the furniture it has used recently so consecutive pieces do
   // not all carry the same headings and the same opening construction.
   const recent = index.articles.slice(0, 12)
@@ -1267,9 +1286,31 @@ export const runDailyBatch = async (opts: {
     `${stories.length} uncovered stories; room for ${newsRoom} news and ${articleRoom} article(s) today, up to ${perRun} this run.`,
   )
 
+  // Images already spoken for. Two clusters built from the same outlet's page
+  // resolve to the same og:image, and the site then shows one photograph twice
+  // in a row under two different headlines, which looks broken even when the
+  // stories genuinely differ.
+  const usedImages = new Set(
+    publishedToday.map((a) => a.image).filter(Boolean),
+  )
+
   for (let i = 0; i < stories.length && published.length < perRun && callsUsed < callBudget; i++) {
     const story = stories[i]
     if (newsLeft === 0 && articlesLeft === 0) break
+
+    // Skip anything this run has already covered.
+    //
+    // gatherStories filters against the covered list as it was when the run
+    // started, and nothing re-checked it as pieces were written. So when
+    // clustering left two near-identical clusters — the same story filed by
+    // outlets whose headlines did not overlap quite enough to merge — both were
+    // written, one as news and one as an article, from the same source material.
+    // They came out with the same headline and the same photograph, one above
+    // the other on the page. One story gets one piece.
+    if (coveredNow.some((prev) => sameStory(prev.title, story.lead.title)) ||
+        story.members.some((m) => coveredNow.some((prev) => sameStory(prev.title, m.title)))) {
+      continue
+    }
 
     // One long-form piece per run at most, taken from the best-corroborated
     // story available, so the daily article quota actually gets filled even
@@ -1303,7 +1344,7 @@ export const runDailyBatch = async (opts: {
         .map((a) => ({ id: a.id, title: a.title, date: a.date }))
       const outcome = await writeOne(
         apiKey, model, story, others, writtenTitles, kind, varietyNote,
-        buildArchiveNote(archive), new Set(archive.map((a) => a.id)),
+        buildArchiveNote(archive), new Set(archive.map((a) => a.id)), usedImages,
       )
       callsUsed += outcome.calls
       if (!outcome.ok) {
@@ -1320,6 +1361,7 @@ export const runDailyBatch = async (opts: {
       if (kind === 'article') articlesLeft--
       else newsLeft--
 
+      if (outcome.article.image) usedImages.add(outcome.article.image)
       coveredNow.unshift(
         { title: outcome.article.title, at: Date.now() },
         ...story.members.map((m) => ({ title: m.title, at: Date.now() })),
