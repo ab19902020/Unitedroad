@@ -2416,7 +2416,24 @@ FORMAT: plain text. No markdown, no headings, no bullet lists.`;
                     {(() => {
                         const HOT = 6 * 60 * 60 * 1000;
                         const now = Date.now();
-                        const ticker = blogPosts.slice(0, 14);
+                        // One story per subject, newest wins.
+                        //
+                        // "Tielemans Sits Out... Debut Looms" was published, he then
+                        // played, and the piece carried on running as breaking news
+                        // because the desk has no way to retire a story that events
+                        // have overtaken. It cannot fix the article, but it can stop
+                        // the ticker asserting the older of two stories about the same
+                        // person — which is where a stale line does the most damage,
+                        // because the ticker is the one place the site is claiming
+                        // something is happening right now.
+                        const seenSubject = new Set();
+                        const ticker = blogPosts.filter(n => {
+                            const subjects = (n.people || []).map(x => String(x).toLowerCase());
+                            if (!subjects.length) return true;
+                            if (subjects.some(x => seenSubject.has(x))) return false;
+                            subjects.forEach(x => seenSubject.add(x));
+                            return true;
+                        }).slice(0, 14);
                         const isBreaking = ticker.some(n => now - n.timestamp < HOT);
                         const ago = (ts) => {
                             const m = Math.max(0, Math.round((now - ts) / 60000));
