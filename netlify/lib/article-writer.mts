@@ -570,19 +570,22 @@ export const findCommonsImage = async (
   name: string,
   taken: Set<string> = new Set(),
 ): Promise<CommonsImage | null> => {
-  const surname = name.trim().split(/\s+/).pop()?.toLowerCase() || ''
+  const clean = name.trim().replace(/\s+/g, ' ')
+  const parts = clean.toLowerCase().split(' ')
+  const surname = parts[parts.length - 1] || ''
+  const forename = parts[0] || ''
   if (surname.length < 3) return null
 
   const params = new URLSearchParams({
     action: 'query', generator: 'search',
-    gsrsearch: name, gsrnamespace: '6', gsrlimit: '12',
+    gsrsearch: clean, gsrnamespace: '6', gsrlimit: '30',
     prop: 'imageinfo', iiprop: 'url|extmetadata|size', iiurlwidth: '1200',
     format: 'json', formatversion: '2',
   })
 
   try {
     const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), 8000)
+    const timer = setTimeout(() => controller.abort(), 9000)
     const res = await fetch(`${COMMONS_ENDPOINT}?${params}`, {
       headers: { 'User-Agent': 'UnitedRoadBot/1.0 (https://unitedroad.uk)' },
       signal: controller.signal,
@@ -591,32 +594,62 @@ export const findCommonsImage = async (
 
     const data = await res.json()
     const pages: any[] = data?.query?.pages || []
+    const thisYear = new Date().getFullYear()
 
     const scored = pages
       .map((pg) => {
         const ii = pg?.imageinfo?.[0]
         if (!ii?.thumburl) return null
-        const title = String(pg.title || '')
-        // The surname must be in the filename, or the search happily returns a
-        // squad photograph for any player who was on the pitch that day.
-        if (!title.toLowerCase().includes(surname)) return null
+
+        // Filename with separators flattened, so "David_Beckham_2024.jpg" and
+        // "David Beckham (cropped).jpg" are compared the same way.
+        const file = String(pg.title || '').replace(/^File:/i, '').replace(/\.[a-z0-9]+$/i, '')
+        const flat = file.toLowerCase().replace(/[_\-]+/g, ' ').replace(/\s+/g, ' ')
+
+        // The filename must BEGIN with the person's full name.
+        //
+        // Matching the surname anywhere put Victoria Beckham on a story about
+        // David Beckham. Requiring the full name anywhere was still not enough:
+        // it returned "Adidas Predator Touch 96 (David Beckham)" — a photograph
+        // of a boot — and "Amir Murillo Marcus Rashford England v Panama", two
+        // players wrestling. In both the person is incidental to the subject.
+        //
+        // How Commons is actually named settles it. A photograph *of* someone is
+        // filed under their name first — "Michael Carrick 12042025", "Kobbie
+        // Mainoo England v Ghana". When the name appears later or in brackets,
+        // they are not what the picture is of. Anchoring to the start is a
+        // single cheap rule that encodes exactly that.
+        if (!flat.startsWith(`${forename} ${surname}`)) return null
+
+        // Group and object shots that still lead with the name.
+        if (/\b(and|with|&)\b/.test(flat)) return null
+        if (/\b(squad|team|group|lineup|line up|players|fans|crowd|panel|family|statue|mural|graffiti|poster|shirt|jersey|boots?|museum|waxwork)\b/.test(flat)) return null
+
         const em = ii.extmetadata || {}
         const licence = String(em.LicenseShortName?.value || '')
-        // Public domain and CC licences only. No "fair use" file ever.
         if (!/^(CC|Public domain|CC0)/i.test(licence)) return null
+
         const w = Number(ii.width) || 0
         const h = Number(ii.height) || 0
         if (w < 640) return null
+
+        // How old the photograph is. A 1990s picture illustrating a 2026 story
+        // is wrong even when it is the right person, so age is scored hard.
+        const dateRaw = String(em.DateTimeOriginal?.value || em.DateTime?.value || '')
+        const year = Number((dateRaw.match(/(19|20)\d{2}/) || [])[0]) || 0
+        const age = year ? thisYear - year : 12
+        const ratio = w / Math.max(1, h)
+
         return {
           url: String(ii.thumburl),
           credit: stripTags(String(em.Artist?.value || 'Wikimedia Commons')).replace(/\s+/g, ' ').trim().slice(0, 80),
           licence,
-          // Prefer something close to landscape; a tall portrait crops badly in
-          // a 16/9 card.
-          score: -Math.abs(w / Math.max(1, h) - 1.5),
+          year,
+          // Recency dominates; framing breaks ties.
+          score: -age * 2 - Math.abs(ratio - 1.5) * 3,
         }
       })
-      .filter(Boolean) as (CommonsImage & { score: number })[]
+      .filter(Boolean) as (CommonsImage & { score: number; year: number })[]
 
     const pick = scored.filter((c) => !taken.has(c.url)).sort((a, b) => b.score - a.score)[0]
     return pick ? { url: pick.url, credit: pick.credit, licence: pick.licence } : null

@@ -260,8 +260,23 @@
         @keyframes ur-skeleton-slide { 0% { background-position: 140% 0; } 100% { background-position: -40% 0; } }
 
         /* Fade an image in once it has actually decoded */
+        /* These were a hard 0 -> 1 snap. With loading="lazy", every card's image
+           decodes as it scrolls into view, so each one popped in behind a
+           shimmering skeleton — the flicker you see swiping down the page. A
+           short fade turns the same event into something you do not notice. */
         .ur-img-loading { opacity: 0; }
         .ur-img-ready { opacity: 1; }
+        .ur-img-loading, .ur-img-ready { transition: opacity 0.4s var(--ur-ease); }
+
+        /* A still tint, not a moving shimmer, behind an image that is loading.
+           An animated placeholder under a fading image is two things moving at
+           once for something that resolves in a few hundred milliseconds — and
+           it is also one of the elements the off-screen animation pauser toggles
+           on scroll, which made the flashing worse. */
+        .ur-img-pending {
+            position: absolute; inset: 0;
+            background: linear-gradient(140deg, #eef0f4 0%, #f6f7f9 100%);
+        }
 
         /* ---------- Buttons ---------- */
         .ur-btn {
@@ -734,7 +749,7 @@
 
             return (
                 <div className={`ur-media ${wrapperClassName}`}>
-                    {!loaded && <div className="absolute inset-0 ur-skeleton" aria-hidden="true"></div>}
+                    {!loaded && <div className="ur-img-pending" aria-hidden="true"></div>}
                     <img
                         src={current}
                         alt={alt}
