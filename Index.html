@@ -72,7 +72,13 @@
         ::selection { background: #DA291C; color: #ffffff; }
 
         /* Accessible, on-brand keyboard focus ring (mouse clicks stay clean) */
-        a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible {
+        /* [role="button"] included because ten interactive elements on this site
+           are divs — cards, story rows, the read-next strip. They are reachable
+           by keyboard and they respond to Enter, but the selector only named real
+           <button> elements, so tabbing through the site moved a focus ring you
+           could not see. */
+        a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible,
+        [role="button"]:focus-visible {
             outline: 2px solid #FFD700; outline-offset: 3px; border-radius: 4px;
         }
 
