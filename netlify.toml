@@ -11,83 +11,19 @@
 [functions]
   node_bundler = "esbuild"
 
-# Every section has a real URL rather than a fragment, so it can be indexed,
-# linked to and shared. The app is a single HTML file, so each of those paths
-# has to serve it — a 200 rewrite, not a redirect, or the address bar would snap
-# back to "/" and the URL would be pointless.
+# The section paths are served by netlify/functions/section-page.mts, which
+# injects each one's own title, description and share image.
 #
-# These are listed one by one on purpose. A blanket /* catch-all would sit in
-# front of the function routes (/api/*, /article/:id) and of any real file added
-# later, and would answer 200 for every typo instead of 404 — which tells Google
-# the site has infinite pages. An unknown path should still be a 404.
-[[redirects]]
-  from = "/news"
-  to = "/index.html"
-  status = 200
-[[redirects]]
-  from = "/articles"
-  to = "/index.html"
-  status = 200
-[[redirects]]
-  from = "/transfers"
-  to = "/index.html"
-  status = 200
-[[redirects]]
-  from = "/academy"
-  to = "/index.html"
-  status = 200
-[[redirects]]
-  from = "/matchday"
-  to = "/index.html"
-  status = 200
-[[redirects]]
-  from = "/hub"
-  to = "/index.html"
-  status = 200
-[[redirects]]
-  from = "/vault"
-  to = "/index.html"
-  status = 200
-[[redirects]]
-  from = "/videos"
-  to = "/index.html"
-  status = 200
-[[redirects]]
-  from = "/oracle"
-  to = "/index.html"
-  status = 200
-[[redirects]]
-  from = "/games"
-  to = "/index.html"
-  status = 200
-[[redirects]]
-  from = "/manager"
-  to = "/index.html"
-  status = 200
-[[redirects]]
-  from = "/about"
-  to = "/index.html"
-  status = 200
-[[redirects]]
-  from = "/author"
-  to = "/index.html"
-  status = 200
-[[redirects]]
-  from = "/standards"
-  to = "/index.html"
-  status = 200
-[[redirects]]
-  from = "/contact"
-  to = "/index.html"
-  status = 200
-[[redirects]]
-  from = "/privacy"
-  to = "/index.html"
-  status = 200
-[[redirects]]
-  from = "/terms"
-  to = "/index.html"
-  status = 200
+# The 200 rewrites that used to be here were kept "as a safety net" on the
+# assumption that a function route would be matched first. It is not: the
+# rewrites won, every section carried on serving the homepage's head, and the
+# function was dead code from the moment it deployed. A fallback that silently
+# takes precedence over the thing it is meant to be backing up is worse than no
+# fallback, so they are gone.
+#
+# Note there is deliberately no /* catch-all. It would sit in front of the
+# function routes and answer 200 for every typo instead of 404, telling Google
+# the site has infinite pages.
 
 # The scheduled article-desk run and the manual trigger both call DeepSeek,
 # which can take a while on a long piece.
