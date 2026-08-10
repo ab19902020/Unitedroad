@@ -117,3 +117,6 @@
 
 [functions."desk-status"]
   included_files = ["netlify/lib/**"]
+
+[functions."refresh-club-state"]
+  included_files = ["netlify/lib/**"]

@@ -61,9 +61,18 @@ export default async (_req: Request, context: Context) => {
     }
     console.log(`[article-desk] cron handed off to the background worker (auth: ${auth.mode}).`)
 
+    const now = new Date()
+
+    // Once a day, re-establish what is currently true at the club from live
+    // reporting. Everything the desk writes that day is prompted with it, so a
+    // stale fact — a manager who left months ago — cannot reach an article.
+    if (now.getUTCHours() === 5 && now.getUTCMinutes() < 5) {
+      fetch(`${siteUrl}/api/refresh-club-state?refresh=1`, { method: 'POST' })
+        .catch((e) => console.error('[club-state] refresh failed:', e.message))
+    }
+
     // Sunday evening: also kick the weekly round-up. It no-ops if one has
     // already gone out this week, so firing it on every Sunday run is safe.
-    const now = new Date()
     if (now.getUTCDay() === 0 && now.getUTCHours() === 18) {
       fetch(`${siteUrl}/.netlify/functions/weekly-roundup`, {
         method: 'POST',

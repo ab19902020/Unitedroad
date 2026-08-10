@@ -1008,6 +1008,7 @@ const writeOne = async (
   archiveNote = '',
   archiveIds: Set<string> = new Set(),
   takenImages: Set<string> = new Set(),
+  clubStateNote = '',
 ): Promise<WriteOutcome> => {
   let correction = ''
   let calls = 0
@@ -1023,6 +1024,8 @@ const writeOne = async (
       model,
       [
         UNITED_ROAD_BRAIN,
+        // Before the mode brief, so current fact outranks house style.
+        clubStateNote,
         kind === 'news' ? NEWS_MODE_BRIEF
           : kind === 'match' ? MATCH_MODE_BRIEF
           : kind === 'weekly' ? WEEKLY_MODE_BRIEF
@@ -1216,6 +1219,9 @@ export const runDailyBatch = async (opts: {
       `Daily ceilings reached (${newsToday}/${BATCH.newsPerDay} news, ${articlesToday}/${BATCH.articlesPerDay} articles) — still checking for anything significant.`,
     )
   }
+
+  const clubStateNote = buildClubStateNote(await readClubState())
+  if (!clubStateNote) notes.push('No current club state established yet — run /api/refresh-club-state.')
 
   let stories = await gatherStories(index.covered)
   if (stories.length === 0) {
@@ -1424,7 +1430,7 @@ export const runDailyBatch = async (opts: {
         .map((a) => ({ id: a.id, title: a.title, date: a.date }))
       const outcome = await writeOne(
         apiKey, model, story, others, writtenTitles, kind, varietyNote,
-        buildArchiveNote(archive), new Set(archive.map((a) => a.id)), usedImages,
+        buildArchiveNote(archive), new Set(archive.map((a) => a.id)), usedImages, clubStateNote,
       )
       callsUsed += outcome.calls
       if (!outcome.ok) {
@@ -1610,4 +1616,139 @@ export const publishRoundup = async (): Promise<{ status: string; title?: string
   })
 
   return { status: 'published', title }
+}
+
+// --- Current club state --------------------------------------------------
+//
+// The failure this fixes: a model states a fact it learned in training as
+// though it were current. It is how "Ruben Amorim" gets written under a 2026
+// dateline when Michael Carrick has the job, and no amount of instruction fixes
+// it, because the model does not know its own knowledge is stale.
+//
+// Note carefully that DeepSeek cannot solve this by being asked. It has a
+// training cutoff of its own, so "who manages United?" gets the same confident,
+// possibly wrong answer from it as from any other model. What it can do is
+// *read*. The feeds this site already polls every five minutes are live, and
+// extracting a fact from supplied text is a different task from recalling one.
+//
+// So this reads the day's reporting and pulls out only what that reporting
+// actually states. Anything not stated comes back null and the previous value
+// stands, which means a quiet news day never erases what we know, and a wrong
+// value is corrected the moment the feeds contradict it.
+
+export type ClubState = {
+  manager: string | null
+  managerSince: string | null
+  ownership: string | null
+  competition: string | null
+  notes: string[]
+  updatedAt: number
+  /** Headlines the last extraction was drawn from, so a wrong value is traceable. */
+  basis: string[]
+}
+
+const CLUB_STATE_KEY = 'club-state.json'
+
+const EMPTY_CLUB_STATE: ClubState = {
+  manager: null, managerSince: null, ownership: null,
+  competition: null, notes: [], updatedAt: 0, basis: [],
+}
+
+export const readClubState = async (): Promise<ClubState> => {
+  try {
+    const data = (await store().get(CLUB_STATE_KEY, { type: 'json' })) as ClubState | null
+    return data ? { ...EMPTY_CLUB_STATE, ...data } : { ...EMPTY_CLUB_STATE }
+  } catch {
+    return { ...EMPTY_CLUB_STATE }
+  }
+}
+
+/**
+ * The block injected into every writing prompt.
+ *
+ * Deliberately says where the facts came from and when. A model told "this is
+ * what the reporting says today" treats it as evidence; a model told "the
+ * manager is X" treats it as one more thing it half-remembers and may argue
+ * with. It also carries the instruction that matters most: prefer this over
+ * anything you think you know.
+ */
+export const buildClubStateNote = (state: ClubState): string => {
+  const lines: string[] = []
+  if (state.manager) lines.push(`- Head coach: ${state.manager}${state.managerSince ? ` (since ${state.managerSince})` : ''}`)
+  if (state.ownership) lines.push(`- Ownership: ${state.ownership}`)
+  if (state.competition) lines.push(`- Where the season stands: ${state.competition}`)
+  for (const n of state.notes.slice(0, 6)) lines.push(`- ${n}`)
+  if (!lines.length) return ''
+
+  const age = state.updatedAt ? Math.round((Date.now() - state.updatedAt) / 3600000) : 0
+  return `
+WHAT IS TRUE AT MANCHESTER UNITED RIGHT NOW
+Established from this week's reporting${age ? `, ${age} hour(s) ago` : ''}. This is current. Your own training is not — where the two disagree, this wins, every time. Never name a manager, owner or squad member from memory.
+${lines.join('\n')}
+`
+}
+
+/**
+ * Re-derive the current facts from live reporting.
+ *
+ * Cheap: one call over headlines and summaries we have already fetched.
+ */
+export const refreshClubState = async (): Promise<{ status: string; state?: ClubState; reason?: string }> => {
+  const apiKey = process.env.DEEPSEEK_API_KEY
+  if (!apiKey) return { status: 'skipped', reason: 'DEEPSEEK_API_KEY is not set.' }
+  const model = process.env.DEEPSEEK_MODEL || DEFAULT_MODEL
+
+  const stories = await gatherStories([])
+  if (stories.length < 3) return { status: 'skipped', reason: `Only ${stories.length} stories available.` }
+
+  const material = stories
+    .slice(0, 30)
+    .map((c, i) => `[${i + 1}] ${c.lead.title}\n    ${stripTags(c.lead.description || '').slice(0, 220)}`)
+    .join('\n')
+
+  const system = `You extract facts from supplied reporting. You do not answer from memory.
+
+Read the Manchester United reporting below and state only what it establishes. If the reporting does not establish something, return null for it — do NOT fill it in from what you believe to be true. Your training data is older than this reporting and may be wrong; the reporting wins.
+
+A name appearing in a headline is not proof of a role. "Carrick's side beat Arsenal" establishes he is the head coach. "United considering Carrick" does not.
+
+Respond with a single JSON object and nothing else:
+{
+  "manager": "Full name of the current Manchester United head coach, or null if the reporting does not make it clear",
+  "managerSince": "Month and year they took charge if stated, else null",
+  "ownership": "One clause on who controls the club, e.g. 'Glazer family majority owners, INEOS running football operations', or null",
+  "competition": "One clause on where the season stands, e.g. 'Pre-season, 2026/27 Premier League campaign starts this month', or null",
+  "notes": ["Up to 4 short factual statements the reporting establishes that a writer would need — a major signing completed, a long-term injury, a captaincy change. Nothing speculative."]
+}`
+
+  const parsed = await callDeepSeek(apiKey, model, system, material)
+  const prev = await readClubState()
+  const text = (v: unknown, max = 160) =>
+    typeof v === 'string' && v.trim() && v.trim().toLowerCase() !== 'null'
+      ? stripTags(v).replace(/\s+/g, ' ').trim().slice(0, max)
+      : null
+
+  // A null keeps the previous value. A quiet week must not erase what we know.
+  const state: ClubState = {
+    manager: text(parsed?.manager, 60) ?? prev.manager,
+    managerSince: text(parsed?.managerSince, 40) ?? prev.managerSince,
+    ownership: text(parsed?.ownership) ?? prev.ownership,
+    competition: text(parsed?.competition) ?? prev.competition,
+    notes: Array.isArray(parsed?.notes)
+      ? parsed.notes.map((n: unknown) => text(n, 180)).filter(Boolean).slice(0, 4) as string[]
+      : prev.notes,
+    updatedAt: Date.now(),
+    basis: stories.slice(0, 8).map((c) => c.lead.title.slice(0, 110)),
+  }
+
+  if (prev.manager && state.manager && prev.manager !== state.manager) {
+    console.log(`[club-state] head coach changed: ${prev.manager} -> ${state.manager}`)
+  }
+
+  try {
+    await store().setJSON(CLUB_STATE_KEY, state)
+  } catch (err) {
+    return { status: 'error', reason: (err as Error).message }
+  }
+  return { status: 'ok', state }
 }
