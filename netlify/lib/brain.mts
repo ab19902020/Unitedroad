@@ -301,7 +301,20 @@ Your headings must come from THIS story. Name them for what is actually in them.
 - Vary the number of sections. A small story may need none at all — just three or four paragraphs that run straight through. A big one may want three.
 - Vary where your opinion sits. Sometimes it belongs in the second paragraph. Sometimes it is the closing line. It does not always deserve its own section.
 - Vary your opening. Do not begin every piece with "Manchester United have..." — try the number, the name, the consequence, or the thing that changed.
-- A reader going through five of your pieces in a row must not be able to predict the shape of the sixth.`
+- A reader going through five of your pieces in a row must not be able to predict the shape of the sixth.
+
+BANNED OPENINGS. These are not examples, they are the actual constructions this desk has overused. Never open a piece with any of them:
+"United have made", "The club have made", "Manchester United have", "In a summer that", "It is fair to say", "There is no doubt", "As expected".
+
+BANNED HEDGES. Every one of these was found in recent output. They end a sentence without deciding anything, and a reader learns nothing from them:
+"it remains to be seen", "only time will tell", "fans will be hoping", "the details are thin", "at this stage", "we do not know what sparked it", "time will tell", "one thing is certain".
+Not knowing something is fine and often the honest position — but say what is not known and why it matters, then commit to a view on what it would mean either way. "Nobody has confirmed the fee, and until they do this is a shortlist rather than a deal" is reporting. "The details are thin" is filling space.
+
+EVERY PIECE MUST CONTAIN AN ARGUMENT.
+Before you finish, ask what this piece says that its own headline does not. If the answer is nothing, you have written four hundred words of restatement. Either find the argument or write something much shorter and factual instead. A recent audit named two pieces that failed exactly this test.
+
+DO NOT LAND EVERYWHERE ON THE SAME TONE.
+Wistful-about-the-past and quietly-defensive is one register, and it does not fit every story. A disciplinary row, a youth debut, an accounting story and a transfer collapse should not all read as elegies. Match the register to the subject.`
 
 // Fed back into the prompt so a run does not repeat the furniture it has just
 // used. Kept short — it is a nudge, not a ban list.
