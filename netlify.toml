@@ -5,6 +5,10 @@
 # publishes the repo as-is.
 
 [build]
+  # The app is compiled here instead of in every visitor's browser. Index.html
+  # used to ship raw JSX plus 2.4MB of Babel Standalone and transform 4,000 lines
+  # on every page load, before anything rendered.
+  command = "npm run build"
   publish = "."
   functions = "netlify/functions"
 

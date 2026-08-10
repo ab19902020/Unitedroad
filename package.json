@@ -2,7 +2,7 @@
   "name": "united-road",
   "version": "1.0.0",
   "private": true,
-  "description": "United Road — Manchester United fan hub. Static site plus Netlify Functions for feed proxying and the AI article desk.",
+  "description": "United Road \u2014 Manchester United fan hub. Static site plus Netlify Functions for feed proxying and the AI article desk.",
   "type": "module",
   "engines": {
     "node": ">=20"
@@ -10,5 +10,11 @@
   "dependencies": {
     "@netlify/blobs": "^8.1.0",
     "@netlify/functions": "^3.0.0"
+  },
+  "scripts": {
+    "build": "esbuild src/app.jsx --loader:.jsx=jsx --outfile=app.js --minify --target=es2019 --legal-comments=none"
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.0"
   }
 }
