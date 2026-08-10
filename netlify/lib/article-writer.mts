@@ -44,6 +44,8 @@ export type StoredArticle = {
   tags: string[]
   /** People the piece is genuinely about, for the /player topic pages. */
   people?: string[]
+  /** Photographer credit, required when the cover came from Wikimedia Commons. */
+  imageCredit?: string
   /** Ids of our own earlier pieces a reader would want next. */
   relatedIds?: string[]
   /** Alternative headlines the writer produced, kept for review. */
@@ -543,6 +545,84 @@ const scrapeOgImage = async (pageUrl: string): Promise<string> => {
     }
   } catch { /* an image is a nice-to-have, never a failure */ }
   return ''
+}
+
+/**
+ * A free-licensed photograph of a named person from Wikimedia Commons.
+ *
+ * This exists because the alternative was a generated placeholder. DeepSeek
+ * cannot help here — it is a text model, and asked for an image URL it returns
+ * a plausible one that 404s — so the answer is a real image source rather than
+ * a cleverer prompt.
+ *
+ * Commons is the right source for a site that wants to keep its photographs:
+ * the licences are CC BY / CC BY-SA, which permit commercial reuse provided the
+ * photographer is credited, so the credit is fetched with the image and stored
+ * beside it. Files are matched on the surname appearing in the filename, which
+ * is what separates a portrait of the player from a wide shot of a team he
+ * happened to be standing in.
+ */
+export type CommonsImage = { url: string; credit: string; licence: string }
+
+const COMMONS_ENDPOINT = 'https://commons.wikimedia.org/w/api.php'
+
+export const findCommonsImage = async (
+  name: string,
+  taken: Set<string> = new Set(),
+): Promise<CommonsImage | null> => {
+  const surname = name.trim().split(/\s+/).pop()?.toLowerCase() || ''
+  if (surname.length < 3) return null
+
+  const params = new URLSearchParams({
+    action: 'query', generator: 'search',
+    gsrsearch: name, gsrnamespace: '6', gsrlimit: '12',
+    prop: 'imageinfo', iiprop: 'url|extmetadata|size', iiurlwidth: '1200',
+    format: 'json', formatversion: '2',
+  })
+
+  try {
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 8000)
+    const res = await fetch(`${COMMONS_ENDPOINT}?${params}`, {
+      headers: { 'User-Agent': 'UnitedRoadBot/1.0 (https://unitedroad.uk)' },
+      signal: controller.signal,
+    }).finally(() => clearTimeout(timer))
+    if (!res.ok) return null
+
+    const data = await res.json()
+    const pages: any[] = data?.query?.pages || []
+
+    const scored = pages
+      .map((pg) => {
+        const ii = pg?.imageinfo?.[0]
+        if (!ii?.thumburl) return null
+        const title = String(pg.title || '')
+        // The surname must be in the filename, or the search happily returns a
+        // squad photograph for any player who was on the pitch that day.
+        if (!title.toLowerCase().includes(surname)) return null
+        const em = ii.extmetadata || {}
+        const licence = String(em.LicenseShortName?.value || '')
+        // Public domain and CC licences only. No "fair use" file ever.
+        if (!/^(CC|Public domain|CC0)/i.test(licence)) return null
+        const w = Number(ii.width) || 0
+        const h = Number(ii.height) || 0
+        if (w < 640) return null
+        return {
+          url: String(ii.thumburl),
+          credit: stripTags(String(em.Artist?.value || 'Wikimedia Commons')).replace(/\s+/g, ' ').trim().slice(0, 80),
+          licence,
+          // Prefer something close to landscape; a tall portrait crops badly in
+          // a 16/9 card.
+          score: -Math.abs(w / Math.max(1, h) - 1.5),
+        }
+      })
+      .filter(Boolean) as (CommonsImage & { score: number })[]
+
+    const pick = scored.filter((c) => !taken.has(c.url)).sort((a, b) => b.score - a.score)[0]
+    return pick ? { url: pick.url, credit: pick.credit, licence: pick.licence } : null
+  } catch {
+    return null
+  }
 }
 
 /**
@@ -1361,6 +1441,21 @@ export const runDailyBatch = async (opts: {
       if (kind === 'article') articlesLeft--
       else newsLeft--
 
+      // No usable photograph from the reporting — either none was offered or
+      // the only candidate was already used today. Rather than fall straight to
+      // generated art, look for a free-licensed photograph of whoever the piece
+      // is actually about. The writer has just told us in `people`.
+      if (!outcome.article.image) {
+        for (const person of outcome.article.people || []) {
+          const found = await findCommonsImage(person, usedImages)
+          if (found) {
+            outcome.article.image = found.url
+            outcome.article.imageCredit = `${found.credit} / ${found.licence}`
+            notes.push(`Cover for "${outcome.article.title.slice(0, 40)}" from Wikimedia Commons (${person}).`)
+            break
+          }
+        }
+      }
       if (outcome.article.image) usedImages.add(outcome.article.image)
       coveredNow.unshift(
         { title: outcome.article.title, at: Date.now() },

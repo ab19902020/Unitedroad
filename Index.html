@@ -1640,6 +1640,7 @@ FORMAT: plain text. No markdown, no headings, no bullet lists.`;
                             readMinutes: item.readMinutes || 3,
                             tags: Array.isArray(item.tags) ? item.tags : [],
                             people: Array.isArray(item.people) ? item.people : [],
+                            imageCredit: item.imageCredit || '',
                             relatedIds: Array.isArray(item.relatedIds) ? item.relatedIds : [],
                             sources: Array.isArray(item.sources) ? item.sources : [],
                             category: item.category || 'NEWS',
@@ -3880,6 +3881,14 @@ FORMAT: plain text. No markdown, no headings, no bullet lists.`;
                                     <div className="text-[11px] font-heading font-bold text-gray-400 uppercase tracking-widest">{post.date}{post.readMinutes ? ` · ${post.readMinutes} min read` : ''}</div>
                                 </div>
                             </div>
+                            {/* CC BY and CC BY-SA require the photographer to be
+                                credited wherever the picture is shown. This is not
+                                decoration — without it we are not licensed to use it. */}
+                            {post.imageCredit && (
+                                <div className="-mt-6 mb-10 text-[11px] font-body text-gray-400">
+                                    Photograph: {post.imageCredit} · via <a href="https://commons.wikimedia.org" target="_blank" rel="noopener" className="underline hover:text-[#DA291C]">Wikimedia Commons</a>
+                                </div>
+                            )}
                             <div className="prose max-w-none font-body text-gray-700" dangerouslySetInnerHTML={{ __html: post.content || '' }}></div>
 
                             {/* Share */}
