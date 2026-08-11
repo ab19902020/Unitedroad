@@ -496,6 +496,13 @@ const ALLOWED_TAGS = ['p', 'h2', 'h3', 'ul', 'ol', 'li', 'blockquote', 'strong',
 export const sanitizeHtml = (input: string): string => {
   let html = String(input || '')
 
+  // Markdown bold reaching the page as literal asterisks. The brief asks for
+  // <strong>, and the model mostly complies, but "**three players were sent
+  // off**" rendered exactly like that on a live article. Converting is better
+  // than stripping: the emphasis was intended and is part of the house style.
+  html = html.replace(/\*\*(?!\s)([^*\n]{1,120}?)(?<!\s)\*\*/g, '<strong>$1</strong>')
+  html = html.replace(/(^|[\s(])\*(?!\s)([^*\n]{1,120}?)(?<!\s)\*(?=[\s.,;:!?)]|$)/g, '$1<em>$2</em>')
+
   html = html.replace(/<!--[\s\S]*?-->/g, '')
   html = html.replace(/<\s*(script|style|iframe|object|embed|form|input|link|meta|svg|math)[\s\S]*?<\/\s*\1\s*>/gi, '')
   html = html.replace(/<\s*(script|style|iframe|object|embed|form|input|link|meta|img)[^>]*\/?>/gi, '')
@@ -1729,6 +1736,8 @@ export const publishRoundup = async (): Promise<{ status: string; title?: string
 
 export type ClubState = {
   manager: string | null
+  /** Players the reporting shows have left. Never written about as current. */
+  departed?: string[]
   managerSince: string | null
   ownership: string | null
   competition: string | null
@@ -1742,7 +1751,7 @@ const CLUB_STATE_KEY = 'club-state.json'
 
 const EMPTY_CLUB_STATE: ClubState = {
   manager: null, managerSince: null, ownership: null,
-  competition: null, notes: [], updatedAt: 0, basis: [],
+  competition: null, notes: [], departed: [], updatedAt: 0, basis: [],
 }
 
 export const readClubState = async (): Promise<ClubState> => {
@@ -1769,6 +1778,9 @@ export const buildClubStateNote = (state: ClubState): string => {
   if (state.ownership) lines.push(`- Ownership: ${state.ownership}`)
   if (state.competition) lines.push(`- Where the season stands: ${state.competition}`)
   for (const n of state.notes.slice(0, 6)) lines.push(`- ${n}`)
+  if (state.departed?.length) {
+    lines.push(`- NOT Manchester United players: ${state.departed.slice(0, 20).join(', ')}. Never write about any of them as though they are at the club.`)
+  }
   if (!lines.length) return ''
 
   const age = state.updatedAt ? Math.round((Date.now() - state.updatedAt) / 3600000) : 0
@@ -1809,7 +1821,8 @@ Respond with a single JSON object and nothing else:
   "managerSince": "Month and year they took charge if stated, else null",
   "ownership": "One clause on who controls the club, e.g. 'Glazer family majority owners, INEOS running football operations', or null",
   "competition": "One clause on where the season stands, e.g. 'Pre-season, 2026/27 Premier League campaign starts this month', or null",
-  "notes": ["Up to 4 short factual statements the reporting establishes that a writer would need — a major signing completed, a long-term injury, a captaincy change. Nothing speculative."]
+  "notes": ["Up to 4 short factual statements the reporting establishes that a writer would need — a major signing completed, a long-term injury, a captaincy change. Nothing speculative."],
+  "departed": ["Full names of players the reporting shows are NOT currently Manchester United players — sold, released, or now playing for another club. Only where the reporting makes that clear. Empty array if none."]
 }`
 
   const parsed = await callDeepSeek(apiKey, model, system, material)
@@ -1828,6 +1841,12 @@ Respond with a single JSON object and nothing else:
     notes: Array.isArray(parsed?.notes)
       ? parsed.notes.map((n: unknown) => text(n, 180)).filter(Boolean).slice(0, 4) as string[]
       : prev.notes,
+    // Accumulates. A player who left does not un-leave, and a week when nobody
+    // mentions them must not quietly restore them to the squad.
+    departed: Array.from(new Set([
+      ...(prev.departed || []),
+      ...(Array.isArray(parsed?.departed) ? parsed.departed.map((n: unknown) => text(n, 40)).filter(Boolean) as string[] : []),
+    ])).slice(0, 40),
     updatedAt: Date.now(),
     basis: stories.slice(0, 8).map((c) => c.lead.title.slice(0, 110)),
   }
