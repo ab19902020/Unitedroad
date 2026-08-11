@@ -720,6 +720,15 @@
         ];
 
         // The headline title, surfaced across the home page, the games hub and its own /manager route.
+        // Cache-buster for the externally hosted games. Hourly granularity: fresh
+        // enough that an update is live within the hour without a deploy, coarse
+        // enough that visitors still share a cached copy.
+        const withGameStamp = (url) => {
+            if (!url || url === '#' || !url.startsWith('http')) return url;
+            const stamp = Math.floor(Date.now() / 3600000);
+            return url + (url.includes('?') ? '&' : '?') + 'v=' + stamp;
+        };
+
         const FEATURED_GAME = GAMES_LIBRARY.find(g => g.featured) || GAMES_LIBRARY[0];
 
         const LEGACY_STATS = [
@@ -3139,7 +3148,18 @@ FORMAT: plain text. No markdown, no headings, no bullet lists.`;
                                         <p className="font-heading text-white/60 text-[10px] tracking-[4px] uppercase font-bold">Loading engine</p>
                                     </div>
                                 </div>
-                                <iframe src={activeGame.url} className="absolute inset-0 w-full h-full border-0 z-10 bg-transparent" allow="autoplay; fullscreen; encrypted-media; gyroscope" title={activeGame.title} />
+                                {/* The games live in their own GitHub repos and are
+                                    served straight from the main branch by githack, so
+                                    pushing a game update does NOT require redeploying
+                                    this site. What it does require is getting past
+                                    githack's CDN cache on a branch URL, which is why an
+                                    updated game could appear not to have changed.
+
+                                    The stamp changes hourly rather than per page load:
+                                    per load would bypass the CDN entirely on every
+                                    visit, making the games slower for everyone to save
+                                    an hour of staleness after an update. */}
+                                <iframe src={withGameStamp(activeGame.url)} className="absolute inset-0 w-full h-full border-0 z-10 bg-transparent" allow="autoplay; fullscreen; encrypted-media; gyroscope" title={activeGame.title} />
                             </div>
                         </div>
                     );
